@@ -3910,6 +3910,16 @@ body.deliveryMode .deliveryQuickActions{
 .mdTestPanelBody{padding:10px 12px;overflow:auto;font-size:11px;line-height:1.35}.mdTestPanelBody h3{font-size:12px;margin:4px 0 7px}.mdTestPanelBody p{margin:6px 0}.mdTestActions{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}.mdTestActions button{min-height:36px;border:1px solid #d0d5dd;border-radius:9px;background:#f8fafc;padding:7px 10px;font:inherit;font-weight:850}.mdTestActions .primary{background:#172033;color:#fff;border-color:#172033}.mdTestActions .danger{background:#fff5f5;color:#9b1c1c;border-color:#fecaca}
 .mdTestResult{display:grid;grid-template-columns:58px minmax(0,1fr);gap:6px;padding:7px 0;border-bottom:1px solid #eef1f4}.mdTestResult .state{font-size:8px;font-weight:950;border-radius:999px;padding:3px 5px;text-align:center;align-self:start}.mdTestResult.pass .state{background:#e8f7ee;color:#166534}.mdTestResult.fail .state{background:#fee2e2;color:#991b1b}.mdTestResult.warn .state,.mdTestResult.skip .state{background:#fff4cc;color:#7c5a13}.mdTestResult b{font-size:10px}.mdTestResult small{display:block;color:#667085;font-size:9px;margin-top:2px;white-space:pre-wrap}.mdTestProgress{height:7px;background:#eef1f4;border-radius:999px;overflow:hidden;margin:8px 0}.mdTestProgress span{display:block;height:100%;background:#172033;width:0%;transition:width .2s}
 .mdTestAssist{position:fixed;z-index:10200;left:8px;right:8px;bottom:calc(env(safe-area-inset-bottom,0px) + 8px);display:none;background:#172033;color:white;border-radius:13px;padding:10px;box-shadow:0 8px 28px #0005}.mdTestAssist.open{display:block}.mdTestAssist b{font-size:11px}.mdTestAssist p{font-size:9px;line-height:1.35;margin:4px 0 8px;color:#e5e7eb}.mdTestAssist .buttons{display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px}.mdTestAssist button{min-height:36px;border:0;border-radius:8px;font-size:10px;font-weight:900}.mdTestAssist .pass{background:#dcfce7;color:#166534}.mdTestAssist .fail{background:#fee2e2;color:#991b1b}.mdTestAssist .skip{background:#fff4cc;color:#7c5a13}
+.mdTestAssist .action{background:#dbeafe;color:#1d4ed8}
+.mdTestAssist.minimized{
+  left:auto;right:8px;bottom:auto;top:calc(env(safe-area-inset-top,0px) + 54px);
+  width:auto;max-width:210px;padding:6px 7px;border-radius:10px;
+  background:#ffd84d;color:#111;box-shadow:0 5px 18px #0004
+}
+.mdTestAssist.minimized .miniRow{display:flex;align-items:center;gap:6px}
+.mdTestAssist.minimized span{font-size:9px;font-weight:900;white-space:nowrap}
+.mdTestAssist.minimized button{min-height:30px;height:30px;padding:4px 8px;background:#111;color:#fff;font-size:9px}
+
 body.mdTestRunning #mdTestLaunch{display:none}
 
 
@@ -3946,6 +3956,12 @@ body.mdTestRunning #mdTestLaunch{display:none}
   }
 }
 
+
+/* v0.10.14 TEST CANDIDATE
+   Sunday suggestions use configured target-stock top-up.
+   Current active suggestions are limited to the latest Bangrak + Lamai pair.
+   TEST manual checkpoints can minimise while the user performs the action.
+*/
 </style>
 </head>
 <body>
@@ -3970,7 +3986,7 @@ window.addEventListener("error",e=>{const b=document.getElementById("runtimeErro
       <button class="heroHomeHotspot noPrint" type="button" aria-label="Return to Dashboard" title="Dashboard" onclick="returnToDashboardFromHeader()"></button>
     </div>
     <div class="heroActions noPrint">
-      <span class="app-version test-version-badge" aria-label="Test build version v0.10.13">v0.10.13<br><b>TEST</b></span>
+      <span class="app-version test-version-badge" aria-label="Test build version v0.10.14">v0.10.14<br><b>TEST</b></span>
       <button class="heroMenuButton" id="heroMenuButton" type="button" aria-expanded="false">Menu</button>
     </div>
   </div>
@@ -6111,7 +6127,7 @@ function buildFullBackupPayload(kind="SUPPORT",note=""){
   return {
     magicDragonBackup:true,
     app:"Magic Dragon Pin",
-    appVersion:"0.10.13",
+    appVersion:"0.10.14",
     backupKind:String(kind||"SUPPORT").toUpperCase(),
     createdAt:new Date().toISOString(),
     note:String(note||""),
@@ -8344,19 +8360,48 @@ function ensureDeliverySuggestions(){
   // Legacy compatibility only. v0.10.13 stores suggested deliveries as normal unsent dockets.
   if(!Array.isArray(db.deliverySuggestions))db.deliverySuggestions=[];
 }
+const SUNDAY_TOPUP_TARGETS={
+  "BM Bangrak":{"1g":30,"5g":3,"preroll":15,"hash":10,"gummy":15},
+  "Lamai":{"1g":6,"5g":0,"preroll":6,"hash":0,"gummy":0}
+};
+function sundaySuggestionProductClass(p){
+  const v=effectiveDeliveryVariant(p);
+  const n=String((p?.name||"")+" "+(p?.type||"")+" "+(p?.variantLabel||"")).toLowerCase();
+  if(v.variantKey==="1g"||v.variantKey==="5g"||v.variantKey==="preroll")return v.variantKey;
+  if(n.includes("gummy")||n.includes("edible"))return "gummy";
+  if(n.includes("hash")||n.includes("mousse"))return "hash";
+  return "other";
+}
 function sundaySuggestedLines(report){
+  const branch=canonicalBranchName(report?.branch||"");
+  const cfg=SUNDAY_TOPUP_TARGETS[branch]||{};
   const combined=new Map();
   (report?.rows||[]).forEach(rr=>{
-    const sold=Number(rr.sold ?? ((Number(rr.oldStock)||0)+(Number(rr.newDeliver)||0)-(Number(rr.takeOut)||0)-(Number(rr.inStock)||0)))||0;
-    if(sold<=0)return;
     const pm=canonicalProductMatchRow(rr),p=pm.product;
     if(!p)return;
+    const kind=sundaySuggestionProductClass(p);
+    if(!Object.prototype.hasOwnProperty.call(cfg,kind))return;
+
+    const target=Number(cfg[kind]);
+    const closing=Number(rr.inStock ?? rr.closing ?? 0)||0;
+    const qty=Math.max(0,target-closing);
+    if(qty<=0)return;
+
     const prices=validatedProductPrices(p)||{cost:Number(p.cost||0),retail:Number(p.retail||0)};
-    const existing=combined.get(p.id)||{productId:p.id,qty:0,productName:p.name,cost:Number(prices.cost||0),retail:Number(prices.retail||0)};
-    existing.qty+=sold;
-    combined.set(p.id,existing);
+    combined.set(p.id,{
+      productId:p.id,
+      qty,
+      productName:p.name,
+      cost:Number(prices.cost||0),
+      retail:Number(prices.retail||0),
+      suggestedTarget:target,
+      sundayClosing:closing,
+      suggestionClass:kind
+    });
   });
-  return [...combined.values()].filter(l=>l.qty>0).sort((a,b)=>String(a.productName).localeCompare(String(b.productName),'en',{sensitivity:'base',numeric:true}));
+  return [...combined.values()]
+    .filter(l=>l.qty>0)
+    .sort((a,b)=>String(a.productName).localeCompare(String(b.productName),"en",{sensitivity:"base",numeric:true}));
 }
 function suggestedDraftRef(date,branch){
   const d=String(date||today()).replaceAll("-","").slice(2);
@@ -8364,7 +8409,10 @@ function suggestedDraftRef(date,branch){
   return `SD-${d}-${b}`;
 }
 function isSuggestedDraftDocket(d){
-  return !!d && !!d.generatedFromSundaySuggestion && !d.deliveredAt;
+  return !!d &&
+    !!d.generatedFromSundaySuggestion &&
+    !d.deliveredAt &&
+    !d.suggestedSupersededAt;
 }
 function migrateLegacyDeliverySuggestions(){
   ensureDeliverySuggestions();
@@ -8404,34 +8452,43 @@ function migrateLegacyDeliverySuggestions(){
 function refreshSundayDeliverySuggestions(state,date){
   if(!date||!state?.items?.length)return;
   migrateLegacyDeliverySuggestions();
+
+  const nowIso=new Date().toISOString();
+
+  db.deliveries=(db.deliveries||[]).filter(d=>{
+    if(!d?.generatedFromSundaySuggestion || d.deliveredAt)return true;
+    const source=String(d.sourceSundayDate||d.date||"");
+    if(source===String(date))return true;
+
+    if(d.userEditedSuggestedDraft){
+      d.suggestedSupersededAt=d.suggestedSupersededAt||nowIso;
+      d.suggestedSupersededByDate=String(date);
+      return true;
+    }
+    return false;
+  });
+
   state.items.forEach(({report})=>{
     const branch=report.branch;
     const lines=sundaySuggestedLines(report);
     const existing=(db.deliveries||[]).find(d=>
       d.generatedFromSundaySuggestion &&
       d.sourceSundayDate===date &&
-      canonicalBranchName(d.branch)===canonicalBranchName(branch)
+      canonicalBranchName(d.branch)===canonicalBranchName(branch) &&
+      !d.deliveredAt
     );
 
-    // Once the draft has been marked delivered it is historical and never regenerated.
-    if(existing?.deliveredAt)return;
-
-    if(!lines.length){
-      if(existing){
-        db.deliveries=db.deliveries.filter(d=>d.id!==existing.id);
-      }
-      return;
-    }
-
     if(existing){
-      // Refresh only the untouched system suggestion. If Pin has edited it, preserve her work.
+      delete existing.suggestedSupersededAt;
+      delete existing.suggestedSupersededByDate;
       if(!existing.userEditedSuggestedDraft){
         existing.lines=lines.map(l=>({...l}));
-        existing.updatedAt=new Date().toISOString();
-        existing.note=existing.note||`Suggested from sales for week ending ${date}`;
+        existing.updatedAt=nowIso;
+        existing.note=`Sunday top-up to configured target stock for week ending ${date}`;
       }
       existing.suggestedRef=existing.suggestedRef||suggestedDraftRef(date,branch);
       existing.generatedFromSundaySuggestion=true;
+      existing.suggestionMethod="target-stock-topup-v1";
       return;
     }
 
@@ -8439,26 +8496,33 @@ function refreshSundayDeliverySuggestions(state,date){
       id:"D"+Date.now()+Math.random().toString(36).slice(2,5),
       branch,
       date:today(),
-      note:`Suggested from sales for week ending ${date}`,
+      note:`Sunday top-up to configured target stock for week ending ${date}`,
       lines:lines.map(l=>({...l})),
       deliveredAt:null,
       lineChanges:[],
       generatedFromSundaySuggestion:true,
       sourceSundayDate:date,
       suggestedRef:suggestedDraftRef(date,branch),
-      createdAt:new Date().toISOString()
+      suggestionMethod:"target-stock-topup-v1",
+      createdAt:nowIso,
+      updatedAt:nowIso
     });
   });
 }
 function bootstrapLatestSavedInvoiceSuggestions(){
   migrateLegacyDeliverySuggestions();
-  if(db.deliverySuggestionBootstrapDoneV2)return;
-  const latest=[...(db.invoices||[])].filter(i=>i&&!i.supersededBy&&i.status!=="void"&&i.reportDate).sort((a,b)=>String(b.reportDate).localeCompare(String(a.reportDate))||Number(b.version||1)-Number(a.version||1))[0];
+  if(db.deliverySuggestionBootstrapVersion==="0.10.14")return;
+
+  const latest=[...(db.invoices||[])]
+    .filter(i=>i&&!i.supersededBy&&i.status!=="void"&&i.reportDate)
+    .sort((a,b)=>String(b.reportDate).localeCompare(String(a.reportDate))||Number(b.version||1)-Number(a.version||1))[0];
   if(!latest)return;
+
   const items=wizardReportsForDate(latest.reportDate);
   if(items.length){
     refreshSundayDeliverySuggestions({items},latest.reportDate);
     db.deliverySuggestionBootstrapDoneV2=true;
+    db.deliverySuggestionBootstrapVersion="0.10.14";
     localStorage.setItem("mdpin-db",JSON.stringify(db));
   }
 }
@@ -9057,7 +9121,7 @@ document.getElementById("exportData").onclick=async()=>{
  const btn=document.getElementById("exportData");if(btn.disabled)return;btn.disabled=true;backupStatus("Preparing complete backup…");
  try{
   const sourceFiles=await exportArchivedSourceFiles(),counts=backupCounts();
-  const pkg={format:BACKUP_FORMAT,schema:BACKUP_SCHEMA,appVersion:"0.10.13",createdAt:new Date().toISOString(),counts,sourceFilesCount:sourceFiles.length,data:JSON.parse(JSON.stringify(db)),sourceFiles};
+  const pkg={format:BACKUP_FORMAT,schema:BACKUP_SCHEMA,appVersion:"0.10.14",createdAt:new Date().toISOString(),counts,sourceFilesCount:sourceFiles.length,data:JSON.parse(JSON.stringify(db)),sourceFiles};
   await downloadBackupPackage(pkg);
   backupStatus(`Backup ready: ${counts.deliveries} deliveries, ${counts.sundayReports} Sunday reports, ${counts.invoices} invoices, ${sourceFiles.length} archived source file${sourceFiles.length===1?"":"s"}.`);
  }catch(e){console.error(e);backupStatus("Backup could not be created. No app data was changed.",true);alert("The full backup could not be created. Your current app data has not been changed.")}
@@ -9146,9 +9210,9 @@ document.getElementById("exportHistorical").onclick=()=>{
 <script>
 /* v0.10.13 TEST RUNNER v1 — isolated evidence collection, never production */
 const MDTest=(()=>{
-  const VERSION='v0.10.13-TEST-RUNNER-v1';
+  const VERSION='v0.10.14-TEST-RUNNER-v2';
   const RESTORE_KEY='mdpin-test-runner-restore-point';
-  const report={runnerVersion:VERSION,appVersion:'0.10.13',startedAt:null,finishedAt:null,environment:{},results:[],events:[],snapshots:[],errors:[],manual:[],restore:{},summary:{}};
+  const report={runnerVersion:VERSION,appVersion:'0.10.14',startedAt:null,finishedAt:null,environment:{},results:[],events:[],snapshots:[],errors:[],manual:[],restore:{},summary:{}};
   let originalDb=null,running=false,manualResolve=null;
   const nativeConsoleError=console.error.bind(console);
   window.addEventListener('error',e=>{if(running)report.errors.push({type:'window.error',message:String(e.message||''),source:e.filename||'',line:e.lineno||0,time:new Date().toISOString()})});
@@ -9171,8 +9235,41 @@ const MDTest=(()=>{
   function productClass(p){const v=effectiveDeliveryVariant(p);const n=String((p?.name||'')+' '+(p?.type||'')+' '+(p?.variantLabel||'')).toLowerCase();if(v.variantKey==='1g'||v.variantKey==='5g'||v.variantKey==='preroll')return v.variantKey;if(n.includes('gummy')||n.includes('edible'))return 'gummy';if(n.includes('hash')||n.includes('mousse'))return 'hash';return 'other'}
   const targets={'BM Bangrak':{'1g':30,'5g':3,'preroll':15,'hash':10,'gummy':15},'Lamai':{'1g':6,'5g':0,'preroll':6,'hash':0,'gummy':0}};
   function expectedTopup(report){const branch=canonicalBranchName(report.branch);const cfg=targets[branch]||{};const out=[];(report.rows||[]).forEach(rr=>{const p=canonicalProductMatchRow(rr)?.product;if(!p)return;const kind=productClass(p);if(!(kind in cfg))return;const closing=Number(rr.inStock??rr.closing??0)||0;const qty=Math.max(0,Number(cfg[kind]||0)-closing);if(qty>0)out.push({productId:p.id,qty,kind,closing,target:cfg[kind],name:deliveryProductDisplayName(p)})});return out}
-  async function manualCheckpoint(name,instruction,prepare){if(prepare)await prepare();closePanel();return new Promise(resolve=>{manualResolve=resolve;const a=qs('mdTestAssist');a.innerHTML=`<b>${escapeHtml(name)}</b><p>${escapeHtml(instruction)}</p><div class="buttons"><button class="pass" onclick="MDTest.manualAnswer('PASS')">Looks good</button><button class="fail" onclick="MDTest.manualAnswer('FAIL')">Problem</button><button class="skip" onclick="MDTest.manualAnswer('SKIP')">Skip</button></div>`;a.classList.add('open');a.setAttribute('aria-hidden','false')})}
-  function manualAnswer(state){const a=qs('mdTestAssist');a.classList.remove('open');a.setAttribute('aria-hidden','true');let note='';if(state==='FAIL')note=prompt('Briefly describe what looked wrong (optional):','')||'';const resolve=manualResolve;manualResolve=null;resolve?.({state,note})}
+  let manualName="",manualInstruction="";
+  async function manualCheckpoint(name,instruction,prepare){
+    if(prepare)await prepare();
+    closePanel();
+    manualName=name;
+    manualInstruction=instruction;
+    return new Promise(resolve=>{
+      manualResolve=resolve;
+      const a=qs("mdTestAssist");
+      a.classList.remove("minimized");
+      a.innerHTML=`<b>${escapeHtml(name)}</b><p>${escapeHtml(instruction)}</p><div class="buttons"><button class="action" onclick="MDTest.beginManualAction()">Do test</button><button class="skip" onclick="MDTest.manualAnswer('SKIP')">Skip</button></div>`;
+      a.classList.add("open");
+      a.setAttribute("aria-hidden","false")
+    })
+  }
+  function beginManualAction(){
+    const a=qs("mdTestAssist");
+    a.classList.add("minimized");
+    a.innerHTML=`<div class="miniRow"><span>${escapeHtml(manualName)}</span><button onclick="MDTest.showManualResult()">Record result</button></div>`;
+  }
+  function showManualResult(){
+    const a=qs("mdTestAssist");
+    a.classList.remove("minimized");
+    a.innerHTML=`<b>${escapeHtml(manualName)}</b><p>Test the requested control, then record what happened.</p><div class="buttons"><button class="pass" onclick="MDTest.manualAnswer('PASS')">Looks good</button><button class="fail" onclick="MDTest.manualAnswer('FAIL')">Problem</button><button class="skip" onclick="MDTest.manualAnswer('SKIP')">Skip</button></div>`;
+  }
+  function manualAnswer(state){
+    const a=qs("mdTestAssist");
+    a.classList.remove("open","minimized");
+    a.setAttribute("aria-hidden","true");
+    let note="";
+    if(state==="FAIL")note=prompt("Briefly describe what looked wrong (optional):","")||"";
+    const resolve=manualResolve;
+    manualResolve=null;
+    resolve?.({state,note})
+  }
   async function runFull(){if(running)return;running=true;document.body.classList.add('mdTestRunning');report.startedAt=new Date().toISOString();report.environment=env();report.results=[];report.events=[];report.snapshots=[];report.errors=[];report.manual=[];saveRestorePoint();renderProgress();
     try{
       pass('Test restore point','Database copied before temporary tests.');
@@ -9216,7 +9313,7 @@ const MDTest=(()=>{
   async function exportEvidence(){if(!report.startedAt)return alert('Run the test first.');const payload=JSON.stringify(report,null,2);const stamp=(report.finishedAt||new Date().toISOString()).replace(/[:.]/g,'-');const filename=`Magic-Dragon-Test-Evidence-${stamp}.json`;const blob=new Blob([payload],{type:'application/json'});const file=new File([blob],filename,{type:'application/json'});try{if(navigator.share&&navigator.canShare?.({files:[file]})){await navigator.share({files:[file],title:'Magic Dragon Test Evidence'});return}}catch(e){if(e?.name==='AbortError')return}const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=filename;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),2000)}
   // Offer recovery if a prior test was interrupted before cleanup.
   setTimeout(()=>{if(localStorage.getItem(RESTORE_KEY)){const b=qs('mdTestPanelBody');qs('mdTestPanel')?.classList.add('open');if(b)b.innerHTML=`<h3>Interrupted test detected</h3><p>A pre-test database restore point is still present. Restore it before doing anything else.</p><div class="mdTestActions"><button class="danger" onclick="MDTest.emergencyRestore()">Restore Pre-Test Data Now</button></div>`}},500);
-  return {openPanel,closePanel,runFull,exportEvidence,manualAnswer,emergencyRestore};
+  return {openPanel,closePanel,runFull,exportEvidence,manualAnswer,beginManualAction,showManualResult,emergencyRestore};
 })();
 </script>
 
