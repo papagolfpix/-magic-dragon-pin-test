@@ -1,17 +1,17 @@
-MAGIC DRAGON PIN v0.10.15 — TEST TOP-UP + AUTO KEYBOARD DIAGNOSTIC v1
+MAGIC DRAGON PIN v0.10.16 — FINAL NIGHTLY TEST CANDIDATE v1
 
-DEPLOYMENT:
-TEST repository only: magic-dragon-pin-test
-Do NOT deploy to Pin Production yet.
+DEPLOY TO TEST ONLY:
+magic-dragon-pin-test
 
-FOCUS OF THIS BUILD
-1. Fresh current Sunday suggestions are rebuilt from Sunday closing stock.
-2. Same-date manually edited suggestions are preserved only as superseded history.
-3. Full TEST run forces a current suggestion refresh before validation.
-4. Added synthetic internal top-up formula self-test.
-5. Keyboard test now needs only one user tap on Qty; viewport measurements decide PASS/FAIL automatically.
+Do NOT deploy this build to Pin Production yet.
 
-NOT YET INCLUDED
-- Combined Suggested Delivery Save/Share PDF.
-- Final Save-button safe-bottom fix.
+TONIGHT:
+- Delivery Save bottom zone hardened.
+- iPhone keyboard mode collapses nonessential entry controls.
+- Combined Suggested Delivery now has Share PDF.
+- Combined PDF is validated internally before share/download.
+- Version metadata aligned to 0.10.16.
+- Full nightly test is mostly automatic.
+- Only iOS keyboard opening still needs one physical Qty tap.
 
+Expected: Sunday suggestion tests, Save visibility, Combined PDF, and cleanup should all pass.
