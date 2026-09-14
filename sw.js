@@ -1,4 +1,4 @@
-const CACHE_NAME = "magic-dragon-pin-v0.10.14-test-sunday-topup-v1";
+const CACHE_NAME = "magic-dragon-pin-v0.10.15-test-topup-auto-keyboard-v1";
 const APP_ASSETS = [
   "./",
   "./index.html",
