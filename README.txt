@@ -1,4 +1,5 @@
-MAGIC DRAGON PIN v0.10.22 — TEST
+MAGIC DRAGON PIN v0.10.23 — TEST
+UI-only cleanup: Combined Suggested Delivery now uses compact docket spacing and bottom-right dark Create / Share PDF action.
 
 Suggested-docket workflow refinement:
 - moves Review before top-up to the top of each suggested docket, immediately below the docket header;
