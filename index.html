@@ -4052,6 +4052,7 @@ body.deliveryMode .deliveryAddButton{width:56px!important;max-width:56px!importa
 */
 
 /* v0.10.18 TEST — runner must restore both database and UI state */
+/* v0.10.19 TEST — wait for iOS visualViewport recovery before final UI cleanup validation */
 </style>
 </head>
 <body>
@@ -4076,7 +4077,7 @@ window.addEventListener("error",e=>{const b=document.getElementById("runtimeErro
       <button class="heroHomeHotspot noPrint" type="button" aria-label="Return to Dashboard" title="Dashboard" onclick="returnToDashboardFromHeader()"></button>
     </div>
     <div class="heroActions noPrint">
-      <span class="app-version test-version-badge" aria-label="Test build version v0.10.18">v0.10.18<br><b>TEST</b></span>
+      <span class="app-version test-version-badge" aria-label="Test build version v0.10.19">v0.10.19<br><b>TEST</b></span>
       <button class="heroMenuButton" id="heroMenuButton" type="button" aria-expanded="false">Menu</button>
     </div>
   </div>
@@ -6305,7 +6306,7 @@ function buildFullBackupPayload(kind="SUPPORT",note=""){
   return {
     magicDragonBackup:true,
     app:"Magic Dragon Pin",
-    appVersion:"0.10.18",
+    appVersion:"0.10.19",
     backupKind:String(kind||"SUPPORT").toUpperCase(),
     createdAt:new Date().toISOString(),
     note:String(note||""),
@@ -8711,7 +8712,7 @@ function refreshSundayDeliverySuggestions(state,date){
 }
 function bootstrapLatestSavedInvoiceSuggestions(){
   migrateLegacyDeliverySuggestions();
-  if(db.deliverySuggestionBootstrapVersion==="0.10.18")return;
+  if(db.deliverySuggestionBootstrapVersion==="0.10.19")return;
 
   const latest=[...(db.invoices||[])]
     .filter(i=>i&&!i.supersededBy&&i.status!=="void"&&i.reportDate)
@@ -8722,7 +8723,7 @@ function bootstrapLatestSavedInvoiceSuggestions(){
   if(items.length){
     refreshSundayDeliverySuggestions({items},latest.reportDate);
     db.deliverySuggestionBootstrapDoneV2=true;
-    db.deliverySuggestionBootstrapVersion="0.10.18";
+    db.deliverySuggestionBootstrapVersion="0.10.19";
     localStorage.setItem("mdpin-db",JSON.stringify(db));
   }
 }
@@ -9321,7 +9322,7 @@ document.getElementById("exportData").onclick=async()=>{
  const btn=document.getElementById("exportData");if(btn.disabled)return;btn.disabled=true;backupStatus("Preparing complete backup…");
  try{
   const sourceFiles=await exportArchivedSourceFiles(),counts=backupCounts();
-  const pkg={format:BACKUP_FORMAT,schema:BACKUP_SCHEMA,appVersion:"0.10.18",createdAt:new Date().toISOString(),counts,sourceFilesCount:sourceFiles.length,data:JSON.parse(JSON.stringify(db)),sourceFiles};
+  const pkg={format:BACKUP_FORMAT,schema:BACKUP_SCHEMA,appVersion:"0.10.19",createdAt:new Date().toISOString(),counts,sourceFilesCount:sourceFiles.length,data:JSON.parse(JSON.stringify(db)),sourceFiles};
   await downloadBackupPackage(pkg);
   backupStatus(`Backup ready: ${counts.deliveries} deliveries, ${counts.sundayReports} Sunday reports, ${counts.invoices} invoices, ${sourceFiles.length} archived source file${sourceFiles.length===1?"":"s"}.`);
  }catch(e){console.error(e);backupStatus("Backup could not be created. No app data was changed.",true);alert("The full backup could not be created. Your current app data has not been changed.")}
@@ -9410,9 +9411,9 @@ document.getElementById("exportHistorical").onclick=()=>{
 <script>
 /* v0.10.13 TEST RUNNER v1 — isolated evidence collection, never production */
 const MDTest=(()=>{
-  const VERSION='v0.10.18-TEST-RUNNER-v6';
+  const VERSION='v0.10.19-TEST-RUNNER-v7';
   const RESTORE_KEY='mdpin-test-runner-restore-point';
-  const report={runnerVersion:VERSION,appVersion:"0.10.18",startedAt:null,finishedAt:null,environment:{},results:[],events:[],snapshots:[],errors:[],manual:[],restore:{},summary:{}};
+  const report={runnerVersion:VERSION,appVersion:"0.10.19",startedAt:null,finishedAt:null,environment:{},results:[],events:[],snapshots:[],errors:[],manual:[],restore:{},summary:{}};
   let originalDb=null,running=false,manualResolve=null;
   const nativeConsoleError=console.error.bind(console);
   window.addEventListener('error',e=>{if(running)report.errors.push({type:'window.error',message:String(e.message||''),source:e.filename||'',line:e.lineno||0,time:new Date().toISOString()})});
@@ -9487,38 +9488,32 @@ function expectedTopup(report){const branch=canonicalBranchName(report.branch);c
 
   
   async function restoreUiAfterTest(){
+    const vv=window.visualViewport;
+    const sleep=ms=>new Promise(r=>setTimeout(r,ms));
     try{document.activeElement?.blur?.();}catch(_){}
     document.body.classList.remove("deliveryKeyboardOpen","deliveryQtyFocus","deliveryEditMode");
-    const assist=qs("mdTestAssist");
-    assist?.classList.remove("open","minimized");
-    assist?.setAttribute("aria-hidden","true");
-
+    const assist=qs("mdTestAssist"); assist?.classList.remove("open","minimized"); assist?.setAttribute("aria-hidden","true");
+    const dismissStartedAt=Date.now(); let viewportSamples=[];
+    for(let i=0;i<20;i++){
+      const h=vv?.height||window.innerHeight; viewportSamples.push({t:Date.now()-dismissStartedAt,h});
+      if(!vv || h>=window.innerHeight*0.90) break;
+      try{document.activeElement?.blur?.();}catch(_){}
+      document.body.classList.remove("deliveryKeyboardOpen","deliveryQtyFocus");
+      await sleep(100);
+    }
     try{switchTab("docket");}catch(_){}
     try{openDeliveryCreate();}catch(_){}
-    await delay(120);
+    document.body.classList.remove("deliveryKeyboardOpen","deliveryQtyFocus","deliveryEditMode");
     try{document.activeElement?.blur?.();}catch(_){}
-    await delay(180);
-
-    const vv=window.visualViewport;
+    await sleep(160);
+    if(vv && vv.height<window.innerHeight*0.90){ await sleep(250); try{document.activeElement?.blur?.();}catch(_){} document.body.classList.remove("deliveryKeyboardOpen","deliveryQtyFocus"); }
+    await sleep(100);
     const visibleIds=["delBranch","delDate","delParent","delVariant","delQty","addDeliveryLine","saveDelivery"];
-    const missing=visibleIds.filter(id=>{
-      const el=qs(id);
-      if(!el)return true;
-      const r=rect(el);
-      return !r || r.width<=0 || r.height<=0;
-    });
+    const missing=visibleIds.filter(id=>{const el=qs(id); if(!el)return true; const r=rect(el); return !r||r.width<=0||r.height<=0;});
     const keyboardClass=document.body.classList.contains("deliveryKeyboardOpen");
-    const focused=document.activeElement;
-    const focusedId=(focused && focused!==document.body) ? (focused.id||focused.tagName||"") : "";
-    const viewportRestored=!vv || vv.height >= window.innerHeight*0.9;
-
-    return {
-      ok:!keyboardClass && !focusedId && viewportRestored && missing.length===0,
-      keyboardClass,focusedId,
-      viewportHeight:vv?.height||null,
-      innerHeight:window.innerHeight,
-      viewportRestored,missing
-    };
+    const focused=document.activeElement; const focusedId=(focused&&focused!==document.body)?(focused.id||focused.tagName||""):"";
+    const viewportHeight=vv?.height||window.innerHeight; const viewportRestored=!vv||viewportHeight>=window.innerHeight*0.90;
+    return {ok:!keyboardClass&&!focusedId&&viewportRestored&&missing.length===0,keyboardClass,focusedId,viewportHeight,innerHeight:window.innerHeight,viewportRestored,missing,dismissDurationMs:Date.now()-dismissStartedAt,viewportSamples};
   }
 
 async function autoKeyboardCheckpoint(prepare){
@@ -9655,8 +9650,8 @@ async function autoKeyboardCheckpoint(prepare){
 
       const uiRestore=await restoreUiAfterTest();
       uiRestore.ok
-        ? pass('Automatic UI state cleanup','Keyboard/test UI state cleared and New Delivery returned to a clean visible state.',uiRestore)
-        : fail('Automatic UI state cleanup','Test left stale UI state behind.',uiRestore);
+        ? pass('Automatic UI state cleanup','Keyboard fully dismissed, temporary UI state cleared, and New Delivery returned to a clean visible state.',uiRestore)
+        : fail('Automatic UI state cleanup','Keyboard or temporary UI state did not fully restore within the allowed cleanup window.',uiRestore);
       snapshot('post-test-clean-ui',{uiRestore});
 
       report.finishedAt=new Date().toISOString();

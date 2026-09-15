@@ -1,4 +1,4 @@
-const CACHE_NAME = "magic-dragon-pin-v0.10.18-test-ui-state-restore-v1";
+const CACHE_NAME = "magic-dragon-pin-v0.10.19-test-ios-keyboard-dismiss-v1";
 const APP_ASSETS = [
   "./",
   "./index.html",
