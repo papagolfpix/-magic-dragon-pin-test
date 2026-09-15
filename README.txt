@@ -1,4 +1,4 @@
-MAGIC DRAGON PIN v0.10.32 — TEST
+MAGIC DRAGON PIN v0.10.33 — TEST
 
 Purpose of this build:
 - Regression-only repair for New Delivery Qty on iPhone Safari.
@@ -17,3 +17,6 @@ Preserved unchanged from the immediately prior test build:
 
 TEST CHECK:
 Tap New Delivery Qty. The numeric keyboard must open normally, the Qty field must remain visible above it, and the layout must restore after the keyboard closes.
+
+
+v0.10.33 TEST: iPhone New Delivery Qty fix removes double keyboard-height shrink and all top-Qty scroll corrections.
