@@ -3911,7 +3911,28 @@ body.deliveryMode .deliveryQuickActions{
   flex:0 0 auto;
 }
 
-\n/* v0.10.14 — Product -> Variant -> Qty delivery picker */\n.deliveryPickerFlow{display:grid;grid-template-columns:minmax(0,1fr) 92px 62px auto;gap:5px;align-items:end;margin-top:4px}\n.deliveryPickerFlow .field{min-width:0!important;margin:0!important}\n.deliveryPickerFlow label{font-size:9px!important;line-height:1!important}\n.deliveryPickerFlow select,.deliveryPickerFlow input{width:100%!important;min-width:0!important;min-height:34px!important;height:34px!important;padding:4px 6px!important;font-size:16px!important;border-radius:8px!important}\n.deliveryPickerFlow .deliveryAddButton{height:34px!important;min-height:34px!important;padding:4px 9px!important;white-space:nowrap!important;font-size:11px!important}\n@media(max-width:430px){.deliveryPickerFlow{grid-template-columns:minmax(0,1fr) 86px 58px auto;gap:4px}.deliveryPickerFlow .deliveryAddButton{padding:4px 7px!important}}\n
+\n/* v0.10.27 TEST — PROVEN iPhone Qty keyboard dock Lego block
+   New Delivery Qty is promoted to a true viewport-root dock while the iOS
+   keyboard is open. This deliberately avoids fixed positioning inside the
+   delivery workspace/clipping context. */
+.deliveryPickerKeyboardDock{
+  position:fixed!important;
+  left:10px!important;right:10px!important;
+  top:var(--md-delivery-keyboard-dock-top,120px)!important;
+  z-index:2147483000!important;
+  width:auto!important;
+  margin:0!important;
+  padding:8px!important;
+  box-sizing:border-box!important;
+  background:#fff!important;
+  border:1px solid #d8dde6!important;
+  border-radius:12px!important;
+  box-shadow:0 8px 24px rgba(15,23,42,.18)!important;
+}
+body.deliveryKeyboardOpen .deliveryPickerKeyboardDock{display:grid!important}
+.deliveryPickerKeyboardPlaceholder{height:42px!important;display:block!important}
+
+/* v0.10.14 — Product -> Variant -> Qty delivery picker */\n.deliveryPickerFlow{display:grid;grid-template-columns:minmax(0,1fr) 92px 62px auto;gap:5px;align-items:end;margin-top:4px}\n.deliveryPickerFlow .field{min-width:0!important;margin:0!important}\n.deliveryPickerFlow label{font-size:9px!important;line-height:1!important}\n.deliveryPickerFlow select,.deliveryPickerFlow input{width:100%!important;min-width:0!important;min-height:34px!important;height:34px!important;padding:4px 6px!important;font-size:16px!important;border-radius:8px!important}\n.deliveryPickerFlow .deliveryAddButton{height:34px!important;min-height:34px!important;padding:4px 9px!important;white-space:nowrap!important;font-size:11px!important}\n@media(max-width:430px){.deliveryPickerFlow{grid-template-columns:minmax(0,1fr) 86px 58px auto;gap:4px}.deliveryPickerFlow .deliveryAddButton{padding:4px 7px!important}}\n
 
 /* v0.10.14 Production candidate — proven compact Delivery entry */
 body.deliveryMode #deliveryFinderTools,
@@ -4021,7 +4042,7 @@ window.addEventListener("error",e=>{const b=document.getElementById("runtimeErro
       <button class="heroHomeHotspot noPrint" type="button" aria-label="Return to Dashboard" title="Dashboard" onclick="returnToDashboardFromHeader()"></button>
     </div>
     <div class="heroActions noPrint">
-      <span class="app-version">v0.10.26 TEST</span>
+      <span class="app-version">v0.10.27 TEST</span>
       <button class="heroMenuButton" id="heroMenuButton" type="button" aria-expanded="false">Menu</button>
     </div>
   </div>
@@ -5152,14 +5173,66 @@ function updateDeliveryKeyboardViewport(){
 }
 
 
+let newDeliveryKeyboardDockState=null;
+
+function updateNewDeliveryKeyboardDockPosition(){
+  if(!newDeliveryKeyboardDockState)return;
+  const vv=window.visualViewport;
+  const visibleH=vv?.height||window.innerHeight||461;
+  const top=(vv?.offsetTop||0)+Math.max(82,Math.min(132,Math.round(visibleH*0.27)));
+  document.documentElement.style.setProperty("--md-delivery-keyboard-dock-top",`${top}px`);
+}
+
+function mountNewDeliveryKeyboardDock(input){
+  if(newDeliveryKeyboardDockState)return;
+  const flow=input?.closest(".deliveryPickerFlow");
+  if(!flow)return;
+  const parent=flow.parentNode;
+  const next=flow.nextSibling;
+  const placeholder=document.createElement("div");
+  placeholder.className="deliveryPickerKeyboardPlaceholder";
+  parent.insertBefore(placeholder,flow);
+  const owner=input.closest(".section");
+  newDeliveryKeyboardDockState={flow,parent,next,placeholder,owner,scrollTop:owner?.scrollTop||0};
+  document.body.appendChild(flow);
+  flow.classList.add("deliveryPickerKeyboardDock");
+  updateNewDeliveryKeyboardDockPosition();
+  if(owner)owner.scrollTop=0;
+}
+
+function restoreNewDeliveryKeyboardDock(){
+  const st=newDeliveryKeyboardDockState;
+  if(!st)return;
+  st.flow.classList.remove("deliveryPickerKeyboardDock");
+  if(st.next&&st.next.parentNode===st.parent)st.parent.insertBefore(st.flow,st.next);
+  else st.parent.appendChild(st.flow);
+  st.placeholder?.remove();
+  if(st.owner)st.owner.scrollTop=st.scrollTop;
+  document.documentElement.style.removeProperty("--md-delivery-keyboard-dock-top");
+  newDeliveryKeyboardDockState=null;
+}
+
+function syncNewDeliveryKeyboardDock(){
+  if(!newDeliveryKeyboardDockState)return;
+  const m=deliveryKeyboardMetrics();
+  if(m.open){
+    updateNewDeliveryKeyboardDockPosition();
+    if(newDeliveryKeyboardDockState.owner)newDeliveryKeyboardDockState.owner.scrollTop=0;
+  }else if(document.activeElement?.id!=="delQty"){
+    restoreNewDeliveryKeyboardDock();
+  }
+}
+
 window.newDeliveryQtyFocus=(input)=>{
   deliveryKeyboardActiveInput=input;
   try{input.select()}catch(_){}
+  mountNewDeliveryKeyboardDock(input);
   updateDeliveryKeyboardViewport();
-  // Reassert the Qty position through the full iOS keyboard animation.
-  [30,70,130,210,320,460].forEach(delay=>setTimeout(()=>{
+  // iOS focus scrolling and visualViewport changes occur in stages. Keep the
+  // picker docked at the viewport root and reset the underlying section.
+  [0,40,90,160,260,420,620].forEach(delay=>setTimeout(()=>{
     updateDeliveryKeyboardViewport();
-    positionActiveDeliveryQty();
+    syncNewDeliveryKeyboardDock();
   },delay));
 };
 
@@ -5167,7 +5240,11 @@ window.newDeliveryQtyBlur=(input)=>{
   setTimeout(()=>{
     if(document.activeElement!==input)deliveryKeyboardActiveInput=null;
     updateDeliveryKeyboardViewport();
-  },100);
+    syncNewDeliveryKeyboardDock();
+  },120);
+  setTimeout(()=>{
+    if(document.activeElement?.id!=="delQty"&&!deliveryKeyboardMetrics().open)restoreNewDeliveryKeyboardDock();
+  },520);
 };
 
 window.deliveryQtyFocus=(input)=>{
@@ -5192,8 +5269,8 @@ window.deliveryQtyBlur=(input)=>{
 };
 
 if(window.visualViewport){
-  window.visualViewport.addEventListener("resize",updateDeliveryKeyboardViewport,{passive:true});
-  window.visualViewport.addEventListener("scroll",updateDeliveryKeyboardViewport,{passive:true});
+  window.visualViewport.addEventListener("resize",()=>{updateDeliveryKeyboardViewport();syncNewDeliveryKeyboardDock();},{passive:true});
+  window.visualViewport.addEventListener("scroll",()=>{updateDeliveryKeyboardViewport();syncNewDeliveryKeyboardDock();},{passive:true});
 }
 window.addEventListener("orientationchange",()=>{
   setTimeout(()=>{
@@ -6333,7 +6410,7 @@ function buildFullBackupPayload(kind="SUPPORT",note=""){
   return {
     magicDragonBackup:true,
     app:"Magic Dragon Pin",
-    appVersion:"0.10.26",
+    appVersion:"0.10.27",
     backupKind:String(kind||"SUPPORT").toUpperCase(),
     createdAt:new Date().toISOString(),
     note:String(note||""),
@@ -9380,7 +9457,7 @@ document.getElementById("exportData").onclick=async()=>{
  const btn=document.getElementById("exportData");if(btn.disabled)return;btn.disabled=true;backupStatus("Preparing complete backup…");
  try{
   const sourceFiles=await exportArchivedSourceFiles(),counts=backupCounts();
-  const pkg={format:BACKUP_FORMAT,schema:BACKUP_SCHEMA,appVersion:"0.10.26",createdAt:new Date().toISOString(),counts,sourceFilesCount:sourceFiles.length,data:JSON.parse(JSON.stringify(db)),sourceFiles};
+  const pkg={format:BACKUP_FORMAT,schema:BACKUP_SCHEMA,appVersion:"0.10.27",createdAt:new Date().toISOString(),counts,sourceFilesCount:sourceFiles.length,data:JSON.parse(JSON.stringify(db)),sourceFiles};
   await downloadBackupPackage(pkg);
   backupStatus(`Backup ready: ${counts.deliveries} deliveries, ${counts.sundayReports} Sunday reports, ${counts.invoices} invoices, ${sourceFiles.length} archived source file${sourceFiles.length===1?"":"s"}.`);
  }catch(e){console.error(e);backupStatus("Backup could not be created. No app data was changed.",true);alert("The full backup could not be created. Your current app data has not been changed.")}
