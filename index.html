@@ -3912,7 +3912,7 @@ body.deliveryMode .deliveryQuickActions{
 }
 
 
-/* v0.10.31 TEST — New Delivery Qty uses the proven shared keyboardSafeInput Lego block. */
+/* v0.10.32 TEST — New Delivery Qty uses the proven shared keyboardSafeInput Lego block. */
 /* v0.10.14 — Product -> Variant -> Qty delivery picker */\n.deliveryPickerFlow{display:grid;grid-template-columns:minmax(0,1fr) 92px 62px auto;gap:5px;align-items:end;margin-top:4px}\n.deliveryPickerFlow .field{min-width:0!important;margin:0!important}\n.deliveryPickerFlow label{font-size:9px!important;line-height:1!important}\n.deliveryPickerFlow select,.deliveryPickerFlow input{width:100%!important;min-width:0!important;min-height:34px!important;height:34px!important;padding:4px 6px!important;font-size:16px!important;border-radius:8px!important}\n.deliveryPickerFlow .deliveryAddButton{height:34px!important;min-height:34px!important;padding:4px 9px!important;white-space:nowrap!important;font-size:11px!important}\n@media(max-width:430px){.deliveryPickerFlow{grid-template-columns:minmax(0,1fr) 86px 58px auto;gap:4px}.deliveryPickerFlow .deliveryAddButton{padding:4px 7px!important}}\n
 
 /* v0.10.14 Production candidate — proven compact Delivery entry */
@@ -3943,6 +3943,20 @@ body.deliveryMode.deliveryKeyboardOpen #deliveryQuickActions{display:none!import
 body.deliveryMode.deliveryKeyboardOpen .deliveryTopPane{padding-top:2px!important;padding-bottom:4px!important}
 body.deliveryMode.deliveryKeyboardOpen .deliveryPickerFlow{margin-top:0!important}
 body.deliveryMode.deliveryKeyboardOpen #delQty{scroll-margin-top:12px!important;scroll-margin-bottom:16px!important}
+
+/* v0.10.32 TEST — proven iPhone New Delivery keyboard geometry.
+   Reserve the actual visible viewport; do not scroll #docket or an overflow:hidden ancestor. */
+body.deliveryMode.deliveryKeyboardOpen .contentViewport{
+  bottom:var(--md-keyboard-height,0px)!important;
+}
+body.deliveryMode:not(.deliveryEditMode).deliveryKeyboardOpen .deliveryBottomPane{display:none!important}
+body.deliveryMode:not(.deliveryEditMode).deliveryKeyboardOpen #deliveryCreatePane>.deliveryWorkspace{
+  grid-template-rows:auto minmax(0,1fr)!important;
+}
+body.deliveryMode:not(.deliveryEditMode).deliveryKeyboardOpen #docket.section.active{
+  overflow:hidden!important;
+}
+
 /* v0.10.26 TEST — Combined Suggested Delivery aligned to compact docket UI */
 #combinedPackingOverlay .combinedPackingHead{
   grid-template-columns:38px minmax(0,1fr) 38px;
@@ -4023,7 +4037,7 @@ window.addEventListener("error",e=>{const b=document.getElementById("runtimeErro
       <button class="heroHomeHotspot noPrint" type="button" aria-label="Return to Dashboard" title="Dashboard" onclick="returnToDashboardFromHeader()"></button>
     </div>
     <div class="heroActions noPrint">
-      <span class="app-version">v0.10.31 TEST</span>
+      <span class="app-version">v0.10.32 TEST</span>
       <button class="heroMenuButton" id="heroMenuButton" type="button" aria-expanded="false">Menu</button>
     </div>
   </div>
@@ -4225,7 +4239,7 @@ window.addEventListener("error",e=>{const b=document.getElementById("runtimeErro
           <div class="deliveryPickerFlow">
             <div class="field deliveryProductField"><label>Product</label><select id="delParent"></select></div>
             <div class="field deliveryVariantField"><label>Variant</label><select id="delVariant"></select></div>
-            <div class="field deliveryQtyField"><label>Qty</label><input id="delQty" class="keyboardSafeInput" type="number" min="1" max="999" placeholder="Qty" inputmode="numeric" enterkeyhint="done" aria-label="Quantity, maximum 3 digits" oninput="this.value=this.value.replace(/\D/g,'').slice(0,3)"></div>
+            <div class="field deliveryQtyField"><label>Qty</label><input id="delQty" type="number" min="1" max="999" placeholder="Qty" inputmode="numeric" enterkeyhint="done" aria-label="Quantity, maximum 3 digits" oninput="this.value=this.value.replace(/\D/g,'').slice(0,3)" onfocus="newDeliveryQtyFocus(this)" onblur="newDeliveryQtyBlur(this)"></div>
             <button class="btn gold deliveryAddButton" id="addDeliveryLine">Add</button>
           </div>
         </div>
@@ -4707,7 +4721,7 @@ function keyboardSafeScrollOwner(el){
   while(node && node!==document.body){
     const style=getComputedStyle(node);
     const oy=style.overflowY;
-    const canScroll=(oy==="auto"||oy==="scroll"||oy==="hidden") && node.scrollHeight>node.clientHeight+2;
+    const canScroll=(oy==="auto"||oy==="scroll") && node.scrollHeight>node.clientHeight+2;
     if(canScroll)return node;
     node=node.parentElement;
   }
@@ -5080,25 +5094,18 @@ function positionActiveDeliveryQty(){
 
   const card=input.closest(".deliveryEditLineCard");
   if(!card){
-    // New Delivery Qty lives in the top picker, not in an editable line card.
-    // The scroll owner is the active .section, not #docket/document. Using the
-    // wrong owner lets iOS Safari focus-scroll the field above the viewport.
-    const owner=keyboardSafeScrollOwner(input);
-    const nudge=()=>{
-      if(!input||!owner||!document.body.contains(input))return;
-      const b=keyboardSafeBounds(owner);
-      if(b.height<80)return;
-      const r=input.getBoundingClientRect();
-      // Keep the Qty box in the upper-middle of the visible space so Product,
-      // Variant and Add line remain understandable while the keyboard is open.
-      const desiredTop=b.top+Math.max(20,Math.min(92,b.height*0.28));
-      let delta=r.top-desiredTop;
-      if(r.top<b.top+8)delta=r.top-(b.top+28);
-      else if(r.bottom>b.bottom-8)delta=r.bottom-(b.bottom-28);
-      if(Math.abs(delta)>2)owner.scrollTop+=delta;
+    // Proven New Delivery rule: never scroll a clipped/hidden Delivery ancestor.
+    // Keep the fixed content viewport resized above the iOS keyboard and reset
+    // Safari's native focus-scroll drift back to the Delivery origin.
+    const resetTopPicker=()=>{
+      if(!input||!document.body.contains(input))return;
+      const docket=input.closest("#docket.section");
+      const viewport=document.getElementById("contentViewport");
+      if(docket)docket.scrollTop=0;
+      if(viewport)viewport.scrollTop=0;
     };
-    requestAnimationFrame(nudge);
-    setTimeout(nudge,40);setTimeout(nudge,90);setTimeout(nudge,170);setTimeout(nudge,280);setTimeout(nudge,420);
+    requestAnimationFrame(resetTopPicker);
+    setTimeout(resetTopPicker,40);setTimeout(resetTopPicker,90);setTimeout(resetTopPicker,170);setTimeout(resetTopPicker,280);setTimeout(resetTopPicker,420);
     return;
   }
 
@@ -5151,13 +5158,38 @@ function updateDeliveryKeyboardViewport(){
 }
 
 
-/* v0.10.31 TEST — New Delivery Qty regression fix.
+/* v0.10.32 TEST — New Delivery Qty regression fix.
    IMPORTANT: the shared keyboardSafeInput block below is restored verbatim from the proven DEV implementation.
    New Delivery Qty must NOT override keyboardSafeScrollOwner or add a second scroll algorithm.
    The nearest actually-scrollable ancestor owns correction; this prevents the whole .section from jumping to blank space. */
 
-/* v0.10.31 TEST — New Delivery Qty deliberately uses the shared mobileKeyboardSafeFocus block.
+/* v0.10.32 TEST — New Delivery Qty deliberately uses the shared mobileKeyboardSafeFocus block.
    Do not reparent a focused/focusable input on iPhone Safari; that can suppress the numeric keyboard. */
+
+/* v0.10.32 TEST — restored proven New Delivery top-picker keyboard contract.
+   The top Qty input is NOT a generic keyboardSafeInput because Delivery is a
+   fixed/clipped workspace. iOS may focus-scroll hidden ancestors if a generic
+   scroll correction touches them. Instead resize the fixed contentViewport to
+   visualViewport height, hide the bottom action zone, and keep #docket at 0. */
+window.newDeliveryQtyFocus=(input)=>{
+  deliveryKeyboardActiveInput=input;
+  document.body.classList.add("deliveryKeyboardOpen");
+  const reset=()=>{
+    const docket=input?.closest?.("#docket.section");
+    const viewport=document.getElementById("contentViewport");
+    if(docket)docket.scrollTop=0;
+    if(viewport)viewport.scrollTop=0;
+    updateDeliveryKeyboardViewport();
+  };
+  reset();
+  [40,90,170,280,420,560].forEach(delay=>setTimeout(reset,delay));
+};
+window.newDeliveryQtyBlur=(input)=>{
+  setTimeout(()=>{
+    if(document.activeElement!==input && deliveryKeyboardActiveInput===input)deliveryKeyboardActiveInput=null;
+    updateDeliveryKeyboardViewport();
+  },120);
+};
 
 window.deliveryQtyFocus=(input)=>{
   deliveryKeyboardActiveInput=input;
@@ -6322,7 +6354,7 @@ function buildFullBackupPayload(kind="SUPPORT",note=""){
   return {
     magicDragonBackup:true,
     app:"Magic Dragon Pin",
-    appVersion:"0.10.31",
+    appVersion:"0.10.32",
     backupKind:String(kind||"SUPPORT").toUpperCase(),
     createdAt:new Date().toISOString(),
     note:String(note||""),
@@ -9369,7 +9401,7 @@ document.getElementById("exportData").onclick=async()=>{
  const btn=document.getElementById("exportData");if(btn.disabled)return;btn.disabled=true;backupStatus("Preparing complete backup…");
  try{
   const sourceFiles=await exportArchivedSourceFiles(),counts=backupCounts();
-  const pkg={format:BACKUP_FORMAT,schema:BACKUP_SCHEMA,appVersion:"0.10.31",createdAt:new Date().toISOString(),counts,sourceFilesCount:sourceFiles.length,data:JSON.parse(JSON.stringify(db)),sourceFiles};
+  const pkg={format:BACKUP_FORMAT,schema:BACKUP_SCHEMA,appVersion:"0.10.32",createdAt:new Date().toISOString(),counts,sourceFilesCount:sourceFiles.length,data:JSON.parse(JSON.stringify(db)),sourceFiles};
   await downloadBackupPackage(pkg);
   backupStatus(`Backup ready: ${counts.deliveries} deliveries, ${counts.sundayReports} Sunday reports, ${counts.invoices} invoices, ${sourceFiles.length} archived source file${sourceFiles.length===1?"":"s"}.`);
  }catch(e){console.error(e);backupStatus("Backup could not be created. No app data was changed.",true);alert("The full backup could not be created. Your current app data has not been changed.")}
