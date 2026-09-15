@@ -1,28 +1,18 @@
-MAGIC DRAGON PIN v0.10.14 — TEST SUNDAY TOP-UP CANDIDATE v1
+MAGIC DRAGON PIN v0.10.18 — TEST UI STATE RESTORE v1
 
-DEPLOY TO:
-  TEST repository only: magic-dragon-pin-test
+DEPLOY TO TEST ONLY: magic-dragon-pin-test
+DO NOT deploy to Production yet.
 
-DO NOT DEPLOY THIS TO PIN PRODUCTION YET.
+Fix:
+The automated run could restore the database but leave the Delivery UI in keyboard-compressed state.
 
-CHANGES
-- Sunday suggested deliveries now use:
-    max(0, target stock - current Sunday closing stock)
-- Targets:
-    Bangrak: 1g 30 / 5g 3 / Pre-Roll 15 / Hash 10 / Gummy 15
-    Lamai:   1g 6 / 5g 0 / Pre-Roll 6 / Hash 0 / Gummy 0
-- Exactly two latest Sunday suggestions remain active: Bangrak + Lamai.
-- Older untouched generated suggestions are removed.
-- Older user-edited generated suggestions are retained as superseded history.
-- A current branch suggestion can remain with zero lines if no top-up is needed.
-- TEST manual prompts now minimise while you perform the requested iPhone action.
+Now the runner also:
+- blurs focused inputs;
+- removes keyboard/test state classes;
+- returns to a clean New Delivery screen;
+- waits for visualViewport recovery;
+- verifies Branch, Date, Product, Variant, Qty, Add and Save all have visible geometry;
+- adds an Automatic UI state cleanup PASS/FAIL;
+- captures a post-test-clean-ui snapshot.
 
-EXPECTED AFTER RUNNING FULL TEST
-The previous failures:
-  1. Exactly two active Sunday suggestions
-  2. Top-up target calculation
-should now pass.
-
-Still intentionally separate:
-  - Combined Suggested Delivery Save/Share PDF
-  - Delivery Save viewport warning
+A run is complete only when both data and UI state are restored.
