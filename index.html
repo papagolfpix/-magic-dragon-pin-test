@@ -2355,7 +2355,7 @@ body.deliveryMode #deliveryEditBanner{display:block}
 
 
 
-/* v0.10.21 TEST — replenishment review / stock-status safeguards */
+/* v0.10.22 TEST — review-first suggested docket workflow */
 .stockReviewBox{margin:8px 0 0;border:1px solid #e7c86e;background:#fff9e8;border-radius:10px;padding:8px}
 .stockReviewTitle{font-size:10px;font-weight:900;letter-spacing:.06em;text-transform:uppercase;color:#76520c;margin-bottom:5px}
 .stockReviewRow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:7px;align-items:center;padding:7px 0;border-top:1px solid rgba(118,82,12,.14)}
@@ -3969,7 +3969,7 @@ window.addEventListener("error",e=>{const b=document.getElementById("runtimeErro
       <button class="heroHomeHotspot noPrint" type="button" aria-label="Return to Dashboard" title="Dashboard" onclick="returnToDashboardFromHeader()"></button>
     </div>
     <div class="heroActions noPrint">
-      <span class="app-version">v0.10.21 TEST</span>
+      <span class="app-version">v0.10.22 TEST</span>
       <button class="heroMenuButton" id="heroMenuButton" type="button" aria-expanded="false">Menu</button>
     </div>
   </div>
@@ -5449,12 +5449,12 @@ function docketMarkup(d){
    ? `✓ DELIVERED · ${escapeHtml(String(d.deliveredAt).slice(0,10))}`
    : (suggested?`DRAFT · ${escapeHtml(ref)}`:"NOT DELIVERED");
  return `<div class="docket"><div class="docketHead"><div><b>DELIVERY DOCKET</b><div class="small">Yaowaret</div><div class="docketStatus ${d.deliveredAt?"delivered":"draft"}">${statusText}</div></div><div style="text-align:right"><b>${escapeHtml(displayBranchName(d.branch))}</b><div class="small">${escapeHtml(d.date||"—")}${d.note?` · ${escapeHtml(d.note)}`:""}</div></div></div>
+ ${suggested?stockReviewMarkup(d):""}
  <table style="min-width:0;table-layout:fixed">
    <colgroup><col style="width:34%"><col style="width:8%"><col style="width:11%"><col style="width:11%"><col style="width:13%"><col style="width:23%"></colgroup>
    <thead><tr><th>Description</th><th>Qty</th><th>Unit cost</th><th>Retail</th><th>Amount</th><th>Barcode</th></tr></thead>
    <tbody>${rows}</tbody>
  </table>
- ${suggested?stockReviewMarkup(d):""}
  <div class="totalbar"><span>TOTAL COST ${baht(total)}</span></div>${docketChangeHistoryMarkup(d)}</div>`;
 }
 function inferLegacyDeliveredDockets(){
@@ -6220,7 +6220,7 @@ function buildFullBackupPayload(kind="SUPPORT",note=""){
   return {
     magicDragonBackup:true,
     app:"Magic Dragon Pin",
-    appVersion:"0.10.21",
+    appVersion:"0.10.22",
     backupKind:String(kind||"SUPPORT").toUpperCase(),
     createdAt:new Date().toISOString(),
     note:String(note||""),
@@ -9267,7 +9267,7 @@ document.getElementById("exportData").onclick=async()=>{
  const btn=document.getElementById("exportData");if(btn.disabled)return;btn.disabled=true;backupStatus("Preparing complete backup…");
  try{
   const sourceFiles=await exportArchivedSourceFiles(),counts=backupCounts();
-  const pkg={format:BACKUP_FORMAT,schema:BACKUP_SCHEMA,appVersion:"0.10.21",createdAt:new Date().toISOString(),counts,sourceFilesCount:sourceFiles.length,data:JSON.parse(JSON.stringify(db)),sourceFiles};
+  const pkg={format:BACKUP_FORMAT,schema:BACKUP_SCHEMA,appVersion:"0.10.22",createdAt:new Date().toISOString(),counts,sourceFilesCount:sourceFiles.length,data:JSON.parse(JSON.stringify(db)),sourceFiles};
   await downloadBackupPackage(pkg);
   backupStatus(`Backup ready: ${counts.deliveries} deliveries, ${counts.sundayReports} Sunday reports, ${counts.invoices} invoices, ${sourceFiles.length} archived source file${sourceFiles.length===1?"":"s"}.`);
  }catch(e){console.error(e);backupStatus("Backup could not be created. No app data was changed.",true);alert("The full backup could not be created. Your current app data has not been changed.")}
