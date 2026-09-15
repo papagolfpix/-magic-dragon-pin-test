@@ -1,16 +1,19 @@
-MAGIC DRAGON PIN v0.10.24 — TEST
-UI-only cleanup: Combined Suggested Delivery now uses compact docket spacing and bottom-right dark Create / Share PDF action.
+MAGIC DRAGON PIN v0.10.25 — TEST
 
-Suggested-docket workflow refinement:
-- moves Review before top-up to the top of each suggested docket, immediately below the docket header;
-- uncertain / possible out-of-stock items are therefore resolved before the confirmed delivery lines are reviewed;
-- Out of stock still removes the item from suggested top-ups and marks the master SKU;
-- Keep top-up still moves the item into the confirmed top-up lines for that Sunday;
-- retains all v0.10.21 replenishment safeguards and the Cali Mousse target override;
-- service-worker cache key bumped for a clear iPhone refresh.
+Purpose of this build:
+- Keep all validated v0.10.24 Combined Suggested Delivery PDF/share fixes unchanged.
+- Add very light alternating grey shading to every second product row in the Combined Suggested Delivery PDF for easier eye-tracking from product name to quantity.
 
-TEST BUILD — verify review actions and line movement before production promotion.
-Changes in v0.10.24 TEST:
-- Fixed Combined Suggested Delivery PDF generation to produce a standards-valid single PDF for iOS Preview/Print.
-- Native Share now sends exactly one PDF file (no title/text payload).
-- PDF button resets before the iOS share/print sheet opens, preventing a stuck Preparing state.
+Preserved from v0.10.24:
+- Standards-valid single PDF for iOS Preview/Print.
+- Native Share sends exactly one PDF file with no extra text/title payload.
+- PDF button resets correctly instead of hanging on Preparing.
+- Compact Combined Suggested Delivery screen and bottom-right dark Create / Share PDF action.
+
+Preserved replenishment logic:
+- Review before top-up appears first on suggested dockets.
+- Possible out-of-stock items can be marked Out of stock or Keep top-up.
+- Product-specific target overrides, including Cali Mousse target 10.
+- v0.10.21+ replenishment safeguards remain in place.
+
+TEST BUILD — verify alternating PDF row shading and confirm PDF/share/print behaviour remains correct before production promotion.
