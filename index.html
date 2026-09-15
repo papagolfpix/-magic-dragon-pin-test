@@ -2355,7 +2355,7 @@ body.deliveryMode #deliveryEditBanner{display:block}
 
 
 
-/* v0.10.25 TEST — review-first suggested docket workflow */
+/* v0.10.26 TEST — review-first suggested docket workflow */
 .stockReviewBox{margin:8px 0 0;border:1px solid #e7c86e;background:#fff9e8;border-radius:10px;padding:8px}
 .stockReviewTitle{font-size:10px;font-weight:900;letter-spacing:.06em;text-transform:uppercase;color:#76520c;margin-bottom:5px}
 .stockReviewRow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:7px;align-items:center;padding:7px 0;border-top:1px solid rgba(118,82,12,.14)}
@@ -2365,6 +2365,7 @@ body.deliveryMode #deliveryEditBanner{display:block}
 .stockReviewOos{border:1px solid #a33;background:#fff;color:#a33}.stockReviewKeep{border:1px solid #8c6a14;background:#fff8df;color:#6c4d08}
 .catalogueStockBadge{display:inline-block;margin-left:5px;padding:2px 5px;border-radius:999px;font-size:8px;font-weight:900;letter-spacing:.04em;background:#ffe8e8;color:#9b2020;border:1px solid #efb7b7}
 .catalogueMobileRow.stockOutRow{background:#fff7f7}.catalogueActionStack{display:flex;flex-direction:column;gap:4px}.catalogueActionBtn.stock{border-color:#278044;color:#206c38;background:#f1fff5}
+.catalogueStockControl{display:flex;align-items:center;gap:7px;margin-top:6px;flex-wrap:wrap}.catalogueStockControlLabel{font-size:8px;font-weight:900;letter-spacing:.05em;color:#687083;text-transform:uppercase}.catalogueStockToggle{position:relative;display:grid;grid-template-columns:1fr 1fr;align-items:center;width:154px;height:28px;padding:2px;border:1px solid #cfd5df;border-radius:999px;background:#eef1f5;overflow:hidden;cursor:pointer;font:inherit;-webkit-tap-highlight-color:transparent}.catalogueStockToggle::before{content:"";position:absolute;top:2px;bottom:2px;width:calc(50% - 2px);border-radius:999px;transition:transform .16s ease,background .16s ease;box-shadow:0 1px 2px rgba(0,0,0,.12)}.catalogueStockToggle.isIn::before{left:2px;background:#dff4e4;transform:translateX(0)}.catalogueStockToggle.isOut::before{left:2px;background:#ffe1e1;transform:translateX(100%)}.catalogueStockToggle span{position:relative;z-index:1;text-align:center;font-size:8px;font-weight:900;letter-spacing:.025em;line-height:1}.catalogueStockToggle.isIn span:first-child{color:#176b36}.catalogueStockToggle.isIn span:last-child{color:#7f8794}.catalogueStockToggle.isOut span:first-child{color:#7f8794}.catalogueStockToggle.isOut span:last-child{color:#9b2020}
 
 /* v0.10.14 — suggested deliveries are ordinary unsent draft dockets */
 #home .pinSuggestedDrafts{
@@ -3940,7 +3941,7 @@ body.deliveryMode.deliveryKeyboardOpen #deliveryQuickActions{display:none!import
 body.deliveryMode.deliveryKeyboardOpen .deliveryTopPane{padding-top:2px!important;padding-bottom:4px!important}
 body.deliveryMode.deliveryKeyboardOpen .deliveryPickerFlow{margin-top:0!important}
 body.deliveryMode.deliveryKeyboardOpen #delQty{scroll-margin-top:12px!important;scroll-margin-bottom:16px!important}
-/* v0.10.25 TEST — Combined Suggested Delivery aligned to compact docket UI */
+/* v0.10.26 TEST — Combined Suggested Delivery aligned to compact docket UI */
 #combinedPackingOverlay .combinedPackingHead{
   grid-template-columns:38px minmax(0,1fr) 38px;
   gap:6px;
@@ -4020,7 +4021,7 @@ window.addEventListener("error",e=>{const b=document.getElementById("runtimeErro
       <button class="heroHomeHotspot noPrint" type="button" aria-label="Return to Dashboard" title="Dashboard" onclick="returnToDashboardFromHeader()"></button>
     </div>
     <div class="heroActions noPrint">
-      <span class="app-version">v0.10.25 TEST</span>
+      <span class="app-version">v0.10.26 TEST</span>
       <button class="heroMenuButton" id="heroMenuButton" type="button" aria-expanded="false">Menu</button>
     </div>
   </div>
@@ -5080,18 +5081,25 @@ function positionActiveDeliveryQty(){
 
   const card=input.closest(".deliveryEditLineCard");
   if(!card){
-    const pane=input.closest("#docket")||document.scrollingElement;
-    const vv=window.visualViewport;
+    // New Delivery Qty lives in the top picker, not in an editable line card.
+    // The scroll owner is the active .section, not #docket/document. Using the
+    // wrong owner lets iOS Safari focus-scroll the field above the viewport.
+    const owner=keyboardSafeScrollOwner(input);
     const nudge=()=>{
-      if(!input||!vv)return;
+      if(!input||!owner||!document.body.contains(input))return;
+      const b=keyboardSafeBounds(owner);
+      if(b.height<80)return;
       const r=input.getBoundingClientRect();
-      const safeTop=vv.offsetTop+10;
-      const safeBottom=vv.offsetTop+vv.height-18;
-      if(r.bottom>safeBottom && pane) pane.scrollTop += (r.bottom-safeBottom)+18;
-      else if(r.top<safeTop && pane) pane.scrollTop -= (safeTop-r.top)+10;
+      // Keep the Qty box in the upper-middle of the visible space so Product,
+      // Variant and Add line remain understandable while the keyboard is open.
+      const desiredTop=b.top+Math.max(20,Math.min(92,b.height*0.28));
+      let delta=r.top-desiredTop;
+      if(r.top<b.top+8)delta=r.top-(b.top+28);
+      else if(r.bottom>b.bottom-8)delta=r.bottom-(b.bottom-28);
+      if(Math.abs(delta)>2)owner.scrollTop+=delta;
     };
     requestAnimationFrame(nudge);
-    setTimeout(nudge,70);setTimeout(nudge,170);setTimeout(nudge,280);
+    setTimeout(nudge,40);setTimeout(nudge,90);setTimeout(nudge,170);setTimeout(nudge,280);setTimeout(nudge,420);
     return;
   }
 
@@ -5148,8 +5156,11 @@ window.newDeliveryQtyFocus=(input)=>{
   deliveryKeyboardActiveInput=input;
   try{input.select()}catch(_){}
   updateDeliveryKeyboardViewport();
-  setTimeout(updateDeliveryKeyboardViewport,60);
-  setTimeout(updateDeliveryKeyboardViewport,180);
+  // Reassert the Qty position through the full iOS keyboard animation.
+  [30,70,130,210,320,460].forEach(delay=>setTimeout(()=>{
+    updateDeliveryKeyboardViewport();
+    positionActiveDeliveryQty();
+  },delay));
 };
 
 window.newDeliveryQtyBlur=(input)=>{
@@ -5480,7 +5491,24 @@ window.keepSuggestedProductActive=(docketId,productId)=>{
   d.stockReviewLines=(d.stockReviewLines||[]).filter(x=>x.productId!==productId);
   save();renderDocketArchive(docketId);renderPinDashboard();
 };
-window.reactivateProductStock=id=>{const p=(db.products||[]).find(x=>x.id===id);if(!p)return;delete p.stockStatus;delete p.stockStatusUpdatedAt;delete p.stockStatusReason;delete p.stockReviewKeepActiveDate;save();renderCatalogue();renderPinDashboard();};
+window.setProductStockStatus=(id,status)=>{
+  const p=(db.products||[]).find(x=>x.id===id);if(!p||isProductArchived(p))return;
+  if(status==="out_of_stock"){
+    p.stockStatus="out_of_stock";
+    p.stockStatusUpdatedAt=new Date().toISOString();
+    p.stockStatusReason="Set manually in Product catalogue";
+    delete p.stockReviewKeepActiveDate;
+    (db.deliveries||[]).filter(isSuggestedDraftDocket).forEach(x=>{
+      x.lines=(x.lines||[]).filter(l=>l.productId!==id);
+      x.stockReviewLines=(x.stockReviewLines||[]).filter(l=>l.productId!==id);
+    });
+  }else{
+    delete p.stockStatus;delete p.stockStatusUpdatedAt;delete p.stockStatusReason;delete p.stockReviewKeepActiveDate;
+  }
+  save();renderCatalogue();renderPinDashboard();
+};
+window.toggleProductStockStatus=id=>{const p=(db.products||[]).find(x=>x.id===id);if(!p)return;setProductStockStatus(id,productIsOutOfStock(p)?"in_stock":"out_of_stock");};
+window.reactivateProductStock=id=>setProductStockStatus(id,"in_stock");
 
 function docketMarkup(d){
  let total=0;
@@ -5975,11 +6003,12 @@ function renderCatalogue(){
                  <input type="text" value="${escapeHtmlAttr(p.barcode||"")}" placeholder="Optional shop barcode" class="keyboardSafeInput" ${archived?"disabled":""} onchange='saveProductBarcode("${p.id}",this.value)'>
                  <span class="catalogueBarcodeStatus ${p.barcode?"ok":"missing"}">${p.barcode?"BARCODE":"MISSING"}</span>
                </div>
+               ${archived?"":`<div class="catalogueStockControl"><span class="catalogueStockControlLabel">Stock status</span><button type="button" class="catalogueStockToggle ${outOfStock?"isOut":"isIn"}" role="switch" aria-checked="${outOfStock?"false":"true"}" aria-label="${outOfStock?"Out of stock":"In stock"}. Tap to change stock status." onclick='toggleProductStockStatus("${p.id}")'><span>IN STOCK</span><span>OUT OF STOCK</span></button></div>`}
              </div>
              <div class="catalogueMobileAction catalogueActionStack">
                ${archived
                  ? `<button class="catalogueActionBtn restore" type="button" onclick='restoreProductVariant("${p.id}")'>Restore</button>`
-                 : `${outOfStock?`<button class="catalogueActionBtn stock" type="button" onclick='reactivateProductStock("${p.id}")'>Reactivate</button>`:""}<button class="catalogueActionBtn archive" type="button" onclick='archiveProductVariant("${p.id}")'>Archive</button>`}
+                 : `<button class="catalogueActionBtn archive" type="button" onclick='archiveProductVariant("${p.id}")'>Archive</button>`}
              </div>
            </div>
          </td>
@@ -6304,7 +6333,7 @@ function buildFullBackupPayload(kind="SUPPORT",note=""){
   return {
     magicDragonBackup:true,
     app:"Magic Dragon Pin",
-    appVersion:"0.10.25",
+    appVersion:"0.10.26",
     backupKind:String(kind||"SUPPORT").toUpperCase(),
     createdAt:new Date().toISOString(),
     note:String(note||""),
@@ -9351,7 +9380,7 @@ document.getElementById("exportData").onclick=async()=>{
  const btn=document.getElementById("exportData");if(btn.disabled)return;btn.disabled=true;backupStatus("Preparing complete backup…");
  try{
   const sourceFiles=await exportArchivedSourceFiles(),counts=backupCounts();
-  const pkg={format:BACKUP_FORMAT,schema:BACKUP_SCHEMA,appVersion:"0.10.25",createdAt:new Date().toISOString(),counts,sourceFilesCount:sourceFiles.length,data:JSON.parse(JSON.stringify(db)),sourceFiles};
+  const pkg={format:BACKUP_FORMAT,schema:BACKUP_SCHEMA,appVersion:"0.10.26",createdAt:new Date().toISOString(),counts,sourceFilesCount:sourceFiles.length,data:JSON.parse(JSON.stringify(db)),sourceFiles};
   await downloadBackupPackage(pkg);
   backupStatus(`Backup ready: ${counts.deliveries} deliveries, ${counts.sundayReports} Sunday reports, ${counts.invoices} invoices, ${sourceFiles.length} archived source file${sourceFiles.length===1?"":"s"}.`);
  }catch(e){console.error(e);backupStatus("Backup could not be created. No app data was changed.",true);alert("The full backup could not be created. Your current app data has not been changed.")}

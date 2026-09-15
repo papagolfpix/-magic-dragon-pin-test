@@ -1,19 +1,24 @@
-MAGIC DRAGON PIN v0.10.25 — TEST
+MAGIC DRAGON PIN v0.10.26 — TEST
 
 Purpose of this build:
-- Keep all validated v0.10.24 Combined Suggested Delivery PDF/share fixes unchanged.
-- Add very light alternating grey shading to every second product row in the Combined Suggested Delivery PDF for easier eye-tracking from product name to quantity.
+- Add an always-visible two-state IN STOCK / OUT OF STOCK control to every active product variant in Product catalogue.
+- Fix the iPhone New Delivery Qty-field keyboard regression so the quantity control remains visible above the numeric keyboard.
 
-Preserved from v0.10.24:
-- Standards-valid single PDF for iOS Preview/Print.
-- Native Share sends exactly one PDF file with no extra text/title payload.
-- PDF button resets correctly instead of hanging on Preparing.
-- Compact Combined Suggested Delivery screen and bottom-right dark Create / Share PDF action.
+Stock-status behaviour:
+- Every active catalogue variant shows a clear IN STOCK / OUT OF STOCK segmented switch.
+- Marking OUT OF STOCK persists on the master product and removes that SKU from current automatic suggested top-ups.
+- Switching back to IN STOCK reactivates the SKU for future top-up calculations.
+- Archive/Restore remains a separate catalogue lifecycle control.
 
-Preserved replenishment logic:
-- Review before top-up appears first on suggested dockets.
-- Possible out-of-stock items can be marked Out of stock or Keep top-up.
-- Product-specific target overrides, including Cali Mousse target 10.
-- v0.10.21+ replenishment safeguards remain in place.
+Keyboard behaviour:
+- New Delivery Qty now scrolls the actual active app section rather than the wrong page/document container.
+- Repositions repeatedly through the iOS visualViewport keyboard animation so the Qty field cannot be pushed above the visible screen.
+- Existing Edit/Suggested Delivery quantity keyboard handling is preserved.
 
-TEST BUILD — verify alternating PDF row shading and confirm PDF/share/print behaviour remains correct before production promotion.
+Preserved from v0.10.25:
+- Validated target-stock replenishment safeguards and review-before-top-up flow.
+- Cali Mousse product-specific target override.
+- Compact Combined Suggested Delivery UI.
+- Single-file iOS PDF share/print flow and alternating PDF row shading.
+
+TEST BUILD — verify catalogue stock-status toggling and New Delivery Qty visibility on iPhone before production promotion.
