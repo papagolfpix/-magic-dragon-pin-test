@@ -1,4 +1,4 @@
-const CACHE_NAME = "magic-dragon-pin-v0.10.19-test-ios-keyboard-dismiss-v1";
+const CACHE_NAME = "magic-pin-v0.10.21-test";
 const APP_ASSETS = [
   "./",
   "./index.html",
@@ -19,7 +19,7 @@ self.addEventListener("activate", event => {
   event.waitUntil(
     caches.keys()
       .then(keys => Promise.all(keys
-        .filter(key => key.startsWith("magic-dragon-pin-") && key !== CACHE_NAME)
+        .filter(key => (key.startsWith("magic-dragon-pin-") || key.startsWith("magic-pin-")) && key !== CACHE_NAME)
         .map(key => caches.delete(key))))
       .then(() => self.clients.claim())
   );
