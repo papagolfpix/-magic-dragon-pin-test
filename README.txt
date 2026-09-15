@@ -1,4 +1,4 @@
-MAGIC DRAGON PIN v0.10.29 — TEST
+MAGIC DRAGON PIN v0.10.30 — TEST
 
 Purpose of this build:
 - Regression-only repair for New Delivery Qty on iPhone Safari.
