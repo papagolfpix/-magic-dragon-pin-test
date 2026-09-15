@@ -1,17 +1,17 @@
-MAGIC DRAGON PIN v0.10.16 — FINAL NIGHTLY TEST CANDIDATE v1
+MAGIC DRAGON PIN v0.10.17 — TEST COMPACT DELIVERY + KEYBOARD CANDIDATE v1
 
-DEPLOY TO TEST ONLY:
-magic-dragon-pin-test
+TEST repository only: magic-dragon-pin-test
+DO NOT deploy to Production yet.
 
-Do NOT deploy this build to Pin Production yet.
+Changes:
+- Remove Find Product text filter.
+- Remove A-Z scrubber.
+- Product | Variant | Qty | Add on one row.
+- Variant sized around Pre-Roll.
+- Qty 1–999 / max three digits.
+- Product uses remaining width and may visually truncate selected long names.
+- Full names remain visible in native picker.
+- Stronger iPhone visualViewport correction using actual Delivery scroll pane.
+- New automated compact-row and Qty-contract tests.
 
-TONIGHT:
-- Delivery Save bottom zone hardened.
-- iPhone keyboard mode collapses nonessential entry controls.
-- Combined Suggested Delivery now has Share PDF.
-- Combined PDF is validated internally before share/download.
-- Version metadata aligned to 0.10.16.
-- Full nightly test is mostly automatic.
-- Only iOS keyboard opening still needs one physical Qty tap.
-
-Expected: Sunday suggestion tests, Save visibility, Combined PDF, and cleanup should all pass.
+Internal validation passed. Real iPhone keyboard evidence still required.

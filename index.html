@@ -4012,6 +4012,44 @@ body.deliveryMode.deliveryKeyboardOpen #delQty{
    Safe-bottom actions, keyboard focus compression, Combined PDF,
    exact version metadata, and reduced-manual-input test coverage.
 */
+
+/* v0.10.17 compact Delivery entry */
+body.deliveryMode #deliveryFinderTools,
+body.deliveryMode .deliverySearch,
+body.deliveryMode .deliveryAlphabetWrap,
+body.deliveryMode #deliveryEditAddToggle{display:none!important}
+body.deliveryMode .deliveryPickerFlow{
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr) 84px 52px 56px!important;
+  gap:4px!important;
+  align-items:end!important;
+  margin:3px 0 2px!important;
+  width:100%!important
+}
+body.deliveryMode .deliveryPickerFlow .field{min-width:0!important;margin:0!important}
+body.deliveryMode .deliveryPickerFlow label{display:block!important;margin:0 0 2px!important;font-size:8px!important;line-height:1!important;font-weight:800!important}
+body.deliveryMode .deliveryProductField select,
+body.deliveryMode .deliveryVariantField select,
+body.deliveryMode .deliveryQtyField input,
+body.deliveryMode .deliveryAddButton{height:34px!important;min-height:34px!important;box-sizing:border-box!important}
+body.deliveryMode .deliveryProductField select{
+  width:100%!important;min-width:0!important;overflow:hidden!important;white-space:nowrap!important;
+  text-overflow:ellipsis!important;padding:4px 22px 4px 6px!important
+}
+body.deliveryMode .deliveryVariantField select{width:84px!important;max-width:84px!important;padding:4px 18px 4px 5px!important;font-size:14px!important}
+body.deliveryMode .deliveryQtyField input{width:52px!important;max-width:52px!important;padding:4px 5px!important;text-align:center!important;font-size:16px!important}
+body.deliveryMode .deliveryAddButton{width:56px!important;max-width:56px!important;padding:4px 5px!important;font-size:10px!important;white-space:nowrap!important}
+@media(max-width:390px){
+  body.deliveryMode .deliveryPickerFlow{grid-template-columns:minmax(0,1fr) 80px 48px 52px!important;gap:3px!important}
+  body.deliveryMode .deliveryVariantField select{width:80px!important;max-width:80px!important;font-size:13px!important}
+  body.deliveryMode .deliveryQtyField input{width:48px!important;max-width:48px!important}
+  body.deliveryMode .deliveryAddButton{width:52px!important;max-width:52px!important;padding:4px 3px!important}
+}
+
+/* v0.10.17 MORNING CANDIDATE
+   Product / Variant / Qty / Add in one row.
+   Qty 1..999. Product uses remaining width. Finder controls removed.
+*/
 </style>
 </head>
 <body>
@@ -4036,7 +4074,7 @@ window.addEventListener("error",e=>{const b=document.getElementById("runtimeErro
       <button class="heroHomeHotspot noPrint" type="button" aria-label="Return to Dashboard" title="Dashboard" onclick="returnToDashboardFromHeader()"></button>
     </div>
     <div class="heroActions noPrint">
-      <span class="app-version test-version-badge" aria-label="Test build version v0.10.16">v0.10.16<br><b>TEST</b></span>
+      <span class="app-version test-version-badge" aria-label="Test build version v0.10.17">v0.10.17<br><b>TEST</b></span>
       <button class="heroMenuButton" id="heroMenuButton" type="button" aria-expanded="false">Menu</button>
     </div>
   </div>
@@ -4235,21 +4273,11 @@ window.addEventListener("error",e=>{const b=document.getElementById("runtimeErro
           <button id="deliveryNewProductButton" type="button" onclick="openAddProductForm(true)">＋ New product</button>
         </div>
         <div id="deliveryEntryTools" class="deliveryEntryTools">
-          <div id="deliveryFinderTools" class="deliveryFinderTools">
-            <div class="field deliverySearch"><label>Find product</label><input id="deliveryProductSearch" type="search" placeholder="Find product name…" autocomplete="off"></div>
-            <div class="deliveryAlphabetWrap" aria-label="Alphabet product finder">
-              <div id="deliveryAlphabetScrubber" class="deliveryAlphabetScrubber" role="slider" aria-label="Find product by first letter" aria-valuemin="1" aria-valuemax="26" aria-valuenow="1" tabindex="0">
-                <div class="deliveryAlphabetLetters" aria-hidden="true">A B C D E F G H I J K L M N O P Q R S T U V W X Y Z</div>
-                <div id="deliveryAlphabetThumb" class="deliveryAlphabetThumb" aria-hidden="true">A</div>
-              </div>
-            </div>
-            <details class="compactHelp"><summary>ⓘ Delivery entry help</summary><div class="small">The delivery list uses Pin's master product names. Enter only products being delivered.</div></details>
-          </div>
           <div class="deliveryPickerFlow">
             <div class="field deliveryProductField"><label>Product</label><select id="delParent"></select></div>
             <div class="field deliveryVariantField"><label>Variant</label><select id="delVariant"></select></div>
-            <div class="field deliveryQtyField"><label>Qty</label><input id="delQty" type="number" min="1" placeholder="Qty" inputmode="numeric" enterkeyhint="done" onfocus="newDeliveryQtyFocus(this)" onblur="newDeliveryQtyBlur(this)"></div>
-            <button class="btn gold deliveryAddButton" id="addDeliveryLine">Add line</button>
+            <div class="field deliveryQtyField"><label>Qty</label><input id="delQty" type="number" min="1" max="999" placeholder="Qty" inputmode="numeric" enterkeyhint="done" aria-label="Quantity, maximum 3 digits" oninput="this.value=this.value.replace(/\D/g,'').slice(0,3)" onfocus="newDeliveryQtyFocus(this)" onblur="newDeliveryQtyBlur(this)"></div>
+            <button class="btn gold deliveryAddButton" id="addDeliveryLine">Add</button>
           </div>
         </div>
         <details class="deliveryNoteToggle" id="deliveryNoteToggle"><summary>+ Delivery note</summary><div class="field"><input id="delNote" placeholder="e.g. Sunday restock / extra gummies"></div></details>
@@ -5103,11 +5131,22 @@ function positionActiveDeliveryQty(){
 
   const card=input.closest(".deliveryEditLineCard");
   if(!card){
-    // New Delivery Qty lives in the fixed top entry area, not inside a line card.
-    requestAnimationFrame(()=>{
-      try{input.scrollIntoView({block:"center",inline:"nearest",behavior:"instant"});}
-      catch(_){try{input.scrollIntoView({block:"center"});}catch(__){}}
-    });
+    // New Delivery Qty is in the compact row. Scroll the actual Delivery pane
+    // after Safari contracts visualViewport.
+    const pane=input.closest("#docket")||document.scrollingElement;
+    const vv=window.visualViewport;
+    const nudge=()=>{
+      if(!input||!vv)return;
+      const r=input.getBoundingClientRect();
+      const safeTop=vv.offsetTop+10;
+      const safeBottom=vv.offsetTop+vv.height-18;
+      if(r.bottom>safeBottom && pane) pane.scrollTop += (r.bottom-safeBottom)+18;
+      else if(r.top<safeTop && pane) pane.scrollTop -= (safeTop-r.top)+10;
+    };
+    requestAnimationFrame(nudge);
+    setTimeout(nudge,70);
+    setTimeout(nudge,170);
+    setTimeout(nudge,280);
     return;
   }
 
@@ -6264,7 +6303,7 @@ function buildFullBackupPayload(kind="SUPPORT",note=""){
   return {
     magicDragonBackup:true,
     app:"Magic Dragon Pin",
-    appVersion:"0.10.16",
+    appVersion:"0.10.17",
     backupKind:String(kind||"SUPPORT").toUpperCase(),
     createdAt:new Date().toISOString(),
     note:String(note||""),
@@ -8670,7 +8709,7 @@ function refreshSundayDeliverySuggestions(state,date){
 }
 function bootstrapLatestSavedInvoiceSuggestions(){
   migrateLegacyDeliverySuggestions();
-  if(db.deliverySuggestionBootstrapVersion==="0.10.16")return;
+  if(db.deliverySuggestionBootstrapVersion==="0.10.17")return;
 
   const latest=[...(db.invoices||[])]
     .filter(i=>i&&!i.supersededBy&&i.status!=="void"&&i.reportDate)
@@ -8681,7 +8720,7 @@ function bootstrapLatestSavedInvoiceSuggestions(){
   if(items.length){
     refreshSundayDeliverySuggestions({items},latest.reportDate);
     db.deliverySuggestionBootstrapDoneV2=true;
-    db.deliverySuggestionBootstrapVersion="0.10.16";
+    db.deliverySuggestionBootstrapVersion="0.10.17";
     localStorage.setItem("mdpin-db",JSON.stringify(db));
   }
 }
@@ -9280,7 +9319,7 @@ document.getElementById("exportData").onclick=async()=>{
  const btn=document.getElementById("exportData");if(btn.disabled)return;btn.disabled=true;backupStatus("Preparing complete backup…");
  try{
   const sourceFiles=await exportArchivedSourceFiles(),counts=backupCounts();
-  const pkg={format:BACKUP_FORMAT,schema:BACKUP_SCHEMA,appVersion:"0.10.16",createdAt:new Date().toISOString(),counts,sourceFilesCount:sourceFiles.length,data:JSON.parse(JSON.stringify(db)),sourceFiles};
+  const pkg={format:BACKUP_FORMAT,schema:BACKUP_SCHEMA,appVersion:"0.10.17",createdAt:new Date().toISOString(),counts,sourceFilesCount:sourceFiles.length,data:JSON.parse(JSON.stringify(db)),sourceFiles};
   await downloadBackupPackage(pkg);
   backupStatus(`Backup ready: ${counts.deliveries} deliveries, ${counts.sundayReports} Sunday reports, ${counts.invoices} invoices, ${sourceFiles.length} archived source file${sourceFiles.length===1?"":"s"}.`);
  }catch(e){console.error(e);backupStatus("Backup could not be created. No app data was changed.",true);alert("The full backup could not be created. Your current app data has not been changed.")}
@@ -9369,9 +9408,9 @@ document.getElementById("exportHistorical").onclick=()=>{
 <script>
 /* v0.10.13 TEST RUNNER v1 — isolated evidence collection, never production */
 const MDTest=(()=>{
-  const VERSION='v0.10.16-TEST-RUNNER-v4';
+  const VERSION='v0.10.17-TEST-RUNNER-v5';
   const RESTORE_KEY='mdpin-test-runner-restore-point';
-  const report={runnerVersion:VERSION,appVersion:"0.10.16",startedAt:null,finishedAt:null,environment:{},results:[],events:[],snapshots:[],errors:[],manual:[],restore:{},summary:{}};
+  const report={runnerVersion:VERSION,appVersion:"0.10.17",startedAt:null,finishedAt:null,environment:{},results:[],events:[],snapshots:[],errors:[],manual:[],restore:{},summary:{}};
   let originalDb=null,running=false,manualResolve=null;
   const nativeConsoleError=console.error.bind(console);
   window.addEventListener('error',e=>{if(running)report.errors.push({type:'window.error',message:String(e.message||''),source:e.filename||'',line:e.lineno||0,time:new Date().toISOString()})});
@@ -9463,6 +9502,7 @@ function expectedTopup(report){const branch=canonicalBranchName(report.branch);c
       };
       window.__mdKeyboardSkip=()=>finish("SKIP","User skipped keyboard diagnostic.");
 
+      let measureTimer=null;
       const check=()=>{
         const qty=qs("delQty");
         const v=window.visualViewport;
@@ -9470,22 +9510,19 @@ function expectedTopup(report){const branch=canonicalBranchName(report.branch);c
         const keyboardLikely=v.height < window.innerHeight*0.82;
         const active=document.activeElement===qty;
         if(!keyboardLikely||!active)return;
-
-        const qr=rect(qty),sr=rect(qs("saveDelivery"));
-        const top=v.offsetTop,bottom=v.offsetTop+v.height;
-        const qtyVisible=!!qr && qr.bottom<=bottom+2 && qr.top>=top-2;
-        const saveVisible=!!sr && sr.bottom<=bottom+2 && sr.top>=top-2;
-        const metrics={
-          innerHeight:window.innerHeight,
-          visualViewportHeight:v.height,
-          visualViewportOffsetTop:v.offsetTop,
-          qty:qr,save:sr,qtyVisible,saveVisible
-        };
-        // For this workflow Qty must remain visible. Save may be below the keyboard
-        // provided it becomes reachable immediately after keyboard dismissal.
-        finish(qtyVisible?"PASS":"FAIL",
-               qtyVisible?"Qty remained visible while keyboard was open.":"Qty moved outside the visible viewport while keyboard was open.",
-               metrics);
+        clearTimeout(measureTimer);
+        measureTimer=setTimeout(()=>{
+          positionActiveDeliveryQty();
+          setTimeout(()=>{
+            const qr=rect(qty),sr=rect(qs("saveDelivery"));
+            const top=v.offsetTop,bottom=v.offsetTop+v.height;
+            const qtyVisible=!!qr && qr.bottom<=bottom+2 && qr.top>=top-2;
+            const metrics={innerHeight:window.innerHeight,visualViewportHeight:v.height,visualViewportOffsetTop:v.offsetTop,qty:qr,save:sr,qtyVisible,docketScrollTop:qs("docket")?.scrollTop||0};
+            finish(qtyVisible?"PASS":"FAIL",
+                   qtyVisible?"Qty remained visible after keyboard correction.":"Qty remained outside the visible viewport after keyboard correction.",
+                   metrics);
+          },220);
+        },120);
       };
       vv?.addEventListener("resize",check);
       vv?.addEventListener("scroll",check);
@@ -9523,6 +9560,17 @@ function expectedTopup(report){const branch=canonicalBranchName(report.branch);c
       if(btnText==='Use shop list')pass('Show all stock mode indicator','Button changed to Use shop list.');else fail('Show all stock mode indicator',`Button reads “${btnText}”.`);
       const expectedAll=new Set(canonicalDeliveryProducts().map(p=>normalizeProductKey(productParentName(p)||p.name))).size;if(allParents.length===expectedAll)pass('Show all stock catalogue',`Full catalogue exposed: ${allParents.length}/${expectedAll} parent products.`);else fail('Show all stock catalogue',`Picker shows ${allParents.length}; full active catalogue has ${expectedAll} parent products.`);
       toggleDeliveryAllStock();await delay(80);const backParents=[...qs('delParent').options].filter(o=>o.value).length;if(backParents===beforeCount)pass('Use shop list returns',`Returned to ${backParents} Lamai parent products.`);else fail('Use shop list returns',`Expected ${beforeCount}, got ${backParents}.`);
+      const searchGone=!qs('deliveryProductSearch') && !qs('deliveryAlphabetScrubber');
+      searchGone?pass('Compact delivery finder removed','Text filter and A-Z scrubber are absent.'):fail('Compact delivery finder removed','Old text filter or A-Z scrubber is still present.');
+
+      const pr=rect(qs('delParent')),vr=rect(qs('delVariant')),qr0=rect(qs('delQty')),ar=rect(qs('addDeliveryLine'));
+      const sameRow=pr&&vr&&qr0&&ar && Math.max(pr.top,vr.top,qr0.top,ar.top)-Math.min(pr.top,vr.top,qr0.top,ar.top)<=4;
+      sameRow?pass('Compact delivery entry row','Product, Variant, Qty and Add are on one row.',{product:pr,variant:vr,qty:qr0,add:ar}):fail('Compact delivery entry row','Delivery controls are not aligned on one row.',{product:pr,variant:vr,qty:qr0,add:ar});
+
+      const qtyEl=qs('delQty');
+      const qtyContract=qtyEl && qtyEl.max==='999' && /slice\(0,3\)/.test(qtyEl.getAttribute('oninput')||'');
+      qtyContract?pass('Qty 3-digit limit','Qty is limited to 1–999 / three digits.'):fail('Qty 3-digit limit','Qty three-digit constraint is missing.');
+
 
       // Temporary Add Line test, no save.
       if(qs('delParent').value){fillDeliveryVariants();const vo=[...qs('delVariant').options].find(o=>o.value);if(vo){qs('delVariant').value=vo.value;qs('delQty').value='2';qs('addDeliveryLine').click();await delay(100);if(currentDelivery.some(l=>l.productId===vo.value&&Number(l.qty)>=2))pass('Add Line draft','Temporary line added to local draft without saving.');else fail('Add Line draft','Line did not appear in current delivery draft.');snapshot('delivery-after-add-line')}}
