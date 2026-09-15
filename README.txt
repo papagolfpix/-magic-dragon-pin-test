@@ -1,17 +1,28 @@
-MAGIC DRAGON PIN v0.10.17 — TEST COMPACT DELIVERY + KEYBOARD CANDIDATE v1
+MAGIC DRAGON PIN v0.10.14 — TEST SUNDAY TOP-UP CANDIDATE v1
 
-TEST repository only: magic-dragon-pin-test
-DO NOT deploy to Production yet.
+DEPLOY TO:
+  TEST repository only: magic-dragon-pin-test
 
-Changes:
-- Remove Find Product text filter.
-- Remove A-Z scrubber.
-- Product | Variant | Qty | Add on one row.
-- Variant sized around Pre-Roll.
-- Qty 1–999 / max three digits.
-- Product uses remaining width and may visually truncate selected long names.
-- Full names remain visible in native picker.
-- Stronger iPhone visualViewport correction using actual Delivery scroll pane.
-- New automated compact-row and Qty-contract tests.
+DO NOT DEPLOY THIS TO PIN PRODUCTION YET.
 
-Internal validation passed. Real iPhone keyboard evidence still required.
+CHANGES
+- Sunday suggested deliveries now use:
+    max(0, target stock - current Sunday closing stock)
+- Targets:
+    Bangrak: 1g 30 / 5g 3 / Pre-Roll 15 / Hash 10 / Gummy 15
+    Lamai:   1g 6 / 5g 0 / Pre-Roll 6 / Hash 0 / Gummy 0
+- Exactly two latest Sunday suggestions remain active: Bangrak + Lamai.
+- Older untouched generated suggestions are removed.
+- Older user-edited generated suggestions are retained as superseded history.
+- A current branch suggestion can remain with zero lines if no top-up is needed.
+- TEST manual prompts now minimise while you perform the requested iPhone action.
+
+EXPECTED AFTER RUNNING FULL TEST
+The previous failures:
+  1. Exactly two active Sunday suggestions
+  2. Top-up target calculation
+should now pass.
+
+Still intentionally separate:
+  - Combined Suggested Delivery Save/Share PDF
+  - Delivery Save viewport warning
