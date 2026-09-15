@@ -1,19 +1,19 @@
-MAGIC DRAGON PIN v0.10.28 — TEST
+MAGIC DRAGON PIN v0.10.29 — TEST
 
 Purpose of this build:
-- Regression-only fix for New Delivery Qty keyboard opening + visibility on iPhone Safari.
-- Preserve the working IN STOCK / OUT OF STOCK catalogue toggle and all v0.10.26 business/PDF logic unchanged.
+- Regression-only repair for New Delivery Qty on iPhone Safari.
+- Restore the previously proven shared keyboard-safe input Lego block instead of using DOM reparenting or a new keyboard dock.
 
 Blueprint / Lego-block rule applied:
-- The New Delivery Product / Variant / Qty / Add controls are mounted directly under document.body on the Qty pointer-down gesture, BEFORE focus occurs; the same Qty input is then focused synchronously so iOS opens the numeric keyboard.
-- This is the same viewport-root principle used for proven iPhone fixed-action components: do not rely on position:fixed inside overflow/clipping/containment contexts.
-- Never reparent an already-focused iOS input: doing so drops focus and can prevent the keyboard from opening. visualViewport resize/scroll events then keep the pre-mounted dock inside the visible area while iOS animates the keyboard.
-- The underlying delivery section is prevented from drifting upward; the picker is restored to its original DOM position after the keyboard closes.
+- New Delivery Qty stays in its normal DOM position and is a standard keyboardSafeInput.
+- The existing shared mobileKeyboardSafeFocus / visualViewport logic moves the real app scroll owner, not the input itself.
+- No pointerdown preventDefault, no synthetic refocus, and no reparenting of the Qty field. These can suppress the iOS numeric keyboard.
+- Keep the field at 16px to avoid iPhone focus zoom.
 
-Preserved from v0.10.26:
-- Always-visible IN STOCK / OUT OF STOCK catalogue toggle.
-- Target-stock replenishment safeguards and out-of-stock review flow.
-- Compact Combined Suggested Delivery UI.
-- Single-file iOS PDF share/print flow and alternating PDF row shading.
+Preserved unchanged from the immediately prior test build:
+- IN STOCK / OUT OF STOCK catalogue toggle.
+- Target-stock replenishment safeguards and review flow.
+- Combined Suggested Delivery UI and PDF/share behavior.
 
-TEST BUILD — verify tapping New Delivery Qty opens the numeric keyboard immediately, Qty remains visible, and the layout returns cleanly when the keyboard closes.
+TEST CHECK:
+Tap New Delivery Qty. The numeric keyboard must open normally, the Qty field must remain visible above it, and the layout must restore after the keyboard closes.
