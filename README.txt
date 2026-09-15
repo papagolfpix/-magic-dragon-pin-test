@@ -1,4 +1,4 @@
-MAGIC DRAGON PIN v0.10.23 — TEST
+MAGIC DRAGON PIN v0.10.24 — TEST
 UI-only cleanup: Combined Suggested Delivery now uses compact docket spacing and bottom-right dark Create / Share PDF action.
 
 Suggested-docket workflow refinement:
@@ -10,3 +10,7 @@ Suggested-docket workflow refinement:
 - service-worker cache key bumped for a clear iPhone refresh.
 
 TEST BUILD — verify review actions and line movement before production promotion.
+Changes in v0.10.24 TEST:
+- Fixed Combined Suggested Delivery PDF generation to produce a standards-valid single PDF for iOS Preview/Print.
+- Native Share now sends exactly one PDF file (no title/text payload).
+- PDF button resets before the iOS share/print sheet opens, preventing a stuck Preparing state.

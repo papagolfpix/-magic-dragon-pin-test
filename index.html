@@ -2355,7 +2355,7 @@ body.deliveryMode #deliveryEditBanner{display:block}
 
 
 
-/* v0.10.23 TEST — review-first suggested docket workflow */
+/* v0.10.24 TEST — review-first suggested docket workflow */
 .stockReviewBox{margin:8px 0 0;border:1px solid #e7c86e;background:#fff9e8;border-radius:10px;padding:8px}
 .stockReviewTitle{font-size:10px;font-weight:900;letter-spacing:.06em;text-transform:uppercase;color:#76520c;margin-bottom:5px}
 .stockReviewRow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:7px;align-items:center;padding:7px 0;border-top:1px solid rgba(118,82,12,.14)}
@@ -3940,7 +3940,7 @@ body.deliveryMode.deliveryKeyboardOpen #deliveryQuickActions{display:none!import
 body.deliveryMode.deliveryKeyboardOpen .deliveryTopPane{padding-top:2px!important;padding-bottom:4px!important}
 body.deliveryMode.deliveryKeyboardOpen .deliveryPickerFlow{margin-top:0!important}
 body.deliveryMode.deliveryKeyboardOpen #delQty{scroll-margin-top:12px!important;scroll-margin-bottom:16px!important}
-/* v0.10.23 TEST — Combined Suggested Delivery aligned to compact docket UI */
+/* v0.10.24 TEST — Combined Suggested Delivery aligned to compact docket UI */
 #combinedPackingOverlay .combinedPackingHead{
   grid-template-columns:38px minmax(0,1fr) 38px;
   gap:6px;
@@ -4020,7 +4020,7 @@ window.addEventListener("error",e=>{const b=document.getElementById("runtimeErro
       <button class="heroHomeHotspot noPrint" type="button" aria-label="Return to Dashboard" title="Dashboard" onclick="returnToDashboardFromHeader()"></button>
     </div>
     <div class="heroActions noPrint">
-      <span class="app-version">v0.10.23 TEST</span>
+      <span class="app-version">v0.10.24 TEST</span>
       <button class="heroMenuButton" id="heroMenuButton" type="button" aria-expanded="false">Menu</button>
     </div>
   </div>
@@ -6079,7 +6079,10 @@ function combinedSuggestedBranchRows(date){
       }).filter(r=>r.qty>0).sort((a,b)=>a.name.localeCompare(b.name,"en",{sensitivity:"base",numeric:true}))
     }));
 }
-function mdPdfEsc(v){return String(v??"").replace(/\\/g,"\\\\").replace(/\(/g,"\\(").replace(/\)/g,"\\)")}
+function mdPdfEsc(v){
+  // Keep generated PDF content to printable ASCII and escape PDF string syntax.
+  return pdfEscapeText(pdfAscii(v));
+}
 function buildCombinedPackingPdfBytes(date){
   const groups=combinedSuggestedBranchRows(date);
   const totalUnits=groups.reduce((n,g)=>n+g.rows.reduce((a,r)=>a+r.qty,0),0);
@@ -6103,46 +6106,70 @@ function buildCombinedPackingPdfBytes(date){
   });
   addText("Yaowaret - Combined Suggested Delivery",50,38,7.5,false);
 
-  const content=lines.join("\\n"),objs=[];
+  // IMPORTANT: these are real LF newlines, not the literal characters "\\n".
+  // iOS Preview/Print rejects malformed PDFs and may label them as protected.
+  const content=lines.join("\n"),objs=[];
   objs[1]='<< /Type /Catalog /Pages 2 0 R >>';
   objs[2]='<< /Type /Pages /Kids [3 0 R] /Count 1 >>';
   objs[3]='<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 4 0 R /F2 5 0 R >> >> /Contents 6 0 R >>';
   objs[4]='<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>';
   objs[5]='<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>';
-  objs[6]=`<< /Length ${new TextEncoder().encode(content).length} >>\\nstream\\n${content}\\nendstream`;
-  let pdf='%PDF-1.4\\n%MDPIN-COMBINED\\n',offsets=[0];
-  for(let i=1;i<=6;i++){offsets[i]=new TextEncoder().encode(pdf).length;pdf+=`${i} 0 obj\\n${objs[i]}\\nendobj\\n`;}
+  objs[6]=`<< /Length ${new TextEncoder().encode(content).length} >>\nstream\n${content}\nendstream`;
+  let pdf='%PDF-1.4\n%MDPIN-COMBINED\n',offsets=[0];
+  for(let i=1;i<=6;i++){
+    offsets[i]=new TextEncoder().encode(pdf).length;
+    pdf+=`${i} 0 obj\n${objs[i]}\nendobj\n`;
+  }
   const xref=new TextEncoder().encode(pdf).length;
-  pdf+='xref\\n0 7\\n0000000000 65535 f \\n';
-  for(let i=1;i<=6;i++)pdf+=String(offsets[i]).padStart(10,'0')+' 00000 n \\n';
-  pdf+=`trailer\\n<< /Size 7 /Root 1 0 R >>\\nstartxref\\n${xref}\\n%%EOF\\n`;
+  pdf+='xref\n0 7\n0000000000 65535 f \n';
+  for(let i=1;i<=6;i++)pdf+=String(offsets[i]).padStart(10,'0')+' 00000 n \n';
+  pdf+=`trailer\n<< /Size 7 /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`;
   return new TextEncoder().encode(pdf);
+}
+async function shareSingleCombinedPdf(file,blob,filename){
+  // iPhone/iPad Lego block: share exactly ONE file and no title/text payload.
+  // This avoids Safari exposing a second text item beside the PDF in Save to Files.
+  if(file&&navigator.share){
+    let can=true;
+    try{if(navigator.canShare)can=navigator.canShare({files:[file]});}catch(_){can=false;}
+    if(can){
+      try{
+        await navigator.share({files:[file]});
+        return true;
+      }catch(err){
+        if(err?.name==='AbortError')return true;
+        console.warn('Combined PDF native share failed; using direct PDF save',err);
+      }
+    }
+  }
+  docketPdfDownload(blob,filename);
+  return true;
 }
 window.shareCombinedPackingPDF=async()=>{
   const group=latestActiveSuggestedPackingGroup();
   if(!group?.date)return alert("There is no current combined suggested delivery to share.");
   const btn=document.getElementById("combinedPackingPdfBtn"),old=btn?.textContent;
-  if(btn){btn.disabled=true;btn.textContent="Preparing…";}
+  if(btn){btn.disabled=true;btn.textContent="Preparing…";btn.setAttribute('aria-busy','true');}
   try{
     const bytes=buildCombinedPackingPdfBytes(group.date);
     const head=new TextDecoder().decode(bytes.slice(0,8)),tail=new TextDecoder().decode(bytes.slice(-16));
     if(!head.startsWith("%PDF-")||!tail.includes("%%EOF"))throw new Error("Combined PDF validation failed");
     const blob=new Blob([bytes],{type:"application/pdf"});
     const filename=`Combined Suggested Delivery - ${group.date}.pdf`;
-    let file=null;try{file=new File([blob],filename,{type:"application/pdf",lastModified:Date.now()});}catch(_){}
-    if(file&&navigator.share){
-      let can=true;try{if(navigator.canShare)can=navigator.canShare({files:[file]});}catch(_){can=false;}
-      if(can){try{await navigator.share({files:[file],title:"Combined Suggested Delivery"});return;}catch(err){if(err?.name==="AbortError")return;}}
-    }
-    docketPdfDownload(blob,filename);
+    let file=null;
+    try{file=new File([blob],filename,{type:"application/pdf",lastModified:Date.now()});}catch(_){ }
+
+    // File preparation is complete before iOS opens its external share/print sheet.
+    // Reset the button now so it never remains stuck on "Preparing…" while iOS owns the UI.
+    if(btn){btn.disabled=false;btn.textContent=old||"Create / Share PDF";btn.removeAttribute('aria-busy');}
+    await shareSingleCombinedPdf(file,blob,filename);
   }catch(err){
     console.error(err);
     alert("The combined suggested delivery PDF could not be created. Please try again.");
   }finally{
-    if(btn){btn.disabled=false;btn.textContent=old||"Share PDF";}
+    if(btn){btn.disabled=false;btn.textContent=old||"Create / Share PDF";btn.removeAttribute('aria-busy');}
   }
 };
-
 
 window.closeCombinedPackingView=()=>{
   const overlay=document.getElementById("combinedPackingOverlay");
@@ -6274,7 +6301,7 @@ function buildFullBackupPayload(kind="SUPPORT",note=""){
   return {
     magicDragonBackup:true,
     app:"Magic Dragon Pin",
-    appVersion:"0.10.23",
+    appVersion:"0.10.24",
     backupKind:String(kind||"SUPPORT").toUpperCase(),
     createdAt:new Date().toISOString(),
     note:String(note||""),
@@ -9321,7 +9348,7 @@ document.getElementById("exportData").onclick=async()=>{
  const btn=document.getElementById("exportData");if(btn.disabled)return;btn.disabled=true;backupStatus("Preparing complete backup…");
  try{
   const sourceFiles=await exportArchivedSourceFiles(),counts=backupCounts();
-  const pkg={format:BACKUP_FORMAT,schema:BACKUP_SCHEMA,appVersion:"0.10.23",createdAt:new Date().toISOString(),counts,sourceFilesCount:sourceFiles.length,data:JSON.parse(JSON.stringify(db)),sourceFiles};
+  const pkg={format:BACKUP_FORMAT,schema:BACKUP_SCHEMA,appVersion:"0.10.24",createdAt:new Date().toISOString(),counts,sourceFilesCount:sourceFiles.length,data:JSON.parse(JSON.stringify(db)),sourceFiles};
   await downloadBackupPackage(pkg);
   backupStatus(`Backup ready: ${counts.deliveries} deliveries, ${counts.sundayReports} Sunday reports, ${counts.invoices} invoices, ${sourceFiles.length} archived source file${sourceFiles.length===1?"":"s"}.`);
  }catch(e){console.error(e);backupStatus("Backup could not be created. No app data was changed.",true);alert("The full backup could not be created. Your current app data has not been changed.")}
