@@ -3911,7 +3911,7 @@ body.deliveryMode .deliveryQuickActions{
   flex:0 0 auto;
 }
 
-\n/* v0.10.27 TEST — PROVEN iPhone Qty keyboard dock Lego block
+\n/* v0.10.28 TEST — PROVEN iPhone Qty keyboard dock Lego block
    New Delivery Qty is promoted to a true viewport-root dock while the iOS
    keyboard is open. This deliberately avoids fixed positioning inside the
    delivery workspace/clipping context. */
@@ -4042,7 +4042,7 @@ window.addEventListener("error",e=>{const b=document.getElementById("runtimeErro
       <button class="heroHomeHotspot noPrint" type="button" aria-label="Return to Dashboard" title="Dashboard" onclick="returnToDashboardFromHeader()"></button>
     </div>
     <div class="heroActions noPrint">
-      <span class="app-version">v0.10.27 TEST</span>
+      <span class="app-version">v0.10.28 TEST</span>
       <button class="heroMenuButton" id="heroMenuButton" type="button" aria-expanded="false">Menu</button>
     </div>
   </div>
@@ -4244,7 +4244,7 @@ window.addEventListener("error",e=>{const b=document.getElementById("runtimeErro
           <div class="deliveryPickerFlow">
             <div class="field deliveryProductField"><label>Product</label><select id="delParent"></select></div>
             <div class="field deliveryVariantField"><label>Variant</label><select id="delVariant"></select></div>
-            <div class="field deliveryQtyField"><label>Qty</label><input id="delQty" type="number" min="1" max="999" placeholder="Qty" inputmode="numeric" enterkeyhint="done" aria-label="Quantity, maximum 3 digits" oninput="this.value=this.value.replace(/\D/g,'').slice(0,3)" onfocus="newDeliveryQtyFocus(this)" onblur="newDeliveryQtyBlur(this)"></div>
+            <div class="field deliveryQtyField"><label>Qty</label><input id="delQty" type="number" min="1" max="999" placeholder="Qty" inputmode="numeric" enterkeyhint="done" aria-label="Quantity, maximum 3 digits" oninput="this.value=this.value.replace(/\D/g,'').slice(0,3)" onpointerdown="prepareNewDeliveryQtyFocus(this,event)" onfocus="newDeliveryQtyFocus(this)" onblur="newDeliveryQtyBlur(this)"></div>
             <button class="btn gold deliveryAddButton" id="addDeliveryLine">Add</button>
           </div>
         </div>
@@ -5223,13 +5223,24 @@ function syncNewDeliveryKeyboardDock(){
   }
 }
 
+window.prepareNewDeliveryQtyFocus=(input,event)=>{
+  // IMPORTANT iPhone Lego-block rule: reparent BEFORE focus, never during focus.
+  // Moving an already-focused input makes WebKit drop focus and suppresses the
+  // numeric keyboard. pointerdown is a real user gesture, so mount first and
+  // focus the SAME input synchronously while user activation is still valid.
+  if(!input)return;
+  if(!newDeliveryKeyboardDockState)mountNewDeliveryKeyboardDock(input);
+  try{input.focus({preventScroll:true})}catch(_){try{input.focus()}catch(__){}}
+  try{input.select()}catch(_){}
+  if(event?.cancelable)event.preventDefault();
+};
+
 window.newDeliveryQtyFocus=(input)=>{
   deliveryKeyboardActiveInput=input;
   try{input.select()}catch(_){}
-  mountNewDeliveryKeyboardDock(input);
+  // Do NOT reparent here. On iOS, moving the focused element closes/prevents
+  // the keyboard. The viewport-root mount is done during pointerdown above.
   updateDeliveryKeyboardViewport();
-  // iOS focus scrolling and visualViewport changes occur in stages. Keep the
-  // picker docked at the viewport root and reset the underlying section.
   [0,40,90,160,260,420,620].forEach(delay=>setTimeout(()=>{
     updateDeliveryKeyboardViewport();
     syncNewDeliveryKeyboardDock();
