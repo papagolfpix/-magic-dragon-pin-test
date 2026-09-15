@@ -2355,7 +2355,7 @@ body.deliveryMode #deliveryEditBanner{display:block}
 
 
 
-/* v0.10.24 TEST — review-first suggested docket workflow */
+/* v0.10.25 TEST — review-first suggested docket workflow */
 .stockReviewBox{margin:8px 0 0;border:1px solid #e7c86e;background:#fff9e8;border-radius:10px;padding:8px}
 .stockReviewTitle{font-size:10px;font-weight:900;letter-spacing:.06em;text-transform:uppercase;color:#76520c;margin-bottom:5px}
 .stockReviewRow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:7px;align-items:center;padding:7px 0;border-top:1px solid rgba(118,82,12,.14)}
@@ -3940,7 +3940,7 @@ body.deliveryMode.deliveryKeyboardOpen #deliveryQuickActions{display:none!import
 body.deliveryMode.deliveryKeyboardOpen .deliveryTopPane{padding-top:2px!important;padding-bottom:4px!important}
 body.deliveryMode.deliveryKeyboardOpen .deliveryPickerFlow{margin-top:0!important}
 body.deliveryMode.deliveryKeyboardOpen #delQty{scroll-margin-top:12px!important;scroll-margin-bottom:16px!important}
-/* v0.10.24 TEST — Combined Suggested Delivery aligned to compact docket UI */
+/* v0.10.25 TEST — Combined Suggested Delivery aligned to compact docket UI */
 #combinedPackingOverlay .combinedPackingHead{
   grid-template-columns:38px minmax(0,1fr) 38px;
   gap:6px;
@@ -4020,7 +4020,7 @@ window.addEventListener("error",e=>{const b=document.getElementById("runtimeErro
       <button class="heroHomeHotspot noPrint" type="button" aria-label="Return to Dashboard" title="Dashboard" onclick="returnToDashboardFromHeader()"></button>
     </div>
     <div class="heroActions noPrint">
-      <span class="app-version">v0.10.24 TEST</span>
+      <span class="app-version">v0.10.25 TEST</span>
       <button class="heroMenuButton" id="heroMenuButton" type="button" aria-expanded="false">Menu</button>
     </div>
   </div>
@@ -6096,8 +6096,11 @@ function buildCombinedPackingPdfBytes(date){
     if(y<115)return;
     addText(g.branch,50,y,11,true);y-=17;
     if(!g.rows.length){addText("No top-up required",62,y,8,false);y-=14;}
-    g.rows.forEach(r=>{
+    g.rows.forEach((r,rowIndex)=>{
       if(y<75)return;
+      // PDF readability: very light grey band on every second product row.
+      // Draw it before the text so the product name and quantity remain crisp.
+      if(rowIndex%2===1)lines.push(`q 0.965 g 50 ${y-4} 495 14 re f Q`);
       addText(r.name,62,y,8.5,false);
       addText(String(r.qty),500,y,9,true);
       y-=14;
@@ -6301,7 +6304,7 @@ function buildFullBackupPayload(kind="SUPPORT",note=""){
   return {
     magicDragonBackup:true,
     app:"Magic Dragon Pin",
-    appVersion:"0.10.24",
+    appVersion:"0.10.25",
     backupKind:String(kind||"SUPPORT").toUpperCase(),
     createdAt:new Date().toISOString(),
     note:String(note||""),
@@ -9348,7 +9351,7 @@ document.getElementById("exportData").onclick=async()=>{
  const btn=document.getElementById("exportData");if(btn.disabled)return;btn.disabled=true;backupStatus("Preparing complete backup…");
  try{
   const sourceFiles=await exportArchivedSourceFiles(),counts=backupCounts();
-  const pkg={format:BACKUP_FORMAT,schema:BACKUP_SCHEMA,appVersion:"0.10.24",createdAt:new Date().toISOString(),counts,sourceFilesCount:sourceFiles.length,data:JSON.parse(JSON.stringify(db)),sourceFiles};
+  const pkg={format:BACKUP_FORMAT,schema:BACKUP_SCHEMA,appVersion:"0.10.25",createdAt:new Date().toISOString(),counts,sourceFilesCount:sourceFiles.length,data:JSON.parse(JSON.stringify(db)),sourceFiles};
   await downloadBackupPackage(pkg);
   backupStatus(`Backup ready: ${counts.deliveries} deliveries, ${counts.sundayReports} Sunday reports, ${counts.invoices} invoices, ${sourceFiles.length} archived source file${sourceFiles.length===1?"":"s"}.`);
  }catch(e){console.error(e);backupStatus("Backup could not be created. No app data was changed.",true);alert("The full backup could not be created. Your current app data has not been changed.")}
