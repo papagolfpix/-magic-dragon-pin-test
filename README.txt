@@ -1,4 +1,10 @@
-MAGIC DRAGON PIN v0.10.41 — TEST
+MAGIC DRAGON PIN v0.10.42 — TEST
+
+WHAT CHANGED IN v0.10.42
+- Qty keyboard focus mode: when the New Delivery Qty box is tapped, non-essential delivery chrome collapses so the Product / Variant / Qty / Add row remains visibly on-screen above the iPhone numeric keyboard.
+- Does not reparent, refocus, or replace the Qty input.
+- Restores the normal delivery screen when the keyboard closes.
+- The on-device self-test now also verifies the focus-mode chrome is collapsed and the picker row remains visible.
 
 PURPOSE
 Fix the New Delivery Qty/iPhone keyboard regression shown in the 16 Sep screenshots.
@@ -21,7 +27,7 @@ EXPECTED IPHONE BEHAVIOUR
 Tap Qty -> numeric keyboard opens -> Product / Variant / Qty row remains visible below the branded header -> no large upward jump -> Qty remains tappable and visible.
 
 RELEASE CHECKS
-- App badge: v0.10.41 TEST
-- Service-worker cache: magic-pin-v0.10.41-test
+- App badge: v0.10.42 TEST
+- Service-worker cache: magic-pin-v0.10.42-test
 - Service-worker registration cache-buster: v=1041
 - Inline JavaScript syntax checked with Node.
