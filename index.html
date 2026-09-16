@@ -4097,7 +4097,7 @@ Built from protected Production v0.10.13.
 Selective backport from real-device proven TEST v0.10.19.
 TEST runner deliberately excluded.
 */
-.catalogueCoverageWarn{grid-column:2/-1;margin-top:7px;padding:8px 10px;border:1px solid #efc35f;border-radius:10px;background:#fffaf0;color:#6f4a00;font-size:10px;line-height:1.35}.catalogueCoverageWarn b{color:#8a4d00}.catalogueCoverageOk{grid-column:2/-1;margin-top:6px;font-size:9px;color:#2f6a3e;font-weight:800}</style>
+.catalogueCoverageWarn{grid-column:1/-1;width:100%;box-sizing:border-box;margin-top:7px;padding:8px 10px;border:1px solid #efc35f;border-radius:10px;background:#fffaf0;color:#6f4a00;font-size:10px;line-height:1.35}.catalogueCoverageWarn b{color:#8a4d00}.catalogueCoverageOk{grid-column:1/-1;width:100%;box-sizing:border-box;margin-top:6px;font-size:9px;color:#2f6a3e;font-weight:800}</style>
 
 <style id="v01046-fixed-delivery-controls">
 /* v0.10.46 TEST — New Delivery control deck is immutable.
@@ -4179,7 +4179,7 @@ body.deliveryMode .deliveryEditLineCard{
 
 
 <style id="v01047-line-pane-below-controls">
-/* v0.10.52 TEST — hard-separate New Delivery controls from added lines.
+/* v0.10.53 TEST — hard-separate New Delivery controls from added lines.
    iPhone Safari was allowing the first reusable line card/select to paint back
    underneath the stationary control deck.  Use a simple column flex layout
    for New Delivery: controls = fixed natural height, line list = the only
@@ -4240,7 +4240,7 @@ window.addEventListener("error",e=>{const b=document.getElementById("runtimeErro
       <button class="heroHomeHotspot noPrint" type="button" aria-label="Return to Dashboard" title="Dashboard" onclick="returnToDashboardFromHeader()"></button>
     </div>
     <div class="heroActions noPrint">
-      <span class="app-version">v0.10.52 TEST</span>
+      <span class="app-version">v0.10.53 TEST</span>
       <button class="heroMenuButton" id="heroMenuButton" type="button" aria-expanded="false">Menu</button>
     </div>
   </div>
@@ -6681,7 +6681,7 @@ function buildFullBackupPayload(kind="SUPPORT",note=""){
   return {
     magicDragonBackup:true,
     app:"Magic Dragon Pin",
-    appVersion:"0.10.52",
+    appVersion:"0.10.53",
     backupKind:String(kind||"SUPPORT").toUpperCase(),
     createdAt:new Date().toISOString(),
     note:String(note||""),
@@ -9859,7 +9859,7 @@ document.getElementById("exportData").onclick=async()=>{
  const btn=document.getElementById("exportData");if(btn.disabled)return;btn.disabled=true;backupStatus("Preparing complete backup…");
  try{
   const sourceFiles=await exportArchivedSourceFiles(),counts=backupCounts();
-  const pkg={format:BACKUP_FORMAT,schema:BACKUP_SCHEMA,appVersion:"0.10.52",createdAt:new Date().toISOString(),counts,sourceFilesCount:sourceFiles.length,data:JSON.parse(JSON.stringify(db)),sourceFiles};
+  const pkg={format:BACKUP_FORMAT,schema:BACKUP_SCHEMA,appVersion:"0.10.53",createdAt:new Date().toISOString(),counts,sourceFilesCount:sourceFiles.length,data:JSON.parse(JSON.stringify(db)),sourceFiles};
   await downloadBackupPackage(pkg);
   backupStatus(`Backup ready: ${counts.deliveries} deliveries, ${counts.sundayReports} Sunday reports, ${counts.invoices} invoices, ${sourceFiles.length} archived source file${sourceFiles.length===1?"":"s"}.`);
  }catch(e){console.error(e);backupStatus("Backup could not be created. No app data was changed.",true);alert("The full backup could not be created. Your current app data has not been changed.")}
