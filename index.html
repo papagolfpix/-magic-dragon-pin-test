@@ -4173,6 +4173,56 @@ body.deliveryMode .deliveryEditLineCard{
 }
 </style>
 
+
+<style id="v01047-line-pane-below-controls">
+/* v0.10.47 TEST — hard-separate New Delivery controls from added lines.
+   iPhone Safari was allowing the first reusable line card/select to paint back
+   underneath the stationary control deck.  Use a simple column flex layout
+   for New Delivery: controls = fixed natural height, line list = the only
+   flexible/scrolling zone, actions = fixed natural height. */
+body.deliveryMode:not(.deliveryEditMode) #deliveryCreatePane>.deliveryWorkspace{
+  display:flex!important;
+  flex-direction:column!important;
+  grid-template-rows:none!important;
+}
+body.deliveryMode:not(.deliveryEditMode) .deliveryTopPane{
+  flex:0 0 auto!important;
+  position:relative!important;
+  z-index:10!important;
+  background:#fff!important;
+}
+body.deliveryMode:not(.deliveryEditMode) .deliveryMiddlePane{
+  flex:1 1 0!important;
+  min-height:0!important;
+  position:relative!important;
+  z-index:1!important;
+  overflow:hidden!important;
+}
+body.deliveryMode:not(.deliveryEditMode) #deliveryEditLines{
+  position:relative!important;
+  inset:auto!important;
+  height:100%!important;
+  max-height:100%!important;
+  min-height:0!important;
+  overflow-y:auto!important;
+  overflow-x:hidden!important;
+  padding-top:6px!important;
+}
+body.deliveryMode:not(.deliveryEditMode) .deliveryBottomPane{
+  flex:0 0 auto!important;
+  position:relative!important;
+  z-index:10!important;
+  background:#fff!important;
+}
+/* Keyboard only removes the bottom action zone.  The control deck and line
+   pane keep their normal order; nothing is reparented or overlaid. */
+body.deliveryMode:not(.deliveryEditMode).deliveryNewQtyFocus #deliveryCreatePane>.deliveryWorkspace,
+body.deliveryMode:not(.deliveryEditMode).deliveryKeyboardOpen #deliveryCreatePane>.deliveryWorkspace{
+  display:flex!important;
+  flex-direction:column!important;
+}
+</style>
+
 </head>
 <body>
 <div id="runtimeError" style="display:none;position:fixed;left:8px;right:8px;bottom:8px;z-index:9999;background:#fee2e2;color:#7f1d1d;border:1px solid #fecaca;border-radius:12px;padding:10px;font:13px -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif"></div>
@@ -4186,7 +4236,7 @@ window.addEventListener("error",e=>{const b=document.getElementById("runtimeErro
       <button class="heroHomeHotspot noPrint" type="button" aria-label="Return to Dashboard" title="Dashboard" onclick="returnToDashboardFromHeader()"></button>
     </div>
     <div class="heroActions noPrint">
-      <span class="app-version">v0.10.46 TEST</span>
+      <span class="app-version">v0.10.47 TEST</span>
       <button class="heroMenuButton" id="heroMenuButton" type="button" aria-expanded="false">Menu</button>
     </div>
   </div>
