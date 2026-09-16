@@ -1,6 +1,6 @@
-MAGIC DRAGON PIN v0.10.71 — TEST
+MAGIC DRAGON PIN v0.10.72 — TEST
 
-WHAT CHANGED IN v0.10.71
+WHAT CHANGED IN v0.10.72
 - Record-level delivery pull results now distinguish THIS pull from prior sync history.
 - If nothing changed, message says all cloud dockets were already identical.
 - New/updated cloud dockets are remembered and highlighted in Records.
