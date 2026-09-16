@@ -3841,7 +3841,7 @@ body.deliveryMode .deliveryEditRemoveBtn{
   border-radius:7px!important;
 }
 
-/* v0.10.45 — compact delivery line cards must never stretch to fill the
+/* v0.10.46 — compact delivery line cards must never stretch to fill the
    available middle pane. Two lines should occupy two compact rows, leaving
    the remaining space empty/scrollable rather than turning each row into a
    giant card. */
@@ -4094,6 +4094,85 @@ Selective backport from real-device proven TEST v0.10.19.
 TEST runner deliberately excluded.
 */
 </style>
+
+<style id="v01046-fixed-delivery-controls">
+/* v0.10.46 TEST — New Delivery control deck is immutable.
+   The entire circled control block stays together and visible before, during
+   and after Qty keyboard focus. Added lines scroll only in the middle pane. */
+body.deliveryMode:not(.deliveryEditMode) .deliveryModuleHead{
+  display:flex!important;
+  visibility:visible!important;
+  opacity:1!important;
+  flex:0 0 auto!important;
+}
+body.deliveryMode:not(.deliveryEditMode) .deliveryTopPane{
+  display:block!important;
+  visibility:visible!important;
+  opacity:1!important;
+  flex:0 0 auto!important;
+  height:auto!important;
+  max-height:none!important;
+  overflow:visible!important;
+}
+body.deliveryMode:not(.deliveryEditMode) .deliveryTitleRow{
+  display:flex!important;
+  visibility:visible!important;
+  opacity:1!important;
+}
+body.deliveryMode:not(.deliveryEditMode) .deliveryMetaRow{
+  display:grid!important;
+  grid-template-columns:1fr 1fr!important;
+  visibility:visible!important;
+  opacity:1!important;
+}
+body.deliveryMode:not(.deliveryEditMode) #deliveryEntryTools,
+body.deliveryMode:not(.deliveryEditMode) .deliveryPickerFlow{
+  display:grid!important;
+  visibility:visible!important;
+  opacity:1!important;
+}
+body.deliveryMode:not(.deliveryEditMode) #deliveryEntryTools{display:block!important}
+body.deliveryMode:not(.deliveryEditMode) .deliveryNoteToggle{
+  display:block!important;
+  visibility:visible!important;
+  opacity:1!important;
+}
+/* Qty focus must never collapse or replace any part of the control deck. */
+body.deliveryMode:not(.deliveryEditMode).deliveryNewQtyFocus .deliveryModuleHead,
+body.deliveryMode:not(.deliveryEditMode).deliveryKeyboardOpen .deliveryModuleHead{display:flex!important}
+body.deliveryMode:not(.deliveryEditMode).deliveryNewQtyFocus .deliveryTitleRow,
+body.deliveryMode:not(.deliveryEditMode).deliveryKeyboardOpen .deliveryTitleRow{display:flex!important}
+body.deliveryMode:not(.deliveryEditMode).deliveryNewQtyFocus .deliveryMetaRow,
+body.deliveryMode:not(.deliveryEditMode).deliveryKeyboardOpen .deliveryMetaRow{display:grid!important}
+body.deliveryMode:not(.deliveryEditMode).deliveryNewQtyFocus .deliveryNoteToggle,
+body.deliveryMode:not(.deliveryEditMode).deliveryKeyboardOpen .deliveryNoteToggle{display:block!important}
+/* Preserve a fixed-height control deck; only the line list gives up space. */
+body.deliveryMode:not(.deliveryEditMode) #deliveryCreatePane>.deliveryWorkspace{
+  grid-template-rows:auto minmax(0,1fr) auto!important;
+}
+body.deliveryMode:not(.deliveryEditMode).deliveryNewQtyFocus #deliveryCreatePane>.deliveryWorkspace,
+body.deliveryMode:not(.deliveryEditMode).deliveryKeyboardOpen #deliveryCreatePane>.deliveryWorkspace{
+  grid-template-rows:auto minmax(0,1fr)!important;
+}
+/* Bottom actions may hide while keyboard is open, but the circled control deck never does. */
+body.deliveryMode:not(.deliveryEditMode).deliveryNewQtyFocus .deliveryBottomPane,
+body.deliveryMode:not(.deliveryEditMode).deliveryKeyboardOpen .deliveryBottomPane{display:none!important}
+/* Added products remain compact and scroll beneath the stationary control deck. */
+body.deliveryMode #deliveryEditLines{
+  grid-auto-rows:max-content!important;
+  align-content:start!important;
+  align-items:start!important;
+  min-height:0!important;
+  overflow-y:auto!important;
+}
+body.deliveryMode .deliveryEditLineCard{
+  height:auto!important;
+  min-height:0!important;
+  flex:none!important;
+  align-self:start!important;
+}
+</style>
+
 </head>
 <body>
 <div id="runtimeError" style="display:none;position:fixed;left:8px;right:8px;bottom:8px;z-index:9999;background:#fee2e2;color:#7f1d1d;border:1px solid #fecaca;border-radius:12px;padding:10px;font:13px -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif"></div>
@@ -4107,7 +4186,7 @@ window.addEventListener("error",e=>{const b=document.getElementById("runtimeErro
       <button class="heroHomeHotspot noPrint" type="button" aria-label="Return to Dashboard" title="Dashboard" onclick="returnToDashboardFromHeader()"></button>
     </div>
     <div class="heroActions noPrint">
-      <span class="app-version">v0.10.45 TEST</span>
+      <span class="app-version">v0.10.46 TEST</span>
       <button class="heroMenuButton" id="heroMenuButton" type="button" aria-expanded="false">Menu</button>
     </div>
   </div>
@@ -9692,13 +9771,16 @@ if(new URLSearchParams(location.search).get("mdselftest")==="qtyviewport") {
       setTimeout(()=>{
         const metrics=newDeliveryQtyViewportInvariant(syntheticTop,syntheticHeight);
         const focusMode=document.body.classList.contains("deliveryNewQtyFocus");
-        const moduleHeadHidden=getComputedStyle(document.querySelector(".deliveryModuleHead")).display==="none";
+        const moduleHeadVisible=getComputedStyle(document.querySelector(".deliveryModuleHead")).display!=="none";
         const pickerVisible=getComputedStyle(document.querySelector(".deliveryPickerFlow")).display!=="none";
-        const ok=!!metrics.ok && focusMode && moduleHeadHidden && pickerVisible;
+        const titleVisible=getComputedStyle(document.querySelector(".deliveryTitleRow")).display!=="none";
+        const metaVisible=getComputedStyle(document.querySelector(".deliveryMetaRow")).display!=="none";
+        const noteVisible=getComputedStyle(document.querySelector(".deliveryNoteToggle")).display!=="none";
+        const ok=!!metrics.ok && focusMode && moduleHeadVisible && titleVisible && metaVisible && pickerVisible && noteVisible;
         const out=document.createElement("pre");
         out.id="mdSelfTestResult";
         out.dataset.status=ok?"PASS":"FAIL";
-        out.textContent=JSON.stringify({status:ok?"PASS":"FAIL",syntheticTop,syntheticHeight,coordinateSpace:"layout-css-pixels",focusMode,moduleHeadHidden,pickerVisible,metrics},null,2);
+        out.textContent=JSON.stringify({status:ok?"PASS":"FAIL",syntheticTop,syntheticHeight,coordinateSpace:"layout-css-pixels",focusMode,moduleHeadVisible,titleVisible,metaVisible,pickerVisible,noteVisible,metrics},null,2);
         document.body.appendChild(out);
         document.documentElement.dataset.mdSelfTest=ok?"PASS":"FAIL";
       },350);
