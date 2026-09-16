@@ -3853,15 +3853,74 @@ body.deliveryMode:not(.deliveryEditMode).deliveryKeyboardOpen #deliveryCreatePan
 body.deliveryMode #delQty{font-size:16px!important}
 
 
-/* v0.10.43 — New Delivery Qty PASSIVE keyboard rule.
-   The top Qty control is already above the iPhone numeric keyboard.
-   Do not move, collapse, reparent, resize or offset the delivery shell while
-   Qty owns focus. Safari opens/closes the keyboard; the app observes only. */
-body.deliveryMode #delQty{
+/* v0.10.44 — Stable New Delivery Qty keyboard focus mode.
+   The entire exercise is to keep the actual Qty control visible while the
+   iPhone numeric keyboard is open. Safari may pan/clamp the nested fixed
+   delivery shell even when the Qty rect itself reports a plausible position.
+   While Qty owns focus, collapse non-essential chrome and keep the existing
+   picker row as the first visible row. No reparenting, refocus or DOM movement. */
+body.deliveryMode.deliveryNewQtyFocus .deliveryModuleHead,
+body.deliveryMode.deliveryNewQtyFocus .deliveryTitleRow,
+body.deliveryMode.deliveryNewQtyFocus .deliveryMetaRow,
+body.deliveryMode.deliveryNewQtyFocus .deliveryNoteToggle,
+body.deliveryMode.deliveryNewQtyFocus #deliveryQuickActions,
+body.deliveryMode.deliveryNewQtyFocus #deliveryEditAddToggle,
+body.deliveryMode.deliveryNewQtyFocus #deliveryFinderTools{
+  display:none!important;
+}
+body.deliveryMode.deliveryNewQtyFocus #docket>.deliveryModuleCard{
+  padding-top:4px!important;
+}
+body.deliveryMode.deliveryNewQtyFocus #deliveryCreatePane,
+body.deliveryMode.deliveryNewQtyFocus #deliveryCreatePane>.deliveryWorkspace{
+  min-height:0!important;
+  overflow:hidden!important;
+}
+body.deliveryMode.deliveryNewQtyFocus #deliveryCreatePane>.deliveryWorkspace{
+  grid-template-rows:auto minmax(0,1fr)!important;
+}
+body.deliveryMode.deliveryNewQtyFocus .deliveryTopPane{
+  display:block!important;
+  padding:2px 0 5px!important;
+  margin:0!important;
+  overflow:visible!important;
+}
+body.deliveryMode.deliveryNewQtyFocus #deliveryEntryTools,
+body.deliveryMode.deliveryNewQtyFocus .deliveryPickerFlow{
+  display:grid!important;
+  visibility:visible!important;
+  opacity:1!important;
+}
+body.deliveryMode.deliveryNewQtyFocus #deliveryEntryTools{display:block!important}
+body.deliveryMode.deliveryNewQtyFocus .deliveryPickerFlow{margin:0!important}
+body.deliveryMode.deliveryNewQtyFocus .deliveryBottomPane{display:none!important}
+body.deliveryMode.deliveryNewQtyFocus #delQty{
   visibility:visible!important;
   opacity:1!important;
   pointer-events:auto!important;
 }
+
+/* v0.10.44 — Qty viewport self-test coordinate-space correction retained from 0.10.41.
+   iOS Safari can pan the visual viewport when the numeric keyboard opens even
+   when no element is manually scrolled. Fixed UI remains attached to the
+   layout viewport unless we explicitly offset it by visualViewport.offsetTop.
+   This block anchors the existing Magic Dragon shell to the *visible* viewport
+   only while New Delivery Qty owns focus. It moves the shell, never the input. */
+body.deliveryMode.deliveryNewQtyViewport .hero{
+  top:calc(var(--md-vv-top,0px) + 8px)!important;
+}
+body.deliveryMode.deliveryNewQtyViewport .contentViewport{
+  /* Keep the fixed content shell in the SAME visual position when Safari pans
+     the visual viewport. The old v0.10.39 rule omitted --md-vv-top here, so
+     the content moved upward underneath the fixed hero by exactly offsetTop. */
+  top:calc(var(--md-vv-top,0px) + var(--content-top,98px))!important;
+  bottom:auto!important;
+  height:max(0px,calc(var(--md-vv-height,100dvh) - var(--content-top,98px) - 8px))!important;
+}
+body.deliveryMode.deliveryNewQtyViewport .tabs.menuOpen{
+  top:calc(var(--md-vv-top,0px) + var(--menu-top,98px))!important;
+}
+
 
 /* v0.10.14 PRODUCTION — Delivery editor state isolation */
 body.deliveryMode #deliveryArchivePane{
@@ -4033,7 +4092,7 @@ window.addEventListener("error",e=>{const b=document.getElementById("runtimeErro
       <button class="heroHomeHotspot noPrint" type="button" aria-label="Return to Dashboard" title="Dashboard" onclick="returnToDashboardFromHeader()"></button>
     </div>
     <div class="heroActions noPrint">
-      <span class="app-version">v0.10.43 TEST</span>
+      <span class="app-version">v0.10.44 TEST</span>
       <button class="heroMenuButton" id="heroMenuButton" type="button" aria-expanded="false">Menu</button>
     </div>
   </div>
@@ -5171,6 +5230,43 @@ function updateDeliveryKeyboardViewport(){
 }
 
 
+let newDeliveryQtySessionTop=null;
+let newDeliveryQtySessionHeight=null;
+
+function applyNewDeliveryQtyVisualViewport(top,height){
+  const vv=window.visualViewport;
+  const synthetic=Number.isFinite(top)||Number.isFinite(height);
+  let vvTop=Number.isFinite(top)?top:(vv?.offsetTop||0);
+  let vvHeight=Number.isFinite(height)?height:(vv?.height||window.innerHeight||0);
+
+  // iOS can report several visualViewport positions during one keyboard
+  // animation. In 0.10.42 the Qty row could be visible, then disappear again
+  // when a later transient offset moved the shell back upward. During one Qty
+  // focus session, only accept MORE downward pan and a SMALLER visible height.
+  // Never chase a later transient value back toward the top until blur.
+  if(!synthetic){
+    newDeliveryQtySessionTop=newDeliveryQtySessionTop==null?vvTop:Math.max(newDeliveryQtySessionTop,vvTop);
+    newDeliveryQtySessionHeight=newDeliveryQtySessionHeight==null?vvHeight:Math.min(newDeliveryQtySessionHeight,vvHeight);
+    vvTop=newDeliveryQtySessionTop;
+    vvHeight=newDeliveryQtySessionHeight;
+  }
+
+  document.documentElement.style.setProperty("--md-vv-top",`${Math.max(0,Math.round(vvTop))}px`);
+  document.documentElement.style.setProperty("--md-vv-height",`${Math.max(0,Math.round(vvHeight))}px`);
+  document.body.classList.add("deliveryNewQtyViewport");
+
+  requestAnimationFrame(()=>window.syncShellGeometry?.());
+}
+
+function clearNewDeliveryQtyVisualViewport(){
+  newDeliveryQtySessionTop=null;
+  newDeliveryQtySessionHeight=null;
+  document.body.classList.remove("deliveryNewQtyViewport");
+  document.documentElement.style.removeProperty("--md-vv-top");
+  document.documentElement.style.removeProperty("--md-vv-height");
+  requestAnimationFrame(()=>window.syncShellGeometry?.());
+}
+
 function newDeliveryQtyViewportInvariant(visibleTopOverride,visibleHeightOverride){
   const input=document.activeElement?.id==="delQty"?document.activeElement:document.getElementById("delQty");
   const hero=document.querySelector(".hero");
@@ -5178,7 +5274,7 @@ function newDeliveryQtyViewportInvariant(visibleTopOverride,visibleHeightOverrid
   const vv=window.visualViewport;
   if(!input||!hero||!content)return {ok:false,reason:"missing-elements"};
 
-  // IMPORTANT iPhone/Safari coordinate-space rule (v0.10.42, retained from 0.10.41):
+  // IMPORTANT iPhone/Safari coordinate-space rule (v0.10.44, retained from 0.10.41):
   // visualViewport.offsetTop is a LAYOUT-viewport offset, but the rectangles
   // returned by getBoundingClientRect() for the fixed shell we are testing are
   // VISUAL-viewport coordinates while the keyboard is open. Mixing those two
@@ -5227,14 +5323,19 @@ function runNewDeliveryQtyRuntimeCheck(){
 }
 
 window.newDeliveryQtyFocus=(input)=>{
-  // v0.10.43 PASSIVE MODE: Qty already sits above the keyboard.
-  // Record focus for diagnostics only. Do not change layout, scroll position,
-  // shell geometry, CSS viewport variables, focus, selection or DOM placement.
+  // New focus session: forget any viewport values from the previous keyboard.
+  newDeliveryQtySessionTop=null;
+  newDeliveryQtySessionHeight=null;
   deliveryKeyboardActiveInput=input;
-  document.body.classList.remove("deliveryKeyboardOpen","deliveryNewQtyFocus","deliveryNewQtyViewport");
+  document.body.classList.add("deliveryNewQtyFocus");
+  document.body.classList.remove("deliveryKeyboardOpen");
   document.documentElement.style.removeProperty("--md-keyboard-height");
-  document.documentElement.style.removeProperty("--md-vv-top");
-  document.documentElement.style.removeProperty("--md-vv-height");
+  applyNewDeliveryQtyVisualViewport();
+  [40,120,240,420].forEach(ms=>setTimeout(()=>{
+    if(document.activeElement===input)applyNewDeliveryQtyVisualViewport();
+  },ms));
+  // Automatic on-device regression check after the iOS keyboard animation.
+  // PASS is silent. FAIL puts exact viewport/header/Qty geometry on screen.
   setTimeout(()=>{if(document.activeElement===input)runNewDeliveryQtyRuntimeCheck()},700);
 };
 
@@ -5242,6 +5343,8 @@ window.newDeliveryQtyBlur=(input)=>{
   setTimeout(()=>{
     if(document.activeElement!==input){
       deliveryKeyboardActiveInput=null;
+      document.body.classList.remove("deliveryNewQtyFocus");
+      clearNewDeliveryQtyVisualViewport();
       document.getElementById("qtyViewportTestFlag")?.remove();
     }
   },120);
@@ -5270,11 +5373,11 @@ window.deliveryQtyBlur=(input)=>{
 
 if(window.visualViewport){
   window.visualViewport.addEventListener("resize",()=>{
-    // Passive New Delivery Qty: observe only; updateDeliveryKeyboardViewport()
-    // exits without moving anything when #delQty owns focus.
+    if(deliveryKeyboardActiveInput?.id==="delQty")applyNewDeliveryQtyVisualViewport();
     updateDeliveryKeyboardViewport();
   },{passive:true});
   window.visualViewport.addEventListener("scroll",()=>{
+    if(deliveryKeyboardActiveInput?.id==="delQty")applyNewDeliveryQtyVisualViewport();
     updateDeliveryKeyboardViewport();
   },{passive:true});
 }
@@ -9543,38 +9646,31 @@ if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
     window.addEventListener("load",syncGeometry,{once:true});
   })();
 
-  window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js?v=1043", {updateViaCache:"none"}).catch(()=>{}));
+  window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js?v=1042", {updateViaCache:"none"}).catch(()=>{}));
 }
 
-/* v0.10.43 deterministic regression check.
-   Confirms that New Delivery Qty focus is passive: no focus-mode class, no
-   viewport-offset class/variables, no keyboard-height variable and no app
-   scroll/layout correction is installed for the top Qty field. */
+/* v0.10.44 deterministic regression check.
+   Run with ?mdselftest=qtyviewport in any browser. It simulates an iPhone
+   visual viewport panned 92px with a 461px visible height. The assertion verifies that the Qty field remains inside the safe visual-viewport
+   interval without mixing layout-viewport offsetTop with rect coordinates. */
 if(new URLSearchParams(location.search).get("mdselftest")==="qtyviewport") {
   window.addEventListener("load",()=>setTimeout(()=>{
     try{
       openDeliveryCreate();
-      const input=document.getElementById("delQty");
-      const before={
-        pageY:window.pageYOffset||0,
-        docket:document.getElementById("docket")?.scrollTop||0,
-        section:document.querySelector(".section.active")?.scrollTop||0
-      };
-      deliveryKeyboardActiveInput=input;
-      newDeliveryQtyFocus(input);
+      const syntheticTop=92,syntheticHeight=461;
+      deliveryKeyboardActiveInput=document.getElementById("delQty");
+      document.body.classList.add("deliveryNewQtyFocus");
+      applyNewDeliveryQtyVisualViewport(syntheticTop,syntheticHeight);
       setTimeout(()=>{
-        const after={
-          pageY:window.pageYOffset||0,
-          docket:document.getElementById("docket")?.scrollTop||0,
-          section:document.querySelector(".section.active")?.scrollTop||0
-        };
-        const noClasses=!document.body.classList.contains("deliveryNewQtyFocus")&&!document.body.classList.contains("deliveryNewQtyViewport")&&!document.body.classList.contains("deliveryKeyboardOpen");
-        const noVars=!document.documentElement.style.getPropertyValue("--md-vv-top")&&!document.documentElement.style.getPropertyValue("--md-vv-height")&&!document.documentElement.style.getPropertyValue("--md-keyboard-height");
-        const noAppScroll=before.pageY===after.pageY&&before.docket===after.docket&&before.section===after.section;
-        const ok=noClasses&&noVars&&noAppScroll;
+        const metrics=newDeliveryQtyViewportInvariant(syntheticTop,syntheticHeight);
+        const focusMode=document.body.classList.contains("deliveryNewQtyFocus");
+        const moduleHeadHidden=getComputedStyle(document.querySelector(".deliveryModuleHead")).display==="none";
+        const pickerVisible=getComputedStyle(document.querySelector(".deliveryPickerFlow")).display!=="none";
+        const ok=!!metrics.ok && focusMode && moduleHeadHidden && pickerVisible;
         const out=document.createElement("pre");
-        out.id="mdSelfTestResult";out.dataset.status=ok?"PASS":"FAIL";
-        out.textContent=JSON.stringify({status:ok?"PASS":"FAIL",mode:"passive",noClasses,noVars,noAppScroll,before,after},null,2);
+        out.id="mdSelfTestResult";
+        out.dataset.status=ok?"PASS":"FAIL";
+        out.textContent=JSON.stringify({status:ok?"PASS":"FAIL",syntheticTop,syntheticHeight,coordinateSpace:"layout-css-pixels",focusMode,moduleHeadHidden,pickerVisible,metrics},null,2);
         document.body.appendChild(out);
         document.documentElement.dataset.mdSelfTest=ok?"PASS":"FAIL";
       },350);

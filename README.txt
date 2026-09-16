@@ -1,19 +1,16 @@
-MAGIC DRAGON PIN v0.10.43 — TEST
+MAGIC DRAGON PIN v0.10.44 — TEST
 
-WHAT CHANGED
-- New Delivery Qty is now passive on iPhone: tapping Qty does not ask the app to move, collapse, resize, reparent, refocus or offset anything.
-- Removed the v0.10.42 Qty-focus collapse mode and visualViewport shell shifting.
-- Removed repeated visualViewport-driven Qty shell corrections.
-- Safari is allowed to open/close the numeric keyboard naturally.
-- The existing runtime diagnostic remains observation-only: it can report if Qty is genuinely hidden, but it does not move the UI.
-- Edit-existing-delivery Qty keyboard handling is unchanged.
+WHAT CHANGED IN v0.10.44
+- Based on the v0.10.42 keyboard approach because that was the closest on the real iPhone.
+- Fixes the intermittent second movement: while New Delivery Qty stays focused, the app now remembers the strongest Safari visual-viewport pan seen during that keyboard session and will not follow a later transient offset back upward.
+- The visible keyboard height is likewise held at the smallest stable viewport height until Qty loses focus.
+- No input reparenting and no forced refocus.
+- On blur, all temporary viewport values are cleared so the normal screen returns cleanly.
+- Runtime Qty visibility self-test retained.
 
 PASS CONDITION
-Tap New Delivery Qty -> numeric keyboard opens -> the same Qty box remains visible -> type a number and see it in that box -> close keyboard -> layout remains normal.
+Tap New Delivery Qty -> numeric keyboard opens -> the Qty input remains visible continuously -> type a number and see it in the Qty field -> dismiss keyboard -> normal delivery screen returns.
 
-RELEASE CHECKS
-- App badge: v0.10.43 TEST
-- Service-worker cache: magic-pin-v0.10.43-test
-- Service-worker registration cache-buster: v=1043
-- JavaScript syntax checked with Node.
-- ZIP integrity checked.
+VERSION / CACHE
+- App badge: v0.10.44 TEST
+- Service-worker cache: magic-pin-v0.10.44-test
