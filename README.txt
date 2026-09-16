@@ -1,6 +1,9 @@
-MAGIC DRAGON PIN v0.10.58 — TEST
+MAGIC DRAGON PIN v0.10.59 — TEST
 
-WHAT CHANGED IN v0.10.58
+WHAT CHANGED IN v0.10.59
+
+- Complete App Data import now explains the pre-import safety-backup step BEFORE iPhone opens the native Share / Save sheet.
+- The prompt tells the user why the Magic-Pin-SAFETY file is being created, what to do with it, and that cancelling leaves the device unchanged.
 
 - Fixed stale dashboard Sunday status after replacing/overriding an older Sunday report.
 - Historical replacement imports no longer mark that old date as the active Sunday workflow.
@@ -26,7 +29,7 @@ TEST PROCEDURE
 8. Reload once more and confirm imported state persists.
 
 VERSION CHECK
-- App badge: v0.10.58 TEST
-- Service-worker cache: magic-pin-v0.10.58-test
+- App badge: v0.10.59 TEST
+- Service-worker cache: magic-pin-v0.10.59-test
 
 Filename update v0.10.57: user-facing export/backup files use the short Magic-Pin-* naming convention for easier identification on iPhone.

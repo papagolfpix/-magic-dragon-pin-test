@@ -4189,7 +4189,7 @@ body.deliveryMode .deliveryEditLineCard{
 
 
 <style id="v01047-line-pane-below-controls">
-/* v0.10.58 TEST — hard-separate New Delivery controls from added lines.
+/* v0.10.59 TEST — hard-separate New Delivery controls from added lines.
    iPhone Safari was allowing the first reusable line card/select to paint back
    underneath the stationary control deck.  Use a simple column flex layout
    for New Delivery: controls = fixed natural height, line list = the only
@@ -4250,7 +4250,7 @@ window.addEventListener("error",e=>{const b=document.getElementById("runtimeErro
       <button class="heroHomeHotspot noPrint" type="button" aria-label="Return to Dashboard" title="Dashboard" onclick="returnToDashboardFromHeader()"></button>
     </div>
     <div class="heroActions noPrint">
-      <span class="app-version">v0.10.58 TEST</span>
+      <span class="app-version">v0.10.59 TEST</span>
       <button class="heroMenuButton" id="heroMenuButton" type="button" aria-expanded="false">Menu</button>
     </div>
   </div>
@@ -6706,7 +6706,7 @@ function buildFullBackupPayload(kind="SUPPORT",note=""){
   return {
     magicDragonBackup:true,
     app:"Magic Dragon Pin",
-    appVersion:"0.10.58",
+    appVersion:"0.10.59",
     backupKind:String(kind||"SUPPORT").toUpperCase(),
     createdAt:new Date().toISOString(),
     note:String(note||""),
@@ -9961,7 +9961,7 @@ function validateBackupPackage(pkg){
 }
 async function createCompleteTransferPackage(kind="FULL_TRANSFER"){
  const sourceFiles=await exportArchivedSourceFiles(),counts=backupCounts();
- return {format:BACKUP_FORMAT,schema:BACKUP_SCHEMA,appVersion:"0.10.58",backupKind:kind,createdAt:new Date().toISOString(),counts,sourceFilesCount:sourceFiles.length,data:JSON.parse(JSON.stringify(db)),sourceFiles};
+ return {format:BACKUP_FORMAT,schema:BACKUP_SCHEMA,appVersion:"0.10.59",backupKind:kind,createdAt:new Date().toISOString(),counts,sourceFilesCount:sourceFiles.length,data:JSON.parse(JSON.stringify(db)),sourceFiles};
 }
 async function savePackageFile(pkg,prefix="Magic-Pin-Data"){
  const blob=new Blob([JSON.stringify(pkg)],{type:"application/json"});
@@ -10017,6 +10017,14 @@ document.getElementById("transferPreviewCommit").onclick=async()=>{
  const commit=document.getElementById("transferPreviewCommit");commit.disabled=true;
  let safety=null,changed=false;
  try{
+  const continueSafety=confirm(
+   "Safety backup required before replacing this device's data.\n\n"+
+   "Magic Dragon will first create a copy of the CURRENT app data on this device.\n\n"+
+   "Next, your iPhone Share / Save sheet will open with a file named Magic-Pin-SAFETY-....json. Choose Save to Files (or another safe location), then return here.\n\n"+
+   "If you cancel, the import will stop and NOTHING will be changed.\n\n"+
+   "Tap OK to create and save the safety backup."
+  );
+  if(!continueSafety){backupStatus("Import paused before safety backup. Nothing on this device was changed.");return}
   backupStatus("Creating pre-import safety backup…");
   safety=await createCompleteTransferPackage("PRE_IMPORT_SAFETY");
   const saved=await savePackageFile(safety,"Magic-Pin-SAFETY");
