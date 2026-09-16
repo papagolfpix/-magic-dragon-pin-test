@@ -3568,6 +3568,19 @@ body.deliveryEditMode .deliveryEditLineCard.keyboardTarget{
 .backupRecoveryStatus.bad::before{content:"⚠ ";font-weight:900}
 .backupRecoveryStatus.warn::before{content:"! ";font-weight:900}
 
+
+/* v0.10.70 record-level delivery sync TEST */
+.cloudRecordSyncCard{margin-top:10px;border:1px solid #d8dde6;border-radius:14px;background:#fff;padding:12px}
+.cloudRecordSyncCard .recordSyncTitle{font-weight:900;font-size:16px;margin-bottom:2px}
+.cloudRecordSyncCard .recordSyncSub{font-size:12px;color:#667085;line-height:1.35;margin-bottom:9px}
+.cloudRecordSyncCard select{width:100%;min-height:42px;font-size:15px}
+.cloudRecordActions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+.cloudRecordActions .btn{width:100%;margin:0}
+.cloudRecordStatus{margin-top:8px;padding:9px 10px;border-radius:10px;font-weight:800;font-size:13px;line-height:1.35;background:#f4f6f8;color:#344054;border:1px solid #d8dde6}
+.cloudRecordStatus.good{background:#ecfdf3;color:#166534;border-color:#86efac}
+.cloudRecordStatus.warn{background:#fff7ed;color:#9a3412;border-color:#fdba74}
+.cloudRecordStatus.bad{background:#fef2f2;color:#991b1b;border-color:#fca5a5}
+@media(max-width:520px){.cloudRecordActions{grid-template-columns:1fr}.cloudRecordSyncCard{padding:10px}}
 /* v0.10.69 compact TEST Cloud sign-in controls */
 .cloudCompactTop{display:flex;justify-content:flex-end;margin:0 0 6px}
 .cloudInfoToggle{border:1px solid #d0d5dd;background:#fff;color:#475467;border-radius:999px;padding:5px 9px;font-size:10px;font-weight:850;line-height:1.1}
@@ -4219,7 +4232,7 @@ body.deliveryMode .deliveryEditLineCard{
 
 
 <style id="v01047-line-pane-below-controls">
-/* v0.10.69 TEST — hard-separate New Delivery controls from added lines.
+/* v0.10.70 TEST — hard-separate New Delivery controls from added lines.
    iPhone Safari was allowing the first reusable line card/select to paint back
    underneath the stationary control deck.  Use a simple column flex layout
    for New Delivery: controls = fixed natural height, line list = the only
@@ -4280,7 +4293,7 @@ window.addEventListener("error",e=>{const b=document.getElementById("runtimeErro
       <button class="heroHomeHotspot noPrint" type="button" aria-label="Return to Dashboard" title="Dashboard" onclick="returnToDashboardFromHeader()"></button>
     </div>
     <div class="heroActions noPrint">
-      <span class="app-version">v0.10.69 TEST</span>
+      <span class="app-version">v0.10.70 TEST</span>
       <button class="heroMenuButton" id="heroMenuButton" type="button" aria-expanded="false">Menu</button>
     </div>
   </div>
@@ -4659,6 +4672,20 @@ window.addEventListener("error",e=>{const b=document.getElementById("runtimeErro
               <button class="btn alt" id="saveCloudTestMarker" type="button">Save marker</button>
             </div>
             <div id="cloudTestMarkerStatus" class="small" style="margin-top:6px"></div>
+          </div>
+
+          <div class="cloudRecordSyncCard" id="cloudDeliveryRecordCard">
+            <div class="recordSyncTitle">Delivery Record Sync — TEST</div>
+            <div class="recordSyncSub">First record-level sync Lego block. Moves individual delivery dockets without replacing the whole app database.</div>
+            <div class="field">
+              <label>Local delivery docket</label>
+              <select id="cloudDeliveryRecordSelect"></select>
+            </div>
+            <div class="cloudRecordActions">
+              <button class="btn primary" id="cloudPushDeliveryRecord" type="button">Upload selected docket</button>
+              <button class="btn alt" id="cloudPullDeliveryRecords" type="button">Pull delivery records</button>
+            </div>
+            <div class="cloudRecordStatus" id="cloudDeliveryRecordStatus">No delivery record sync action yet.</div>
           </div>
 
           <div class="backupRecoveryCards" style="margin-top:10px">
@@ -6789,7 +6816,7 @@ function buildFullBackupPayload(kind="SUPPORT",note=""){
   return {
     magicDragonBackup:true,
     app:"Magic Dragon Pin",
-    appVersion:"0.10.69",
+    appVersion:"0.10.70",
     backupKind:String(kind||"SUPPORT").toUpperCase(),
     createdAt:new Date().toISOString(),
     note:String(note||""),
@@ -9998,6 +10025,7 @@ const MD_TEST_SUPABASE_URL="https://bzgkeshxbnhnlrpdgbtb.supabase.co";
 const MD_TEST_SUPABASE_KEY="sb_publishable_8EReyQFUFSe6SPHCBLhU7g_zp8j18_D";
 const MD_TEST_WORKSPACE="magic-dragon-pin-test";
 const MD_TEST_STATE_TABLE="md_test_device_state";
+const MD_TEST_DELIVERY_TABLE="md_test_delivery_record";
 let mdCloudSession=null;
 function cloudEl(id){return document.getElementById(id)}
 function cloudStatus(msg,state="info"){const el=cloudEl("cloudStatus");if(el){el.textContent=msg;el.classList.remove("good","bad","warn","info");el.classList.add(state==="bad"?"bad":state==="good"?"good":state==="warn"?"warn":"info")}}
@@ -10033,7 +10061,7 @@ function saveCloudTestMarker(){
  cloudStatus("Local TEST change saved — ready to upload when cloud is current.","info");
  const metaRev=cloudNumStorage(MD_CLOUD_SEEN_REV_KEY),base=cloudNumStorage(MD_CLOUD_BASE_REV_KEY);
  if(metaRev&&base===metaRev){
-   const meta={revision:metaRev,updated_by_device:"cloud",app_version:"0.10.69"};
+   const meta={revision:metaRev,updated_by_device:"cloud",app_version:"0.10.70"};
    const cloud=cloudEl("cloudOverviewCloud"),baseEl=cloudEl("cloudOverviewBase"),stateEl=cloudEl("cloudOverviewState"),wrap=cloudEl("cloudOverview");
    if(cloud)cloud.textContent=`Rev ${metaRev}`;if(baseEl)baseEl.textContent=`Base rev ${base}`;if(stateEl)stateEl.textContent="LOCAL CHANGE — UPLOAD";
    if(wrap){[...wrap.querySelectorAll(".cloudOverviewCard")].forEach(x=>{x.classList.remove("good","bad","warn");x.classList.add("warn")})}
@@ -10173,7 +10201,7 @@ async function cloudPush(){
   const hash=await sha256Text(stableJson(pkg)),fingerprint=await cloudStateFingerprint(pkg),revision=currentRevision+1;
   const c=pkg.counts;
   if(!confirm(`Upload this device to TEST Cloud?\n\nRevision ${revision}\n${c.products} products · ${c.aliases} aliases · ${c.sundayReports} Sunday reports · ${c.deliveries} deliveries · ${c.invoices} invoices\n\nTEST workspace only.`)){cloudStatus("Upload cancelled — nothing changed.","info");return}
-  const row={workspace_id:MD_TEST_WORKSPACE,revision,app_version:"0.10.69",payload:pkg,payload_hash:hash,updated_by:mdCloudSession.user?.id||null,updated_by_device:label,updated_at:new Date().toISOString()};
+  const row={workspace_id:MD_TEST_WORKSPACE,revision,app_version:"0.10.70",payload:pkg,payload_hash:hash,updated_by:mdCloudSession.user?.id||null,updated_by_device:label,updated_at:new Date().toISOString()};
   let saved;
   if(currentRevision===0){
    saved=await mdCloudFetch(`/rest/v1/${MD_TEST_STATE_TABLE}`,{method:"POST",body:row,headers:{Prefer:"return=representation"}});
@@ -10261,7 +10289,7 @@ function validateBackupPackage(pkg){
 }
 async function createCompleteTransferPackage(kind="FULL_TRANSFER"){
  const sourceFiles=await exportArchivedSourceFiles(),counts=backupCounts();
- return {format:BACKUP_FORMAT,schema:BACKUP_SCHEMA,appVersion:"0.10.69",backupKind:kind,createdAt:new Date().toISOString(),counts,sourceFilesCount:sourceFiles.length,data:JSON.parse(JSON.stringify(db)),sourceFiles};
+ return {format:BACKUP_FORMAT,schema:BACKUP_SCHEMA,appVersion:"0.10.70",backupKind:kind,createdAt:new Date().toISOString(),counts,sourceFilesCount:sourceFiles.length,data:JSON.parse(JSON.stringify(db)),sourceFiles};
 }
 async function savePackageFile(pkg,prefix="Magic-Pin-Data"){
  const blob=new Blob([JSON.stringify(pkg)],{type:"application/json"});
@@ -10397,7 +10425,85 @@ if(cloudEl("cloudSignOut"))cloudEl("cloudSignOut").onclick=cloudSignOut;
 if(cloudEl("cloudRefresh"))cloudEl("cloudRefresh").onclick=cloudRefresh;
 if(cloudEl("cloudPush"))cloudEl("cloudPush").onclick=cloudPush;
 if(cloudEl("cloudPull"))cloudEl("cloudPull").onclick=cloudPull;
+
+/* v0.10.70 — first record-level sync Lego block: delivery dockets only. */
+const MD_DELIVERY_SYNC_META_KEY="mdpin-cloud-delivery-sync-meta";
+function deliverySyncMeta(){try{return JSON.parse(localStorage.getItem(MD_DELIVERY_SYNC_META_KEY)||"{}")||{}}catch(e){return {}}}
+function saveDeliverySyncMeta(meta){localStorage.setItem(MD_DELIVERY_SYNC_META_KEY,JSON.stringify(meta||{}))}
+function deliveryRecordStatus(msg,state="info"){
+ const el=cloudEl("cloudDeliveryRecordStatus");if(!el)return;
+ el.textContent=msg;el.classList.remove("good","warn","bad");if(state==="good")el.classList.add("good");else if(state==="warn")el.classList.add("warn");else if(state==="bad")el.classList.add("bad");
+}
+function eligibleDeliveryRecords(){
+ return [...(db.deliveries||[])].filter(d=>d&&d.id&&!d.generatedFromSundaySuggestion).sort((a,b)=>String(b.date||"").localeCompare(String(a.date||""))||String(b.id).localeCompare(String(a.id)));
+}
+function deliveryRecordLabel(d){return `${d.date||"No date"} · ${displayBranchName(d.branch||"")} · ${d.id}`}
+function renderCloudDeliveryRecordUi(preferredId=""){
+ const sel=cloudEl("cloudDeliveryRecordSelect");if(!sel)return;
+ const current=preferredId||sel.value;const rows=eligibleDeliveryRecords();
+ sel.innerHTML=rows.length?rows.map(d=>`<option value="${escapeHtml(d.id)}">${escapeHtml(deliveryRecordLabel(d))}</option>`).join(""):'<option value="">No local delivery dockets</option>';
+ if(current&&rows.some(d=>d.id===current))sel.value=current;
+}
+async function deliveryPayloadFingerprint(d){return sha256Text(stableJson(d||{}))}
+async function cloudGetDeliveryRecord(id){
+ const rows=await mdCloudFetch(`/rest/v1/${MD_TEST_DELIVERY_TABLE}?workspace_id=eq.${encodeURIComponent(MD_TEST_WORKSPACE)}&record_id=eq.${encodeURIComponent(id)}&select=workspace_id,record_id,revision,payload,payload_hash,updated_by_device,updated_at,app_version&limit=1`);
+ return Array.isArray(rows)&&rows.length?rows[0]:null;
+}
+async function cloudGetDeliveryRecords(){
+ const rows=await mdCloudFetch(`/rest/v1/${MD_TEST_DELIVERY_TABLE}?workspace_id=eq.${encodeURIComponent(MD_TEST_WORKSPACE)}&deleted=eq.false&select=workspace_id,record_id,revision,payload,payload_hash,updated_by_device,updated_at,app_version&order=updated_at.asc`);
+ return Array.isArray(rows)?rows:[];
+}
+async function cloudPushSelectedDeliveryRecord(){
+ if(!mdCloudSession?.access_token)return deliveryRecordStatus("Sign in to TEST Cloud first.","bad");
+ const id=cloudEl("cloudDeliveryRecordSelect")?.value;const d=(db.deliveries||[]).find(x=>x.id===id);
+ if(!d)return deliveryRecordStatus("Choose a local delivery docket first.","bad");
+ const label=(cloudEl("cloudDeviceLabel")?.value||localStorage.getItem("mdpin-cloud-device")||detectCloudDeviceLabel()).trim()||"Test device";
+ deliveryRecordStatus("Checking this delivery record in TEST Cloud…");
+ try{
+   const remote=await cloudGetDeliveryRecord(id);const meta=deliverySyncMeta();const base=meta[id]||null;const localFp=await deliveryPayloadFingerprint(d);
+   if(remote){
+     if(!base||Number(base.revision)!==Number(remote.revision)){
+       return deliveryRecordStatus(`Upload blocked — ${id} is cloud revision ${remote.revision}${remote.updated_by_device?` from ${remote.updated_by_device}`:""}. Pull delivery records first.`,"warn");
+     }
+     const next=Number(remote.revision)+1;const row={revision:next,payload:JSON.parse(JSON.stringify(d)),payload_hash:localFp,updated_by:mdCloudSession.user?.id||null,updated_by_device:label,updated_at:new Date().toISOString(),app_version:"0.10.70",deleted:false};
+     const saved=await mdCloudFetch(`/rest/v1/${MD_TEST_DELIVERY_TABLE}?workspace_id=eq.${encodeURIComponent(MD_TEST_WORKSPACE)}&record_id=eq.${encodeURIComponent(id)}&revision=eq.${remote.revision}`,{method:"PATCH",body:row,headers:{Prefer:"return=representation"}});
+     const written=Array.isArray(saved)&&saved.length?saved[0]:null;if(!written)throw new Error("Record revision conflict — another device changed this docket first.");
+     meta[id]={revision:next,fingerprint:localFp};saveDeliverySyncMeta(meta);deliveryRecordStatus(`✓ Docket ${id} uploaded as record revision ${next} from ${label}.`,"good");
+   }else{
+     const row={workspace_id:MD_TEST_WORKSPACE,record_id:id,revision:1,payload:JSON.parse(JSON.stringify(d)),payload_hash:localFp,updated_by:mdCloudSession.user?.id||null,updated_by_device:label,updated_at:new Date().toISOString(),app_version:"0.10.70",deleted:false};
+     const saved=await mdCloudFetch(`/rest/v1/${MD_TEST_DELIVERY_TABLE}`,{method:"POST",body:row,headers:{Prefer:"return=representation"}});
+     const written=Array.isArray(saved)&&saved.length?saved[0]:null;if(!written)throw new Error("The cloud did not confirm the new delivery record.");
+     meta[id]={revision:1,fingerprint:localFp};saveDeliverySyncMeta(meta);deliveryRecordStatus(`✓ Docket ${id} uploaded as new record revision 1 from ${label}.`,"good");
+   }
+ }catch(e){console.error(e);const msg=String(e?.message||e||"");deliveryRecordStatus(msg.includes("Session expired")?"Session expired — please sign in again.":`Delivery upload failed — ${msg}`,"bad")}
+}
+async function cloudPullDeliveryRecordUpdates(){
+ if(!mdCloudSession?.access_token)return deliveryRecordStatus("Sign in to TEST Cloud first.","bad");
+ deliveryRecordStatus("Checking cloud delivery records…");
+ try{
+   const rows=await cloudGetDeliveryRecords();const meta=deliverySyncMeta();let added=0,updated=0,same=0,conflicts=[];
+   for(const row of rows){
+     const incoming=row.payload;if(!incoming||String(incoming.id||"")!==String(row.record_id||"")){conflicts.push(`${row.record_id}: invalid payload`);continue}
+     const remoteFp=row.payload_hash||await deliveryPayloadFingerprint(incoming);const i=(db.deliveries||[]).findIndex(d=>d.id===row.record_id);const base=meta[row.record_id]||null;
+     if(i<0){db.deliveries.push(JSON.parse(JSON.stringify(incoming)));meta[row.record_id]={revision:Number(row.revision),fingerprint:remoteFp};added++;continue}
+     const local=db.deliveries[i],localFp=await deliveryPayloadFingerprint(local);
+     if(localFp===remoteFp){meta[row.record_id]={revision:Number(row.revision),fingerprint:remoteFp};same++;continue}
+     if(base&&localFp===base.fingerprint&&Number(row.revision)>=Number(base.revision)){
+       db.deliveries[i]=JSON.parse(JSON.stringify(incoming));meta[row.record_id]={revision:Number(row.revision),fingerprint:remoteFp};updated++;continue
+     }
+     if(base&&Number(row.revision)===Number(base.revision)&&localFp!==base.fingerprint){conflicts.push(`${row.record_id}: local unsynced edit`);continue}
+     conflicts.push(`${row.record_id}: both cloud and local differ`);
+   }
+   if(added||updated){save();refreshReconciliationViews();renderDocketArchive();renderMetrics();renderHistory();renderAudit();renderDashboardAlerts()}
+   saveDeliverySyncMeta(meta);renderCloudDeliveryRecordUi();
+   if(conflicts.length)deliveryRecordStatus(`Pulled ${added} new and ${updated} updated docket(s). ${conflicts.length} conflict(s) were left unchanged: ${conflicts.join(" · ")}`,"warn");
+   else deliveryRecordStatus(`✓ Delivery record sync complete — ${added} added, ${updated} updated, ${same} already matched. No whole-app restore used.`,"good");
+ }catch(e){console.error(e);const msg=String(e?.message||e||"");deliveryRecordStatus(msg.includes("Session expired")?"Session expired — please sign in again.":`Delivery pull failed — ${msg}`,"bad")}
+}
+
 if(cloudEl("saveCloudTestMarker"))cloudEl("saveCloudTestMarker").onclick=saveCloudTestMarker;
+if(cloudEl("cloudPushDeliveryRecord"))cloudEl("cloudPushDeliveryRecord").onclick=cloudPushSelectedDeliveryRecord;
+if(cloudEl("cloudPullDeliveryRecords"))cloudEl("cloudPullDeliveryRecords").onclick=cloudPullDeliveryRecordUpdates;
 
 /* v0.10.67 Settings focus accordion. Opening one settings group temporarily hides the other chevrons. Collapsing it restores the full menu. */
 (()=>{
@@ -10415,11 +10521,12 @@ if(cloudEl("saveCloudTestMarker"))cloudEl("saveCloudTestMarker").onclick=saveClo
  sync();
 })();
 
-/* v0.10.69 TEST Cloud freshness: whenever the cloud panel opens, refresh live metadata so stale revision labels cannot survive a device switch or restore. */
+/* v0.10.70 TEST Cloud freshness: whenever the cloud panel opens, refresh live metadata so stale revision labels cannot survive a device switch or restore. */
 (()=>{
  const tc=document.getElementById("testCloudDetails");if(!tc)return;
  tc.addEventListener("toggle",()=>{
   if(!tc.open)return;
+  renderCloudDeliveryRecordUi();
   setTimeout(()=>{
    if(mdCloudSession?.access_token)cloudRefresh();
    else{cloudStatus("Sign in to TEST Cloud to check the latest revision.","info");renderCloudOverview(null,"idle");}
@@ -10427,7 +10534,7 @@ if(cloudEl("saveCloudTestMarker"))cloudEl("saveCloudTestMarker").onclick=saveClo
  });
 })();
 
-initCloudFields();renderCloudOverview(null,"idle");renderCloudTestMarker();
+initCloudFields();renderCloudOverview(null,"idle");renderCloudTestMarker();renderCloudDeliveryRecordUi();
 document.getElementById("masterProductSearch").oninput=filterMasterProductSetup;
 document.getElementById("fillMasterCurrent").onclick=()=>renderMasterProductSetup(true);
 document.getElementById("saveMasterProducts").onclick=applyMasterProductSetup;
