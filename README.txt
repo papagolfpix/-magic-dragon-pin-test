@@ -1,4 +1,4 @@
-MAGIC DRAGON PIN v0.10.36 — TEST
+MAGIC DRAGON PIN v0.10.37 — TEST
 
 Purpose of this build:
 - Regression-only repair for New Delivery Qty on iPhone Safari.
@@ -19,4 +19,10 @@ TEST CHECK:
 Tap New Delivery Qty. The numeric keyboard must open normally, the Qty field must remain visible above it, and the layout must restore after the keyboard closes.
 
 
-v0.10.36 TEST: iPhone New Delivery Qty keyboard fix. The top #delQty field is now explicitly excluded from edit-line positioning and all manual docket scroll correction while the keyboard is open. Safari owns focus/keyboard scrolling; Edit/Suggested Delivery Qty positioning remains unchanged.
+v0.10.37 TEST: iPhone New Delivery Qty keyboard fix. The top #delQty field is now explicitly excluded from edit-line positioning and all manual docket scroll correction while the keyboard is open. Safari owns focus/keyboard scrolling; Edit/Suggested Delivery Qty positioning remains unchanged.
+
+
+v0.10.37 targeted iPhone correction:
+- New Delivery Qty is fully exempt from keyboard-layout handling.
+- No deliveryKeyboardOpen class, header collapse, select(), scroll, reparent, refocus or viewport correction is permitted for #delQty.
+- Edit/Suggested Delivery line-item Qty keeps the existing scroll-list keyboard Lego block.

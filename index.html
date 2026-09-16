@@ -4023,7 +4023,7 @@ window.addEventListener("error",e=>{const b=document.getElementById("runtimeErro
       <button class="heroHomeHotspot noPrint" type="button" aria-label="Return to Dashboard" title="Dashboard" onclick="returnToDashboardFromHeader()"></button>
     </div>
     <div class="heroActions noPrint">
-      <span class="app-version">v0.10.36 TEST</span>
+      <span class="app-version">v0.10.37 TEST</span>
       <button class="heroMenuButton" id="heroMenuButton" type="button" aria-expanded="false">Menu</button>
     </div>
   </div>
@@ -5078,7 +5078,7 @@ function positionActiveDeliveryQty(){
   const list=document.getElementById("deliveryEditLines");
   if(!input||!list||!document.body.classList.contains("deliveryMode"))return;
 
-  // v0.10.36 iPhone invariant: the New Delivery top Qty field already lives
+  // v0.10.37 iPhone invariant: the New Delivery top Qty field already lives
   // in the fixed picker zone. Safari owns its focus/keyboard scrolling. Never
   // scroll #docket, reparent, refocus or reposition this input. Those actions
   // race visualViewport and can push the picker above the visible keyboard area.
@@ -5137,13 +5137,22 @@ function updateDeliveryKeyboardViewport(){
       return;
     }
 
+    /* v0.10.37 hard invariant — New Delivery Qty is already in the fixed
+       picker row and needs NO keyboard layout treatment. iOS Safari gets
+       full ownership of focus. Do not collapse the header, hide rows, move
+       panes, set keyboard CSS variables, scroll, select, refocus or reposition. */
+    if(deliveryKeyboardActiveInput?.id==="delQty"){
+      document.body.classList.remove("deliveryKeyboardOpen");
+      document.documentElement.style.removeProperty("--md-keyboard-height");
+      document.querySelectorAll(".deliveryEditLineCard.keyboardTarget").forEach(el=>el.classList.remove("keyboardTarget"));
+      return;
+    }
+
     const m=deliveryKeyboardMetrics();
     document.body.classList.toggle("deliveryKeyboardOpen",m.open);
     if(m.open){
       document.documentElement.style.setProperty("--md-keyboard-height",`${m.height}px`);
-      // Edit/Suggested line Qty may need list positioning. New Delivery #delQty
-      // must remain untouched and is explicitly excluded inside the positioner.
-      if(deliveryKeyboardActiveInput?.id!=="delQty")setTimeout(positionActiveDeliveryQty,40);
+      setTimeout(positionActiveDeliveryQty,40);
     }else{
       document.documentElement.style.removeProperty("--md-keyboard-height");
       document.querySelectorAll(".deliveryEditLineCard.keyboardTarget").forEach(el=>el.classList.remove("keyboardTarget"));
@@ -5153,17 +5162,16 @@ function updateDeliveryKeyboardViewport(){
 
 
 window.newDeliveryQtyFocus=(input)=>{
+  // Deliberately passive. This field is already visible before the keyboard opens.
+  // The only state we keep is enough to make every global viewport callback ignore it.
   deliveryKeyboardActiveInput=input;
-  try{input.select()}catch(_){}
-  updateDeliveryKeyboardViewport();
-  setTimeout(updateDeliveryKeyboardViewport,60);
-  setTimeout(updateDeliveryKeyboardViewport,180);
+  document.body.classList.remove("deliveryKeyboardOpen");
+  document.documentElement.style.removeProperty("--md-keyboard-height");
 };
 
 window.newDeliveryQtyBlur=(input)=>{
   setTimeout(()=>{
     if(document.activeElement!==input)deliveryKeyboardActiveInput=null;
-    updateDeliveryKeyboardViewport();
   },100);
 };
 
