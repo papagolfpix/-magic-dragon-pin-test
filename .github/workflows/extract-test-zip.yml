@@ -1,0 +1,169 @@
+name: Extract Magic Pin TEST ZIP
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "Magic-Pin-v*-TEST.zip"
+  workflow_dispatch:
+    inputs:
+      zip_name:
+        description: "Optional ZIP filename already in the repository root"
+        required: false
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: magic-pin-test-zip-extractor
+  cancel-in-progress: false
+
+jobs:
+  extract-test-zip:
+    if: ${{ !contains(github.event.head_commit.message || '', '[skip extractor]') }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Choose ZIP to extract
+        id: choose
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          ZIP_NAME="${{ inputs.zip_name || '' }}"
+
+          if [ -n "$ZIP_NAME" ]; then
+            if [ ! -f "$ZIP_NAME" ]; then
+              echo "Requested ZIP not found: $ZIP_NAME"
+              exit 1
+            fi
+          else
+            # Prefer a TEST ZIP added or modified by this push.
+            ZIP_NAME="$(git diff-tree --no-commit-id --name-only --diff-filter=AM -r "$GITHUB_SHA" \
+              | grep -E '^Magic-Pin-v.*-TEST\.zip$' \
+              | tail -n 1 || true)"
+
+            # Manual fallback: newest matching TEST ZIP in repository root.
+            if [ -z "$ZIP_NAME" ]; then
+              ZIP_NAME="$(find . -maxdepth 1 -type f -name 'Magic-Pin-v*-TEST.zip' -printf '%T@ %f\n' \
+                | sort -nr | head -n 1 | cut -d' ' -f2- || true)"
+            fi
+          fi
+
+          if [ -z "$ZIP_NAME" ]; then
+            echo "No Magic-Pin-v*-TEST.zip file found. Nothing to do."
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "Using ZIP: $ZIP_NAME"
+          echo "zip_name=$ZIP_NAME" >> "$GITHUB_OUTPUT"
+          echo "found=true" >> "$GITHUB_OUTPUT"
+
+      - name: Extract and validate package
+        if: steps.choose.outputs.found == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          ZIP_NAME="${{ steps.choose.outputs.zip_name }}"
+          rm -rf _extract_test_zip
+          mkdir -p _extract_test_zip
+          unzip -q "$ZIP_NAME" -d _extract_test_zip
+
+          # Accept either:
+          #   1) app files directly at ZIP root, or
+          #   2) one wrapper folder containing the app files.
+          SRC="_extract_test_zip"
+
+          if [ ! -f "$SRC/index.html" ]; then
+            TOP_DIRS="$(find "$SRC" -mindepth 1 -maxdepth 1 -type d | wc -l | tr -d ' ')"
+            TOP_FILES="$(find "$SRC" -mindepth 1 -maxdepth 1 -type f | wc -l | tr -d ' ')"
+
+            if [ "$TOP_DIRS" = "1" ] && [ "$TOP_FILES" = "0" ]; then
+              ONLY_DIR="$(find "$SRC" -mindepth 1 -maxdepth 1 -type d | head -n 1)"
+              if [ -f "$ONLY_DIR/index.html" ]; then
+                SRC="$ONLY_DIR"
+              fi
+            fi
+          fi
+
+          if [ ! -f "$SRC/index.html" ]; then
+            echo "ERROR: ZIP does not contain index.html at its root or inside one wrapper folder."
+            exit 1
+          fi
+
+          echo "Validated app package at: $SRC"
+          echo "$SRC" > /tmp/magic_pin_src
+
+      - name: Replace deployed app files
+        if: steps.choose.outputs.found == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          SRC="$(cat /tmp/magic_pin_src)"
+
+          # Remove only known deployed app assets. Preserve .git, .github and repository admin files.
+          rm -f index.html sw.js manifest.webmanifest manifest.json
+          rm -f icon-192.png icon-512.png
+          rm -f Magic-Dragon-logo.jpeg Magic-Dragon-logo.jpg Magic-Dragon-logo.png
+          rm -f README.txt
+
+          # Copy every file/folder from the TEST package into repository root.
+          cp -a "$SRC"/. .
+
+          # Never let a package overwrite repository automation.
+          git restore --source=HEAD -- .github 2>/dev/null || true
+
+          rm -rf _extract_test_zip
+
+      - name: Verify extracted app
+        if: steps.choose.outputs.found == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          test -f index.html
+
+          echo "Extracted files:"
+          find . -maxdepth 2 -type f \
+            ! -path './.git/*' \
+            ! -path './.github/*' \
+            | sort
+
+          echo
+          echo "Version markers found in index.html:"
+          grep -Eo 'v?[0-9]+\.[0-9]+\.[0-9]+' index.html | sort -u | head -n 20 || true
+
+      - name: Remove uploaded TEST ZIP
+        if: steps.choose.outputs.found == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          ZIP_NAME="${{ steps.choose.outputs.zip_name }}"
+          rm -f "$ZIP_NAME"
+
+      - name: Commit extracted TEST build
+        if: steps.choose.outputs.found == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if git diff --quiet && git diff --cached --quiet && [ -z "$(git ls-files --others --exclude-standard)" ]; then
+            echo "No repository changes to commit."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add -A
+          git commit -m "Auto-extract Magic Pin TEST package [skip extractor]"
+          git push
