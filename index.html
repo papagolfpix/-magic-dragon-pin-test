@@ -4189,7 +4189,7 @@ body.deliveryMode .deliveryEditLineCard{
 
 
 <style id="v01047-line-pane-below-controls">
-/* v0.10.56 TEST — hard-separate New Delivery controls from added lines.
+/* v0.10.57 TEST — hard-separate New Delivery controls from added lines.
    iPhone Safari was allowing the first reusable line card/select to paint back
    underneath the stationary control deck.  Use a simple column flex layout
    for New Delivery: controls = fixed natural height, line list = the only
@@ -4250,7 +4250,7 @@ window.addEventListener("error",e=>{const b=document.getElementById("runtimeErro
       <button class="heroHomeHotspot noPrint" type="button" aria-label="Return to Dashboard" title="Dashboard" onclick="returnToDashboardFromHeader()"></button>
     </div>
     <div class="heroActions noPrint">
-      <span class="app-version">v0.10.56 TEST</span>
+      <span class="app-version">v0.10.57 TEST</span>
       <button class="heroMenuButton" id="heroMenuButton" type="button" aria-expanded="false">Menu</button>
     </div>
   </div>
@@ -6706,7 +6706,7 @@ function buildFullBackupPayload(kind="SUPPORT",note=""){
   return {
     magicDragonBackup:true,
     app:"Magic Dragon Pin",
-    appVersion:"0.10.56",
+    appVersion:"0.10.57",
     backupKind:String(kind||"SUPPORT").toUpperCase(),
     createdAt:new Date().toISOString(),
     note:String(note||""),
@@ -6749,7 +6749,7 @@ window.createBaselineSnapshot=async()=>{
   }
   const status=document.getElementById("baselineSnapshotStatus");
   if(status)status.textContent=`Baseline saved locally: ${new Date(payload.createdAt).toLocaleString()}`;
-  await shareBackupPayload(payload,`Magic-Dragon-Pin_BASELINE_${stamp}`);
+  await shareBackupPayload(payload,`Magic-Pin-BASELINE_${stamp}`);
 };
 window.createSupportBackup=()=>{
   const overlay=document.getElementById("supportBackupModal");
@@ -6773,7 +6773,7 @@ window.shareSupportBackupNow=async()=>{
   const note=document.getElementById("supportBackupNote")?.value||"";
   const payload=buildFullBackupPayload("SUPPORT",note);
   const suffix=mdSafeFilenamePart(note);
-  const name=`Magic-Dragon-Pin_SUPPORT_${mdNowStamp()}${suffix?`_${suffix}`:""}`;
+  const name=`Magic-Pin-SUPPORT_${mdNowStamp()}${suffix?`_${suffix}`:""}`;
   closeSupportBackup();
   await shareBackupPayload(payload,name);
 };
@@ -9941,9 +9941,9 @@ function validateBackupPackage(pkg){
 }
 async function createCompleteTransferPackage(kind="FULL_TRANSFER"){
  const sourceFiles=await exportArchivedSourceFiles(),counts=backupCounts();
- return {format:BACKUP_FORMAT,schema:BACKUP_SCHEMA,appVersion:"0.10.56",backupKind:kind,createdAt:new Date().toISOString(),counts,sourceFilesCount:sourceFiles.length,data:JSON.parse(JSON.stringify(db)),sourceFiles};
+ return {format:BACKUP_FORMAT,schema:BACKUP_SCHEMA,appVersion:"0.10.57",backupKind:kind,createdAt:new Date().toISOString(),counts,sourceFilesCount:sourceFiles.length,data:JSON.parse(JSON.stringify(db)),sourceFiles};
 }
-async function savePackageFile(pkg,prefix="Magic-Dragon-Pin-Complete-Data"){
+async function savePackageFile(pkg,prefix="Magic-Pin-Data"){
  const blob=new Blob([JSON.stringify(pkg)],{type:"application/json"});
  const stamp=mdNowStamp();
  const fileName=`${prefix}-${stamp}.json`;
@@ -9999,7 +9999,7 @@ document.getElementById("transferPreviewCommit").onclick=async()=>{
  try{
   backupStatus("Creating pre-import safety backup…");
   safety=await createCompleteTransferPackage("PRE_IMPORT_SAFETY");
-  const saved=await savePackageFile(safety,"Magic-Dragon-Pin-PRE-IMPORT-SAFETY");
+  const saved=await savePackageFile(safety,"Magic-Pin-SAFETY");
   if(saved.cancelled||!saved.saved){backupStatus("Import stopped because the pre-import safety backup was not saved. Nothing changed.",true);return}
   backupStatus("Safety backup saved. Replacing this device's data…");
   await replaceArchivedSourceFiles(pkg.sourceFiles||[]);
@@ -10136,7 +10136,7 @@ document.getElementById("auditSearch").oninput=renderAudit;
 document.getElementById("histBranch").onchange=renderHistorical;
 document.getElementById("exportHistorical").onclick=()=>{
  const blob=new Blob([JSON.stringify(historicalData,null,2)],{type:"application/json"});
- const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="magic-dragon-historical-source-data.json";a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+ const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="Magic-Pin-History.json";a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
 };
 </script>
 </body>

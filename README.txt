@@ -1,6 +1,6 @@
-MAGIC DRAGON PIN v0.10.56 — TEST
+MAGIC DRAGON PIN v0.10.57 — TEST
 
-WHAT CHANGED IN v0.10.56
+WHAT CHANGED IN v0.10.57
 - First Complete App Data Transfer test build branched from the v0.10.55 solid save point.
 - Backup & Recovery now presents Export Complete App Data / Import Complete App Data.
 - Import opens a readable preview before any data changes: source version, products, aliases, Sunday reports, delivery dockets, invoices, payments and archived source files.
@@ -21,5 +21,7 @@ TEST PROCEDURE
 8. Reload once more and confirm imported state persists.
 
 VERSION CHECK
-- App badge: v0.10.56 TEST
-- Service-worker cache: magic-pin-v0.10.56-test
+- App badge: v0.10.57 TEST
+- Service-worker cache: magic-pin-v0.10.57-test
+
+Filename update v0.10.57: user-facing export/backup files use the short Magic-Pin-* naming convention for easier identification on iPhone.
