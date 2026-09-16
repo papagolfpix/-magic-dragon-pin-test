@@ -3557,6 +3557,15 @@ body.deliveryEditMode .deliveryEditLineCard.keyboardTarget{
 .backupRecoveryActions{display:flex;gap:7px;flex-wrap:wrap}
 .backupRecoveryCard .btn,.backupRecoveryAdvanced .btn,.backupFileButton{min-height:36px;padding:7px 10px;box-sizing:border-box;font-size:10px!important;font-weight:850!important}
 .backupRecoveryStatus{margin-top:9px;padding:8px 9px;border:1px solid #e1e5eb;border-radius:8px;background:#fafbfc;color:#667085;font-size:9px}
+.transferPreviewOverlay{position:fixed;inset:0;z-index:10050;background:rgba(15,23,42,.56);display:none;align-items:center;justify-content:center;padding:18px;box-sizing:border-box}
+.transferPreviewOverlay.open{display:flex}
+.transferPreviewCard{width:min(100%,520px);max-height:min(82vh,680px);overflow:auto;background:#fff;border-radius:18px;padding:18px;box-shadow:0 24px 70px rgba(0,0,0,.28);color:#172033}
+.transferPreviewCard h3{margin:0 0 6px;font-size:20px}.transferPreviewCard p{margin:0 0 12px;color:#667085;line-height:1.35}
+.transferPreviewGrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0}.transferPreviewStat{border:1px solid #dbe1e9;border-radius:10px;padding:9px;background:#f8fafc}.transferPreviewStat b{display:block;font-size:18px}.transferPreviewStat span{font-size:11px;color:#667085}
+.transferPreviewMeta{padding:10px;border-radius:10px;background:#f8fafc;border:1px solid #dbe1e9;font-size:12px;line-height:1.45}.transferPreviewWarning{margin-top:10px;padding:10px;border-radius:10px;background:#fff7ed;border:1px solid #fdba74;color:#9a3412;font-weight:700;font-size:12px}
+.transferPreviewActions{display:grid;grid-template-columns:1fr 1.35fr;gap:8px;margin-top:14px}.transferPreviewActions button{min-height:44px;border-radius:10px;font-weight:850;font-size:14px}.transferPreviewActions .cancel{border:1px solid #cbd5e1;background:#fff;color:#172033}.transferPreviewActions .replace{border:0;background:#0f172a;color:#fff}
+.transferResultStatus.good{background:#ecfdf3;border-color:#86efac;color:#166534}.transferResultStatus.bad{background:#fef2f2;border-color:#fecaca;color:#991b1b}
+
 .backupRecoveryAdvanced{margin-top:9px;border:1px solid #e1e5eb;border-radius:9px;background:#fafbfc}
 .backupRecoveryAdvanced>summary{padding:8px 9px;font-size:9px;font-weight:850;color:#475467;cursor:pointer}
 .backupRecoveryAdvancedBody{display:grid;gap:8px;padding:0 9px 9px}
@@ -4180,7 +4189,7 @@ body.deliveryMode .deliveryEditLineCard{
 
 
 <style id="v01047-line-pane-below-controls">
-/* v0.10.55 TEST — hard-separate New Delivery controls from added lines.
+/* v0.10.56 TEST — hard-separate New Delivery controls from added lines.
    iPhone Safari was allowing the first reusable line card/select to paint back
    underneath the stationary control deck.  Use a simple column flex layout
    for New Delivery: controls = fixed natural height, line list = the only
@@ -4241,7 +4250,7 @@ window.addEventListener("error",e=>{const b=document.getElementById("runtimeErro
       <button class="heroHomeHotspot noPrint" type="button" aria-label="Return to Dashboard" title="Dashboard" onclick="returnToDashboardFromHeader()"></button>
     </div>
     <div class="heroActions noPrint">
-      <span class="app-version">v0.10.55 TEST</span>
+      <span class="app-version">v0.10.56 TEST</span>
       <button class="heroMenuButton" id="heroMenuButton" type="button" aria-expanded="false">Menu</button>
     </div>
   </div>
@@ -4592,8 +4601,8 @@ window.addEventListener("error",e=>{const b=document.getElementById("runtimeErro
         <div class="settingGroupBody">
           <div class="backupRecoveryGuide">
             <b>Keep Pin's data safe</b>
-            <div><strong>Full Backup</strong> is the recommended handover/device-transfer backup. It includes app records, settings, mappings and archived Sunday source workbooks stored on this device.</div>
-            <div><strong>Restore Full Backup</strong> replaces this device's current app data with a previously created full backup after showing you what is inside.</div>
+            <div><strong>Export Complete App Data</strong> creates a full device-transfer package with app records, settings, mappings and archived Sunday source workbooks stored on this device.</div>
+            <div><strong>Import Complete App Data</strong> previews a transfer package first, creates a pre-import safety backup, then replaces this device only after explicit confirmation.</div>
             <div><strong>Quick Safety Snapshot</strong> saves the app database locally and also opens Share. It is useful before testing or making changes, but does not include archived Sunday source workbooks.</div>
             <div><strong>Support Backup</strong> creates a shareable troubleshooting copy of the app database with an optional note.</div>
           </div>
@@ -4601,18 +4610,18 @@ window.addEventListener("error",e=>{const b=document.getElementById("runtimeErro
           <div class="backupRecoveryCards">
             <div class="backupRecoveryCard recommended">
               <div>
-                <b>Create Full Backup</b>
-                <small>Best choice before handover, moving device or major changes.</small>
+                <b>Export Complete App Data</b>
+                <small>Use this to copy the complete working state to another device or keep a full recovery file.</small>
               </div>
-              <button class="btn primary" id="exportData" type="button">Create Full Backup</button>
+              <button class="btn primary" id="exportData" type="button">Export Complete App Data</button>
             </div>
 
             <div class="backupRecoveryCard">
               <div>
-                <b>Restore Full Backup</b>
-                <small>Choose a Magic Dragon full-backup JSON file. A confirmation summary appears before anything is replaced.</small>
+                <b>Import Complete App Data</b>
+                <small>Choose a Magic Dragon complete-data JSON file. You will see a preview before anything changes.</small>
               </div>
-              <label class="btn alt backupFileButton">Restore Full Backup
+              <label class="btn alt backupFileButton">Import Complete App Data
                 <input id="importData" type="file" accept=".json,application/json" hidden>
               </label>
             </div>
@@ -4762,6 +4771,20 @@ window.addEventListener("error",e=>{const b=document.getElementById("runtimeErro
   </div>
 </div>
 
+
+<div id="transferPreviewOverlay" class="transferPreviewOverlay noPrint" aria-hidden="true">
+  <div class="transferPreviewCard" role="dialog" aria-modal="true" aria-labelledby="transferPreviewTitle">
+    <h3 id="transferPreviewTitle">Import Complete App Data</h3>
+    <p id="transferPreviewIntro">Check what is in this file before replacing this device.</p>
+    <div id="transferPreviewMeta" class="transferPreviewMeta"></div>
+    <div id="transferPreviewGrid" class="transferPreviewGrid"></div>
+    <div class="transferPreviewWarning">Nothing changes until you tap <b>Replace This Device's Data</b>. A complete pre-import safety backup is created first.</div>
+    <div class="transferPreviewActions">
+      <button type="button" class="cancel" id="transferPreviewCancel">Cancel</button>
+      <button type="button" class="replace" id="transferPreviewCommit">Replace This Device's Data</button>
+    </div>
+  </div>
+</div>
 
 <div id="supportBackupModal" class="mdFullScreenOverlay noPrint" aria-hidden="true">
   <div class="mdOverlayHead">
@@ -6683,7 +6706,7 @@ function buildFullBackupPayload(kind="SUPPORT",note=""){
   return {
     magicDragonBackup:true,
     app:"Magic Dragon Pin",
-    appVersion:"0.10.55",
+    appVersion:"0.10.56",
     backupKind:String(kind||"SUPPORT").toUpperCase(),
     createdAt:new Date().toISOString(),
     note:String(note||""),
@@ -9870,10 +9893,14 @@ document.querySelectorAll(".tab").forEach(t=>t.onclick=()=>{if(t.dataset.tab==="
 
 const BACKUP_FORMAT="magic-dragon-pin-full-backup";
 const BACKUP_SCHEMA=1;
-function backupStatus(msg,bad=false){const el=document.getElementById("backupStatus");if(el){el.textContent=msg;el.style.color=bad?"#991b1b":""}}
+let pendingTransferPackage=null;
+function backupStatus(msg,bad=false){const el=document.getElementById("backupStatus");if(el){el.textContent=msg;el.classList.toggle("transferResultStatus",true);el.classList.toggle("good",!bad);el.classList.toggle("bad",!!bad)}}
 function backupCounts(data=db){
+ const products=Array.isArray(data?.products)?data.products.length:0;
+ const variants=products;
+ const aliases=data?.productAliases&&typeof data.productAliases==="object"?Object.keys(data.productAliases).length:0;
  return {
-  products:Array.isArray(data?.products)?data.products.length:0,
+  products,variants,aliases,
   deliveries:Array.isArray(data?.deliveries)?data.deliveries.length:0,
   sundayReports:Array.isArray(data?.sundayImports)?data.sundayImports.length:0,
   invoices:Array.isArray(data?.invoices)?data.invoices.length:0,
@@ -9896,6 +9923,9 @@ async function exportArchivedSourceFiles(){
   return out;
  }catch(e){console.warn("Backup could not read archived source files",e);return []}
 }
+async function countArchivedSourceFiles(){
+ try{const idb=await openFileDb();const n=await new Promise((resolve,reject)=>{const tx=idb.transaction("sourceFiles","readonly"),rq=tx.objectStore("sourceFiles").count();rq.onsuccess=()=>resolve(rq.result||0);rq.onerror=()=>reject(rq.error)});idb.close();return n}catch(e){return -1}
+}
 async function replaceArchivedSourceFiles(files){
  const idb=await openFileDb();
  await new Promise((resolve,reject)=>{const tx=idb.transaction("sourceFiles","readwrite"),store=tx.objectStore("sourceFiles");store.clear();for(const f of files||[]){if(!f?.id||!f?.data)continue;const bytes=base64ToBytes(f.data);store.put({id:f.id,archiveName:f.archiveName||"Sunday-Report.xlsx",storedAt:f.storedAt||new Date().toISOString(),blob:new Blob([bytes],{type:f.type||"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"})})}tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error)});
@@ -9909,51 +9939,117 @@ function validateBackupPackage(pkg){
  if(pkg.sourceFiles!=null&&!Array.isArray(pkg.sourceFiles))throw new Error("Archived source files are invalid.");
  return true;
 }
-async function downloadBackupPackage(pkg){
+async function createCompleteTransferPackage(kind="FULL_TRANSFER"){
+ const sourceFiles=await exportArchivedSourceFiles(),counts=backupCounts();
+ return {format:BACKUP_FORMAT,schema:BACKUP_SCHEMA,appVersion:"0.10.56",backupKind:kind,createdAt:new Date().toISOString(),counts,sourceFilesCount:sourceFiles.length,data:JSON.parse(JSON.stringify(db)),sourceFiles};
+}
+async function savePackageFile(pkg,prefix="Magic-Dragon-Pin-Complete-Data"){
  const blob=new Blob([JSON.stringify(pkg)],{type:"application/json"});
- const fileName=`Magic-Dragon-Pin-Backup-${today()}.json`;
+ const stamp=mdNowStamp();
+ const fileName=`${prefix}-${stamp}.json`;
  const file=new File([blob],fileName,{type:"application/json"});
  if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){
-  try{await navigator.share({files:[file]});return}catch(e){if(e?.name==="AbortError")return}
+  try{await navigator.share({files:[file]});return {saved:true,method:"share",fileName}}catch(e){if(e?.name==="AbortError")return {saved:false,cancelled:true,fileName}}
  }
- const a=document.createElement("a"),url=URL.createObjectURL(blob);a.href=url;a.download=fileName;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),4000);
+ try{const a=document.createElement("a"),url=URL.createObjectURL(blob);a.href=url;a.download=fileName;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),4000);return {saved:true,method:"download",fileName}}catch(e){console.error(e);return {saved:false,error:true,fileName}}
+}
+function showTransferPreview(pkg){
+ pendingTransferPackage=pkg;
+ const c=backupCounts(pkg.data),overlay=document.getElementById("transferPreviewOverlay"),meta=document.getElementById("transferPreviewMeta"),grid=document.getElementById("transferPreviewGrid");
+ const when=pkg.createdAt?new Date(pkg.createdAt).toLocaleString():"Unknown";
+ if(meta)meta.innerHTML=`<b>Source app:</b> v${escapeHtml(pkg.appVersion||"unknown")}<br><b>Created:</b> ${escapeHtml(when)}<br><b>Archived Sunday source files:</b> ${(pkg.sourceFiles||[]).length}`;
+ const items=[["Products / variants",c.products],["Aliases / mappings",c.aliases],["Sunday reports",c.sundayReports],["Delivery dockets",c.deliveries],["Invoices",c.invoices],["Paid invoices",c.payments]];
+ if(grid)grid.innerHTML=items.map(([label,n])=>`<div class="transferPreviewStat"><b>${n}</b><span>${label}</span></div>`).join("");
+ if(overlay){overlay.classList.add("open");overlay.setAttribute("aria-hidden","false");document.body.style.overflow="hidden"}
+}
+function closeTransferPreview(){const overlay=document.getElementById("transferPreviewOverlay");if(overlay){overlay.classList.remove("open");overlay.setAttribute("aria-hidden","true")}document.body.style.overflow="";pendingTransferPackage=null}
+async function verifyImportedTransfer(pkg){
+ const expected=backupCounts(pkg.data),actual=backupCounts(db),expectedSources=(pkg.sourceFiles||[]).length,actualSources=await countArchivedSourceFiles();
+ const keys=["products","aliases","sundayReports","deliveries","invoices","payments"];
+ const mismatches=keys.filter(k=>Number(expected[k])!==Number(actual[k]));
+ if(actualSources>=0&&actualSources!==expectedSources)mismatches.push("sourceFiles");
+ return {ok:mismatches.length===0,expected,actual,expectedSources,actualSources,mismatches};
 }
 document.getElementById("exportData").onclick=async()=>{
- const btn=document.getElementById("exportData");if(btn.disabled)return;btn.disabled=true;backupStatus("Preparing complete backup…");
+ const btn=document.getElementById("exportData");if(btn.disabled)return;btn.disabled=true;backupStatus("Preparing complete app-data transfer package…");
  try{
-  const sourceFiles=await exportArchivedSourceFiles(),counts=backupCounts();
-  const pkg={format:BACKUP_FORMAT,schema:BACKUP_SCHEMA,appVersion:"0.10.55",createdAt:new Date().toISOString(),counts,sourceFilesCount:sourceFiles.length,data:JSON.parse(JSON.stringify(db)),sourceFiles};
-  await downloadBackupPackage(pkg);
-  backupStatus(`Backup ready: ${counts.deliveries} deliveries, ${counts.sundayReports} Sunday reports, ${counts.invoices} invoices, ${sourceFiles.length} archived source file${sourceFiles.length===1?"":"s"}.`);
- }catch(e){console.error(e);backupStatus("Backup could not be created. No app data was changed.",true);alert("The full backup could not be created. Your current app data has not been changed.")}
+  const pkg=await createCompleteTransferPackage("COMPLETE_APP_DATA");
+  const result=await savePackageFile(pkg);
+  if(result.cancelled){backupStatus("Export cancelled. No app data was changed.");return}
+  if(!result.saved)throw new Error("The transfer file could not be saved or shared.");
+  const c=pkg.counts;backupStatus(`Complete app data exported: ${c.products} products, ${c.aliases} aliases, ${c.sundayReports} Sunday reports, ${c.deliveries} deliveries, ${c.invoices} invoices, ${pkg.sourceFilesCount} archived source files.`);
+ }catch(e){console.error(e);backupStatus("Complete app-data export could not be created. No app data was changed.",true);alert(e?.message||"The complete app-data export could not be created.")}
  finally{btn.disabled=false}
-}
+};
 document.getElementById("importData").onchange=e=>{
- const input=e.target,f=input.files?.[0];if(!f)return;backupStatus("Checking backup file…");
+ const input=e.target,f=input.files?.[0];if(!f)return;backupStatus("Checking complete app-data file…");
  const r=new FileReader();
- r.onload=async()=>{
-  try{
-   const pkg=JSON.parse(r.result);validateBackupPackage(pkg);const c=backupCounts(pkg.data),when=pkg.createdAt?new Date(pkg.createdAt).toLocaleString():"unknown date";
-   const ok=confirm(`Restore this Magic Dragon backup?\n\nCreated: ${when}\nDeliveries: ${c.deliveries}\nSunday reports: ${c.sundayReports}\nInvoices: ${c.invoices}\nPayments: ${c.payments}\nArchived source files: ${(pkg.sourceFiles||[]).length}\n\nThis will replace the data currently stored on this device.`);
-   if(!ok){backupStatus("Restore cancelled. Current data was not changed.");return}
-   backupStatus("Restoring backup…");
-   await replaceArchivedSourceFiles(pkg.sourceFiles||[]);
-   Object.keys(db).forEach(k=>delete db[k]);Object.assign(db,pkg.data);
-   localStorage.setItem("mdpin-db",JSON.stringify(db));
-   backupStatus("Restore complete. Reloading…");
-   alert("Backup restored successfully. Magic Dragon will now reload using the restored data.");
-   location.reload();
-  }catch(err){console.error(err);backupStatus(err?.message||"Invalid backup file.",true);alert(err?.message||"This backup file could not be restored.")}
-  finally{input.value=""}
+ r.onload=()=>{
+  try{const pkg=JSON.parse(r.result);validateBackupPackage(pkg);showTransferPreview(pkg);backupStatus("Preview ready. Nothing has changed on this device.")}
+  catch(err){console.error(err);backupStatus(err?.message||"Invalid backup file.",true);alert(err?.message||"This backup file could not be opened.");input.value=""}
  };
  r.onerror=()=>{backupStatus("The selected backup file could not be read.",true);input.value=""};
- r.readAsText(f)
+ r.readAsText(f);
+};
+document.getElementById("transferPreviewCancel").onclick=()=>{closeTransferPreview();const input=document.getElementById("importData");if(input)input.value="";backupStatus("Import cancelled. Nothing on this device was changed.")};
+document.getElementById("transferPreviewCommit").onclick=async()=>{
+ const pkg=pendingTransferPackage;if(!pkg)return;
+ const commit=document.getElementById("transferPreviewCommit");commit.disabled=true;
+ let safety=null,changed=false;
+ try{
+  backupStatus("Creating pre-import safety backup…");
+  safety=await createCompleteTransferPackage("PRE_IMPORT_SAFETY");
+  const saved=await savePackageFile(safety,"Magic-Dragon-Pin-PRE-IMPORT-SAFETY");
+  if(saved.cancelled||!saved.saved){backupStatus("Import stopped because the pre-import safety backup was not saved. Nothing changed.",true);return}
+  backupStatus("Safety backup saved. Replacing this device's data…");
+  await replaceArchivedSourceFiles(pkg.sourceFiles||[]);
+  changed=true;
+  Object.keys(db).forEach(k=>delete db[k]);Object.assign(db,JSON.parse(JSON.stringify(pkg.data)));
+  localStorage.setItem("mdpin-db",JSON.stringify(db));
+  const check=await verifyImportedTransfer(pkg);
+  if(!check.ok)throw new Error(`Import verification failed: ${check.mismatches.join(", ")}. The pre-import safety backup is available for recovery.`);
+  sessionStorage.setItem("mdpin-transfer-result",JSON.stringify({at:new Date().toISOString(),sourceVersion:pkg.appVersion||"unknown",counts:check.actual,sourceFiles:check.actualSources}));
+  closeTransferPreview();
+  backupStatus("Import verified successfully. Reloading…");
+  alert(`Complete app data imported and verified successfully.
+
+Products: ${check.actual.products}
+Aliases: ${check.actual.aliases}
+Sunday reports: ${check.actual.sundayReports}
+Deliveries: ${check.actual.deliveries}
+Invoices: ${check.actual.invoices}
+Archived source files: ${check.actualSources}
+
+Magic Dragon will now reload.`);
+  location.reload();
+ }catch(err){
+  console.error(err);
+  if(changed&&safety){
+   try{
+    await replaceArchivedSourceFiles(safety.sourceFiles||[]);
+    Object.keys(db).forEach(k=>delete db[k]);Object.assign(db,JSON.parse(JSON.stringify(safety.data)));
+    localStorage.setItem("mdpin-db",JSON.stringify(db));
+    backupStatus(`Import failed verification and this device was automatically restored to its pre-import state. ${err?.message||""}`,true);
+    alert(`Import was not accepted. This device has been automatically rolled back to its pre-import state.\n\n${err?.message||"Verification failed."}`);
+   }catch(rollbackErr){
+    console.error("Automatic rollback failed",rollbackErr);
+    backupStatus("Import failed and automatic rollback could not be verified. Use the saved PRE-IMPORT-SAFETY file to restore this device.",true);
+    alert("Import failed and automatic rollback could not be verified. Use the PRE-IMPORT-SAFETY file that was saved before the import.");
+   }
+  }else{
+   backupStatus(err?.message||"Import failed. Nothing was changed.",true);alert(err?.message||"The import could not be completed.");
+  }
+ }
+ finally{commit.disabled=false;const input=document.getElementById("importData");if(input)input.value=""}
+};
+function showLastTransferResult(){
+ try{const raw=sessionStorage.getItem("mdpin-transfer-result");if(!raw)return;sessionStorage.removeItem("mdpin-transfer-result");const r=JSON.parse(raw),c=r.counts||{};backupStatus(`Transfer verified after reload — ${c.products||0} products, ${c.aliases||0} aliases, ${c.sundayReports||0} Sunday reports, ${c.deliveries||0} deliveries, ${c.invoices||0} invoices, ${r.sourceFiles>=0?r.sourceFiles:"?"} archived source files.`)}catch(e){}
 }
 document.getElementById("masterProductSearch").oninput=filterMasterProductSetup;
 document.getElementById("fillMasterCurrent").onclick=()=>renderMasterProductSetup(true);
 document.getElementById("saveMasterProducts").onclick=applyMasterProductSetup;
 document.getElementById("resetData").onclick=()=>{if(confirm("Delete all local Magic Dragon Pin data on this browser?")){localStorage.removeItem("mdpin-db");location.reload()}}
-cleanupDataIntegrity();refreshStoredReconciliations();renderImport();renderArchive();migrateLegacyDeliverySuggestions();bootstrapLatestSavedInvoiceSuggestions();renderAll();renderDashboardAlerts();refreshBaselineSnapshotStatus();
+cleanupDataIntegrity();refreshStoredReconciliations();renderImport();renderArchive();migrateLegacyDeliverySuggestions();bootstrapLatestSavedInvoiceSuggestions();renderAll();renderDashboardAlerts();refreshBaselineSnapshotStatus();showLastTransferResult();
 // v0.9.25 contextual Sunday help and compact selection controls
 const sundayHelpButton=document.getElementById("sundayHelpButton");
 const sundayHelp=document.getElementById("sundayHelp");
