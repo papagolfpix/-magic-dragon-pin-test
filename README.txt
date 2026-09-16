@@ -1,6 +1,10 @@
-MAGIC DRAGON PIN v0.10.53 — TEST
+MAGIC DRAGON PIN v0.10.54 — TEST
 
-WHAT CHANGED IN v0.10.53
+WHAT CHANGED IN v0.10.54
+- Mapping review cleanup: only new/changed names remain in the active queue; permanent alias behavior preserved; Unsure — Check Later preserved; explicit saved/deferred confirmation added after every mapping action.
+- No changes to the locked Delivery form, Sunday multi-week detection, duplicate handling, safe deletion, or catalogue discrepancy logic.
+
+PREVIOUS v0.10.53
 - Expanded the Sunday Excel catalogue-check result to use the full available width of each detected weekly report card.
 - The amber review warning and green aligned confirmation now span both the checkbox/control column and report-detail column, making long product names and discrepancy details substantially easier to read on iPhone.
 - No catalogue comparison logic or import behaviour was changed.
@@ -19,5 +23,5 @@ TEST
 4. No import is required for this visual test.
 
 BUILD
-- App badge: v0.10.53 TEST
-- Service-worker cache: magic-pin-v0.10.53-test
+- App badge: v0.10.54 TEST
+- Service-worker cache: magic-pin-v0.10.54-test
