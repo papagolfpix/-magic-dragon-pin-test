@@ -1,4 +1,11 @@
-MAGIC DRAGON PIN v0.10.70 — TEST
+MAGIC DRAGON PIN v0.10.71 — TEST
+
+WHAT CHANGED IN v0.10.71
+- Record-level delivery pull results now distinguish THIS pull from prior sync history.
+- If nothing changed, message says all cloud dockets were already identical.
+- New/updated cloud dockets are remembered and highlighted in Records.
+- Delivery Records list now shows the docket ID so same-date/shop dockets can be distinguished.
+- No record-sync architecture or business logic changed.
 
 WHAT CHANGED IN v0.10.70
 - Adds the first record-level Supabase sync Lego block for individual delivery dockets.
