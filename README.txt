@@ -1,4 +1,11 @@
-MAGIC DRAGON PIN v0.10.73 — TEST
+MAGIC DRAGON PIN v0.10.74 — TEST
+
+WHAT CHANGED IN v0.10.74
+- Separated normal Delivery Sync from the legacy Whole App Snapshot test UI.
+- Delivery Sync is now the primary cloud workflow; whole-app snapshot controls are tucked into a separate collapsed panel.
+- Added Local / Cloud / Waiting delivery counts and a batch Sync Delivery Changes action.
+- Record-level delivery changes no longer present themselves as a whole-app sync failure in the main workflow.
+- Preserved per-record conflict protection and the advanced single-docket test control.
 
 WHAT CHANGED IN v0.10.73
 - Record-level delivery pull results now distinguish THIS pull from prior sync history.
