@@ -1,30 +1,34 @@
-MAGIC DRAGON PIN v0.10.38 — TEST
+MAGIC DRAGON PIN v0.10.39 — TEST
 
 Purpose of this build:
-- Fix the underlying iPhone Safari visual-viewport shell movement revealed by the v0.10.37 screenshot.
-- Do not redesign, scroll, reparent, refocus or manually move the New Delivery Qty input.
-- Reuse the existing fixed Magic Dragon shell, but anchor that shell to visualViewport.offsetTop while New Delivery Qty has focus.
+- Correct the Qty viewport self-test false FAIL exposed by the iPhone screenshot from 16 Sep 2026.
+- Do not change the proven Qty focus, keyboard, shell positioning, reparenting, scrolling or refocus behaviour.
+- Preserve the v0.10.38 visual-viewport shell fix unchanged.
 
-Root cause now addressed:
-- iOS Safari can pan the visual viewport when the numeric keyboard opens.
-- The app header/content shell was position:fixed against the layout viewport, so the whole shell could end up above the visible viewport.
-- The screenshot showing the top of the Magic Dragon banner cut off proves this is a shell/viewport problem, not a Qty-field-only problem.
+Root cause corrected in the test:
+- getBoundingClientRect() returns viewport-client coordinates.
+- visualViewport.offsetTop is a layout-viewport offset.
+- The v0.10.38 runtime assertion compared those two different coordinate spaces, so Safari visual pan could be counted twice and produce a false FAIL even when Qty was visible.
 
-New reusable Lego block:
-- iPhone visual-viewport shell anchor: when a fixed mobile form is active and Safari pans the visual viewport, anchor the fixed shell to visualViewport.offsetTop and size the content area to visualViewport.height.
-- This moves the shell, never the focused input.
-- Existing Edit/Suggested Delivery line-item keyboard behavior remains unchanged.
+Correct invariant:
+- DOMRect visible range is client 0..visualViewport.height.
+- Safe Qty top is max(0, branded-header bottom).
+- Safe Qty bottom is visualViewport.height minus the existing 12px keyboard margin.
+- visualViewport.offsetTop is retained only as diagnostic data; it is not added to DOMRect positions.
 
-Automatic regression test:
+Diagnostic banner:
+- PASS remains silent.
+- FAIL now reports visible client range, visualViewport offsetTop, calculated safe range, header range and Qty range.
+- This makes any future regression numerically diagnosable from one screenshot.
+
+Deterministic regression test:
 - Open index.html with ?mdselftest=qtyviewport.
-- The app simulates a 92px visual-viewport pan and a 461px visible keyboard viewport.
-- The test is PASS only if the branded header, content top and New Delivery Qty field all remain inside the synthetic visible viewport.
-- Release packaging should not proceed if this self-test reports FAIL.
+- It simulates the shell shift from a 92px Safari visual pan and checks against a 461px client-visible height.
+- The deterministic test calls the same invariant function used by the on-device runtime test, so the two checks cannot silently drift apart.
 
 Manual iPhone checkpoint:
 1. Open New Delivery.
-2. Tap Qty.
-3. Leave the numeric keyboard open.
-4. The Magic Dragon header must remain fully visible.
-5. Product / Variant / Qty / Add must remain visible below it.
-6. Closing the keyboard must restore the normal shell without a jump.
+2. Tap Qty and leave the numeric keyboard open.
+3. Product / Variant / Qty / Add must remain visible.
+4. No red self-test banner should appear when Qty is inside the safe client area.
+5. Closing the keyboard must restore the normal shell without a jump.

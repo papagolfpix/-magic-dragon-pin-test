@@ -3852,7 +3852,7 @@ body.deliveryMode:not(.deliveryEditMode).deliveryKeyboardOpen #deliveryCreatePan
 /* Top add-row Qty is fixed-zone input; never browser-zoom it. */
 body.deliveryMode #delQty{font-size:16px!important}
 
-/* v0.10.38 — canonical iPhone visual-viewport shell anchor.
+/* v0.10.39 — Qty viewport self-test coordinate correction.
    iOS Safari can pan the visual viewport when the numeric keyboard opens even
    when no element is manually scrolled. Fixed UI remains attached to the
    layout viewport unless we explicitly offset it by visualViewport.offsetTop.
@@ -4041,7 +4041,7 @@ window.addEventListener("error",e=>{const b=document.getElementById("runtimeErro
       <button class="heroHomeHotspot noPrint" type="button" aria-label="Return to Dashboard" title="Dashboard" onclick="returnToDashboardFromHeader()"></button>
     </div>
     <div class="heroActions noPrint">
-      <span class="app-version">v0.10.38 TEST</span>
+      <span class="app-version">v0.10.39 TEST</span>
       <button class="heroMenuButton" id="heroMenuButton" type="button" aria-expanded="false">Menu</button>
     </div>
   </div>
@@ -5202,17 +5202,27 @@ function clearNewDeliveryQtyVisualViewport(){
   requestAnimationFrame(()=>window.syncShellGeometry?.());
 }
 
-function newDeliveryQtyViewportInvariant(){
+function newDeliveryQtyViewportInvariant(visibleHeightOverride){
   const input=document.getElementById("delQty");
   const hero=document.querySelector(".hero");
   const content=document.querySelector(".contentViewport");
   const vv=window.visualViewport;
   if(!input||!hero||!content)return {ok:false,reason:"missing-elements"};
-  const top=vv?.offsetTop||0;
-  const bottom=top+(vv?.height||window.innerHeight||0);
+
+  // DOMRect values from getBoundingClientRect() are viewport-client coordinates.
+  // visualViewport.offsetTop is a layout-viewport offset and must NOT be added to
+  // those DOMRect coordinates. Doing so double-counts Safari's visual pan and
+  // creates a false FAIL even while Qty is plainly visible above the keyboard.
+  const visibleTop=0;
+  const visibleBottom=Number.isFinite(visibleHeightOverride)
+    ? visibleHeightOverride
+    : (vv?.height||window.innerHeight||0);
+  const viewportOffsetTop=vv?.offsetTop||0;
   const ir=input.getBoundingClientRect(),hr=hero.getBoundingClientRect(),cr=content.getBoundingClientRect();
-  const ok=hr.top>=top-2 && hr.bottom<=bottom+2 && cr.top>=hr.bottom-2 && ir.top>=top-2 && ir.bottom<=bottom-12;
-  return {ok,top,bottom,input:{top:ir.top,bottom:ir.bottom},hero:{top:hr.top,bottom:hr.bottom},content:{top:cr.top,bottom:cr.bottom}};
+  const safeTop=Math.max(visibleTop,hr.bottom);
+  const safeBottom=visibleBottom-12;
+  const ok=hr.top>=visibleTop-2 && hr.bottom<=visibleBottom+2 && cr.top>=hr.bottom-2 && ir.top>=safeTop-2 && ir.bottom<=safeBottom;
+  return {ok,top:visibleTop,bottom:visibleBottom,viewportOffsetTop,safeTop,safeBottom,input:{top:ir.top,bottom:ir.bottom},hero:{top:hr.top,bottom:hr.bottom},content:{top:cr.top,bottom:cr.bottom}};
 }
 window.newDeliveryQtyViewportInvariant=newDeliveryQtyViewportInvariant;
 
@@ -5228,8 +5238,8 @@ function runNewDeliveryQtyRuntimeCheck(){
     flag.style.cssText="position:fixed;left:8px;right:8px;z-index:20000;padding:6px 8px;border-radius:8px;background:#7f1d1d;color:#fff;font:11px -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-weight:800;box-shadow:0 2px 8px #0004";
     document.body.appendChild(flag);
   }
-  flag.style.top=`${Math.round((window.visualViewport?.offsetTop||0)+4)}px`;
-  flag.textContent=`QTY VIEWPORT SELF-TEST FAIL · visible ${Math.round(result.top)}–${Math.round(result.bottom)} · header ${Math.round(result.hero?.top||0)}–${Math.round(result.hero?.bottom||0)} · Qty ${Math.round(result.input?.top||0)}–${Math.round(result.input?.bottom||0)}`;
+  flag.style.top="4px";
+  flag.textContent=`QTY VIEWPORT SELF-TEST FAIL · visible ${Math.round(result.top)}–${Math.round(result.bottom)} · offset ${Math.round(result.viewportOffsetTop||0)} · safe ${Math.round(result.safeTop||0)}–${Math.round(result.safeBottom||0)} · header ${Math.round(result.hero?.top||0)}–${Math.round(result.hero?.bottom||0)} · Qty ${Math.round(result.input?.top||0)}–${Math.round(result.input?.bottom||0)}`;
 }
 
 window.newDeliveryQtyFocus=(input)=>{
@@ -9551,13 +9561,14 @@ if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
     window.addEventListener("load",syncGeometry,{once:true});
   })();
 
-  window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js?v=1038", {updateViaCache:"none"}).catch(()=>{}));
+  window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js?v=1039", {updateViaCache:"none"}).catch(()=>{}));
 }
 
-/* v0.10.38 deterministic regression check.
+/* v0.10.39 deterministic regression check.
    Run with ?mdselftest=qtyviewport in any browser. It simulates an iPhone
-   visual viewport panned 92px with a 461px visible height and fails unless
-   the fixed shell + Qty picker remain inside that synthetic visible region. */
+   visual viewport panned 92px with a 461px visible height. The assertion uses
+   viewport-client coordinates for DOMRect values and records offsetTop only as
+   diagnostic metadata, preventing the iOS visual-pan offset being counted twice. */
 if(new URLSearchParams(location.search).get("mdselftest")==="qtyviewport") {
   window.addEventListener("load",()=>setTimeout(()=>{
     try{
@@ -9566,14 +9577,12 @@ if(new URLSearchParams(location.search).get("mdselftest")==="qtyviewport") {
       deliveryKeyboardActiveInput=document.getElementById("delQty");
       applyNewDeliveryQtyVisualViewport(syntheticTop,syntheticHeight);
       setTimeout(()=>{
-        const input=document.getElementById("delQty"),hero=document.querySelector(".hero"),content=document.querySelector(".contentViewport");
-        const ir=input?.getBoundingClientRect(),hr=hero?.getBoundingClientRect(),cr=content?.getBoundingClientRect();
-        const bottom=syntheticTop+syntheticHeight;
-        const ok=!!(ir&&hr&&cr&&hr.top>=syntheticTop-2&&hr.bottom<=bottom+2&&cr.top>=hr.bottom-2&&ir.top>=syntheticTop-2&&ir.bottom<=bottom-12);
+        const metrics=newDeliveryQtyViewportInvariant(syntheticHeight);
+        const ok=!!metrics.ok;
         const out=document.createElement("pre");
         out.id="mdSelfTestResult";
         out.dataset.status=ok?"PASS":"FAIL";
-        out.textContent=JSON.stringify({status:ok?"PASS":"FAIL",syntheticTop,syntheticHeight,visibleBottom:bottom,hero:hr&&{top:hr.top,bottom:hr.bottom},content:cr&&{top:cr.top,bottom:cr.bottom},qty:ir&&{top:ir.top,bottom:ir.bottom}},null,2);
+        out.textContent=JSON.stringify({status:ok?"PASS":"FAIL",syntheticTop,syntheticHeight,coordinateSpace:"viewport-client",metrics},null,2);
         document.body.appendChild(out);
         document.documentElement.dataset.mdSelfTest=ok?"PASS":"FAIL";
       },350);
