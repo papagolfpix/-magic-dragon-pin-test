@@ -4189,7 +4189,7 @@ body.deliveryMode .deliveryEditLineCard{
 
 
 <style id="v01047-line-pane-below-controls">
-/* v0.10.60 TEST — hard-separate New Delivery controls from added lines.
+/* v0.10.61 TEST — hard-separate New Delivery controls from added lines.
    iPhone Safari was allowing the first reusable line card/select to paint back
    underneath the stationary control deck.  Use a simple column flex layout
    for New Delivery: controls = fixed natural height, line list = the only
@@ -4250,7 +4250,7 @@ window.addEventListener("error",e=>{const b=document.getElementById("runtimeErro
       <button class="heroHomeHotspot noPrint" type="button" aria-label="Return to Dashboard" title="Dashboard" onclick="returnToDashboardFromHeader()"></button>
     </div>
     <div class="heroActions noPrint">
-      <span class="app-version">v0.10.60 TEST</span>
+      <span class="app-version">v0.10.61 TEST</span>
       <button class="heroMenuButton" id="heroMenuButton" type="button" aria-expanded="false">Menu</button>
     </div>
   </div>
@@ -4593,6 +4593,41 @@ window.addEventListener("error",e=>{const b=document.getElementById("runtimeErro
               <thead><tr><th>Product</th><th>Type</th><th>Cost</th><th>Retail</th><th></th></tr></thead><tbody id="catalogueRows"></tbody>
             </table>
           </div>
+        </div>
+      </details>
+
+      <details class="settingGroup" id="testCloudDetails">
+        <summary>TEST Cloud Sync</summary>
+        <div class="settingGroupBody">
+          <div class="notice"><b>iPhone ↔ iPad TEST only.</b> This uses the existing Supabase DEV project. It does not touch Pin's live phone or production data. Sync is manual while we prove the two-device database path.</div>
+          <div class="row" style="margin-top:10px">
+            <div class="field"><label>Email</label><input id="cloudEmail" type="email" autocomplete="username" placeholder="Supabase test login"></div>
+            <div class="field"><label>Password</label><input id="cloudPassword" type="password" autocomplete="current-password" placeholder="Password"></div>
+          </div>
+          <div class="row">
+            <div class="field"><label>Device label</label><input id="cloudDeviceLabel" type="text" maxlength="30" placeholder="iPhone or iPad"></div>
+          </div>
+          <div class="actionbar" style="margin-top:8px">
+            <button class="btn primary" id="cloudSignIn" type="button">Sign in to TEST Cloud</button>
+            <button class="btn alt" id="cloudSignOut" type="button">Sign out</button>
+          </div>
+          <div id="cloudStatus" class="backupRecoveryStatus">Not signed in to TEST Cloud.</div>
+
+          <div class="backupRecoveryCards" style="margin-top:10px">
+            <div class="backupRecoveryCard">
+              <div><b>Check TEST Cloud</b><small>Reads the shared cloud revision and confirms database access.</small></div>
+              <button class="btn alt" id="cloudRefresh" type="button">Check TEST Cloud</button>
+            </div>
+            <div class="backupRecoveryCard recommended">
+              <div><b>Upload This Device</b><small>Manual TEST snapshot only. Creates/updates the shared DEV cloud state, then reads it back for verification.</small></div>
+              <button class="btn primary" id="cloudPush" type="button">Upload This Device</button>
+            </div>
+            <div class="backupRecoveryCard">
+              <div><b>Preview Cloud → This Device</b><small>Downloads the shared TEST snapshot into the existing safe preview. Nothing changes until you approve Replace This Device's Data.</small></div>
+              <button class="btn alt" id="cloudPull" type="button">Preview Cloud → This Device</button>
+            </div>
+          </div>
+          <div id="cloudMeta" class="small" style="margin-top:10px"></div>
         </div>
       </details>
 
@@ -6706,7 +6741,7 @@ function buildFullBackupPayload(kind="SUPPORT",note=""){
   return {
     magicDragonBackup:true,
     app:"Magic Dragon Pin",
-    appVersion:"0.10.60",
+    appVersion:"0.10.61",
     backupKind:String(kind||"SUPPORT").toUpperCase(),
     createdAt:new Date().toISOString(),
     note:String(note||""),
@@ -9911,6 +9946,32 @@ function switchTab(id){
 }
 document.querySelectorAll(".tab").forEach(t=>t.onclick=()=>{if(t.dataset.tab==="docket")openDeliveryArchive();else switchTab(t.dataset.tab)});
 
+const MD_TEST_SUPABASE_URL="https://bzgkeshxbnhnlrpdgbtb.supabase.co";
+const MD_TEST_SUPABASE_KEY="sb_publishable_8EReyQFUFSe6SPHCBLhU7g_zp8j18_D";
+const MD_TEST_WORKSPACE="magic-dragon-pin-test";
+const MD_TEST_STATE_TABLE="md_test_device_state";
+let mdCloudSession=null;
+function cloudEl(id){return document.getElementById(id)}
+function cloudStatus(msg,bad=false){const el=cloudEl("cloudStatus");if(el){el.textContent=msg;el.classList.toggle("good",!bad);el.classList.toggle("bad",!!bad)}}
+function detectCloudDeviceLabel(){const ua=navigator.userAgent||"";if(/iPhone/i.test(ua))return "iPhone";if(/iPad/i.test(ua)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1))return "iPad";return "Test device"}
+function initCloudFields(){const e=cloudEl("cloudEmail"),d=cloudEl("cloudDeviceLabel");if(e)e.value=localStorage.getItem("mdpin-cloud-email")||"";if(d)d.value=localStorage.getItem("mdpin-cloud-device")||detectCloudDeviceLabel();try{const raw=sessionStorage.getItem("mdpin-cloud-session");if(raw)mdCloudSession=JSON.parse(raw)}catch(e){}if(mdCloudSession?.access_token)cloudStatus(`Signed in to TEST Cloud as ${mdCloudSession.user?.email||"test user"}.`)}
+async function mdCloudFetch(path,{method="GET",body=null,auth=true,headers={}}={}){
+ const h={apikey:MD_TEST_SUPABASE_KEY,...headers};
+ if(auth&&mdCloudSession?.access_token)h.Authorization=`Bearer ${mdCloudSession.access_token}`;
+ if(body!=null&&!h["Content-Type"])h["Content-Type"]="application/json";
+ const r=await fetch(MD_TEST_SUPABASE_URL+path,{method,headers:h,body:body==null?undefined:(typeof body==="string"?body:JSON.stringify(body))});
+ const text=await r.text();let data=null;try{data=text?JSON.parse(text):null}catch(e){data=text}
+ if(!r.ok)throw new Error(data?.message||data?.error_description||data?.hint||data?.error||`${r.status} ${r.statusText}`);
+ return data;
+}
+async function cloudSignIn(){const email=(cloudEl("cloudEmail")?.value||"").trim(),password=cloudEl("cloudPassword")?.value||"";if(!email||!password)return alert("Enter the TEST Supabase email and password.");cloudStatus("Signing in…");try{const data=await mdCloudFetch('/auth/v1/token?grant_type=password',{method:'POST',body:{email,password},auth:false});mdCloudSession=data;sessionStorage.setItem("mdpin-cloud-session",JSON.stringify(data));localStorage.setItem("mdpin-cloud-email",email);const label=(cloudEl("cloudDeviceLabel")?.value||detectCloudDeviceLabel()).trim();localStorage.setItem("mdpin-cloud-device",label);cloudEl("cloudPassword").value="";await cloudRefresh();}catch(e){console.error(e);cloudStatus(`TEST Cloud sign-in failed: ${e.message}`,true)}}
+function cloudSignOut(){mdCloudSession=null;sessionStorage.removeItem("mdpin-cloud-session");cloudStatus("Signed out of TEST Cloud.");const m=cloudEl("cloudMeta");if(m)m.textContent=""}
+async function cloudGetMeta(){const rows=await mdCloudFetch(`/rest/v1/${MD_TEST_STATE_TABLE}?workspace_id=eq.${encodeURIComponent(MD_TEST_WORKSPACE)}&select=workspace_id,revision,updated_at,updated_by_device,app_version,payload_hash&limit=1`);return Array.isArray(rows)&&rows.length?rows[0]:null}
+async function cloudRefresh(){if(!mdCloudSession?.access_token){cloudStatus("Sign in to TEST Cloud first.",true);return null}cloudStatus("Checking TEST Cloud…");try{const shops=await mdCloudFetch('/rest/v1/shops?select=name&order=name.asc&limit=5');const meta=await cloudGetMeta();cloudStatus(`Connected securely • ${Array.isArray(shops)?shops.length:0} shops visible.`);const m=cloudEl("cloudMeta");if(m)m.innerHTML=meta?`<b>Shared revision ${meta.revision}</b> · ${escapeHtml(meta.updated_by_device||"unknown device")} · app v${escapeHtml(meta.app_version||"?")}<br>${escapeHtml(new Date(meta.updated_at).toLocaleString())}`:'No shared TEST snapshot uploaded yet.';return meta}catch(e){console.error(e);cloudStatus(`TEST Cloud check failed: ${e.message}`,true);return null}}
+async function sha256Text(text){const bytes=new TextEncoder().encode(text),hash=await crypto.subtle.digest("SHA-256",bytes);return Array.from(new Uint8Array(hash)).map(b=>b.toString(16).padStart(2,"0")).join("")}
+async function cloudPush(){if(!mdCloudSession?.access_token)return cloudStatus("Sign in to TEST Cloud first.",true);const label=(cloudEl("cloudDeviceLabel")?.value||detectCloudDeviceLabel()).trim()||"Test device";localStorage.setItem("mdpin-cloud-device",label);cloudStatus("Preparing TEST cloud snapshot…");try{const before=await cloudGetMeta();const pkg=await createCompleteTransferPackage("TEST_CLOUD_STATE");const json=JSON.stringify(pkg),hash=await sha256Text(json),revision=(Number(before?.revision)||0)+1;const c=pkg.counts;if(!confirm(`Upload this device to TEST Cloud?\n\nRevision ${revision}\n${c.products} products · ${c.aliases} aliases · ${c.sundayReports} Sunday reports · ${c.deliveries} deliveries · ${c.invoices} invoices\n\nThis is the TEST workspace only.`)){cloudStatus("Cloud upload cancelled.");return}const row={workspace_id:MD_TEST_WORKSPACE,revision,app_version:"0.10.61",payload:pkg,payload_hash:hash,updated_by:mdCloudSession.user?.id||null,updated_by_device:label,updated_at:new Date().toISOString()};const saved=await mdCloudFetch(`/rest/v1/${MD_TEST_STATE_TABLE}?on_conflict=workspace_id`,{method:"POST",body:row,headers:{Prefer:"resolution=merge-duplicates,return=representation"}});const after=await cloudGetMeta();if(!after||Number(after.revision)!==revision||after.payload_hash!==hash)throw new Error("Cloud read-back verification did not match the uploaded snapshot.");cloudStatus(`TEST Cloud upload verified — revision ${revision} from ${label}.`);await cloudRefresh()}catch(e){console.error(e);cloudStatus(`TEST Cloud upload failed: ${e.message}`,true)}}
+async function cloudPull(){if(!mdCloudSession?.access_token)return cloudStatus("Sign in to TEST Cloud first.",true);cloudStatus("Downloading TEST cloud snapshot…");try{const rows=await mdCloudFetch(`/rest/v1/${MD_TEST_STATE_TABLE}?workspace_id=eq.${encodeURIComponent(MD_TEST_WORKSPACE)}&select=workspace_id,revision,updated_at,updated_by_device,app_version,payload_hash,payload&limit=1`);if(!Array.isArray(rows)||!rows.length)throw new Error("No TEST cloud snapshot exists yet.");const row=rows[0],pkg=row.payload;validateBackupPackage(pkg);const hash=await sha256Text(JSON.stringify(pkg));if(row.payload_hash&&hash!==row.payload_hash)throw new Error("Cloud snapshot integrity check failed.");showTransferPreview(pkg);cloudStatus(`Cloud revision ${row.revision} downloaded from ${row.updated_by_device||"another test device"}. Preview only — nothing changed yet.`)}catch(e){console.error(e);cloudStatus(`TEST Cloud download failed: ${e.message}`,true)}}
+
 const BACKUP_FORMAT="magic-dragon-pin-full-backup";
 const BACKUP_SCHEMA=1;
 let pendingTransferPackage=null;
@@ -9961,7 +10022,7 @@ function validateBackupPackage(pkg){
 }
 async function createCompleteTransferPackage(kind="FULL_TRANSFER"){
  const sourceFiles=await exportArchivedSourceFiles(),counts=backupCounts();
- return {format:BACKUP_FORMAT,schema:BACKUP_SCHEMA,appVersion:"0.10.60",backupKind:kind,createdAt:new Date().toISOString(),counts,sourceFilesCount:sourceFiles.length,data:JSON.parse(JSON.stringify(db)),sourceFiles};
+ return {format:BACKUP_FORMAT,schema:BACKUP_SCHEMA,appVersion:"0.10.61",backupKind:kind,createdAt:new Date().toISOString(),counts,sourceFilesCount:sourceFiles.length,data:JSON.parse(JSON.stringify(db)),sourceFiles};
 }
 async function savePackageFile(pkg,prefix="Magic-Pin-Data"){
  const blob=new Blob([JSON.stringify(pkg)],{type:"application/json"});
@@ -10076,11 +10137,17 @@ function showLastTransferResult(){
   const raw=sessionStorage.getItem("mdpin-transfer-result");if(!raw)return;
   sessionStorage.removeItem("mdpin-transfer-result");
   const r=JSON.parse(raw),c=r.counts||{};
-  const summary=`Restore complete and verified.\n\nThis device is now using the imported app data.\n\nProducts: ${c.products||0}\nAliases / mappings: ${c.aliases||0}\nSunday reports: ${c.sundayReports||0}\nDelivery dockets: ${c.deliveries||0}\nInvoices: ${c.invoices||0}\nArchived source files: ${r.sourceFiles>=0?r.sourceFiles:"?"}\n\nSource app: v${r.sourceVersion||"unknown"}${r.safetyFile?`\nSafety backup: ${r.safetyFile}`:""}\n\nEverything passed the post-import integrity check.`;
+  const summary=`Restore complete and verified.\n\n${c.products||0} products · ${c.aliases||0} aliases · ${c.sundayReports||0} Sunday reports · ${c.deliveries||0} deliveries · ${c.invoices||0} invoices.\n\n${r.safetyFile?`Safety backup: ${r.safetyFile}\nUsually saved in Downloads.`:""}`;
   backupStatus(`Restore complete and verified — ${c.products||0} products, ${c.aliases||0} aliases, ${c.sundayReports||0} Sunday reports, ${c.deliveries||0} deliveries, ${c.invoices||0} invoices, ${r.sourceFiles>=0?r.sourceFiles:"?"} archived source files.`);
   setTimeout(()=>alert(summary),150);
  }catch(e){}
 }
+if(cloudEl("cloudSignIn"))cloudEl("cloudSignIn").onclick=cloudSignIn;
+if(cloudEl("cloudSignOut"))cloudEl("cloudSignOut").onclick=cloudSignOut;
+if(cloudEl("cloudRefresh"))cloudEl("cloudRefresh").onclick=cloudRefresh;
+if(cloudEl("cloudPush"))cloudEl("cloudPush").onclick=cloudPush;
+if(cloudEl("cloudPull"))cloudEl("cloudPull").onclick=cloudPull;
+initCloudFields();
 document.getElementById("masterProductSearch").oninput=filterMasterProductSetup;
 document.getElementById("fillMasterCurrent").onclick=()=>renderMasterProductSetup(true);
 document.getElementById("saveMasterProducts").onclick=applyMasterProductSetup;
