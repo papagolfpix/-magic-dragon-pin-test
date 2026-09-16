@@ -1,6 +1,11 @@
-MAGIC DRAGON PIN v0.10.57 — TEST
+MAGIC DRAGON PIN v0.10.58 — TEST
 
-WHAT CHANGED IN v0.10.57
+WHAT CHANGED IN v0.10.58
+
+- Fixed stale dashboard Sunday status after replacing/overriding an older Sunday report.
+- Historical replacement imports no longer mark that old date as the active Sunday workflow.
+- Dashboard now self-heals an orphaned active Sunday pointer when the date is already complete, missing, or older than a newer completed Sunday.
+- Existing current/incomplete Sunday workflows still resume normally.
 - First Complete App Data Transfer test build branched from the v0.10.55 solid save point.
 - Backup & Recovery now presents Export Complete App Data / Import Complete App Data.
 - Import opens a readable preview before any data changes: source version, products, aliases, Sunday reports, delivery dockets, invoices, payments and archived source files.
@@ -21,7 +26,7 @@ TEST PROCEDURE
 8. Reload once more and confirm imported state persists.
 
 VERSION CHECK
-- App badge: v0.10.57 TEST
-- Service-worker cache: magic-pin-v0.10.57-test
+- App badge: v0.10.58 TEST
+- Service-worker cache: magic-pin-v0.10.58-test
 
 Filename update v0.10.57: user-facing export/backup files use the short Magic-Pin-* naming convention for easier identification on iPhone.

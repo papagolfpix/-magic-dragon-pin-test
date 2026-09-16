@@ -4189,7 +4189,7 @@ body.deliveryMode .deliveryEditLineCard{
 
 
 <style id="v01047-line-pane-below-controls">
-/* v0.10.57 TEST — hard-separate New Delivery controls from added lines.
+/* v0.10.58 TEST — hard-separate New Delivery controls from added lines.
    iPhone Safari was allowing the first reusable line card/select to paint back
    underneath the stationary control deck.  Use a simple column flex layout
    for New Delivery: controls = fixed natural height, line list = the only
@@ -4250,7 +4250,7 @@ window.addEventListener("error",e=>{const b=document.getElementById("runtimeErro
       <button class="heroHomeHotspot noPrint" type="button" aria-label="Return to Dashboard" title="Dashboard" onclick="returnToDashboardFromHeader()"></button>
     </div>
     <div class="heroActions noPrint">
-      <span class="app-version">v0.10.57 TEST</span>
+      <span class="app-version">v0.10.58 TEST</span>
       <button class="heroMenuButton" id="heroMenuButton" type="button" aria-expanded="false">Menu</button>
     </div>
   </div>
@@ -6706,7 +6706,7 @@ function buildFullBackupPayload(kind="SUPPORT",note=""){
   return {
     magicDragonBackup:true,
     app:"Magic Dragon Pin",
-    appVersion:"0.10.57",
+    appVersion:"0.10.58",
     backupKind:String(kind||"SUPPORT").toUpperCase(),
     createdAt:new Date().toISOString(),
     note:String(note||""),
@@ -6834,9 +6834,9 @@ function renderPinDashboard(){
   if(!badge||!title||!copy||!button)return;
 
   ensureCompletedSundayCycles();
-  const activeDate=db.activeSundayCycleDate||null;
+  const activeDate=normalizeActiveSundayCycle();
 
-  if(activeDate && !isSundayCycleComplete(activeDate)){
+  if(activeDate){
     badge.textContent="IN PROGRESS";
     badge.classList.add("active");
     title.textContent="Continue Sunday Workflow";
@@ -6889,7 +6889,7 @@ function renderMetrics(){
  const currentInvoices=Object.values(latestByDate).filter(i=>!i.supersededBy);
  const unpaid=currentInvoices.filter(i=>i.payment?.status!=="paid");
  const unpaidTotal=unpaid.reduce((n,i)=>n+Number(i.totals?.payPin||0),0);
- const activeDate=db.activeSundayCycleDate||null;
+ const activeDate=normalizeActiveSundayCycle();
  const sundayLabel=activeDate?`In progress · ${recordDateLabel(activeDate)}`:"Ready for next Sunday";
  const am=document.getElementById("dashboardActionMetrics");if(am)am.innerHTML=`<div class="dashboardActionCard ${unpaid.length?'warn':'ok'}"><div class="k">Unpaid invoices</div><div class="v">${unpaid.length?`${unpaid.length} · ${baht(unpaidTotal)}`:"None"}</div></div><div class="dashboardActionCard ${activeDate?'warn':'ok'}"><div class="k">Sunday status</div><div class="v smallStatus">${escapeHtml(sundayLabel)}</div></div>`;
  const legacyMetrics=document.getElementById("metrics");
@@ -8403,7 +8403,7 @@ document.getElementById("importXlsx").onclick=async()=>{
      db.sundayImports=db.sundayImports.filter(x=>!(x.branch===rep.branch&&x.date===rep.date));
      db.weeks=db.weeks.filter(w=>!(w.branch===rep.branch&&w.date===rep.date&&/Excel/i.test(String(w.source||""))));
    }
-   db.sundayImports.push(record);reconReports.push(reconciliation);importedDates.push(rep.date);if(replaceExisting)replacedExistingCount++;else newImportedCount++;
+   db.sundayImports.push(record);reconReports.push(reconciliation);if(!replaceExisting)importedDates.push(rep.date);if(replaceExisting)replacedExistingCount++;else newImportedCount++;
    const weeklyRows=rep.rows.map(rr=>{const pm=canonicalProductMatchRow(rr),p=pm.product;return {productId:p?.id||null,sourceProductName:rr.product,opening:rr.oldStock,delivered:rr.newDeliver||0,takeout:rr.takeOut||0,closing:rr.inStock,reportedSold:rr.sold,sellPrice:rr.sellPrice,cost:rr.cost,historyKnown:rr.oldStock!=null,source:"Excel"}});
    db.weeks.push({id:"W"+Date.now()+Math.random().toString(36).slice(2,5),branch:rep.branch,date:rep.date,source:"Excel Sunday import",sourceArchiveId:id,rows:weeklyRows,totals:{sales:rep.rows.reduce((s,r)=>s+(r.totalSales||0),0),cost:rep.rows.reduce((s,r)=>s+(r.totalCost||0),0),profit:rep.rows.reduce((s,r)=>s+(r.totalProfit||0),0),bm:rep.rows.reduce((s,r)=>s+(r.bmShare||0),0),alix:rep.rows.reduce((s,r)=>s+(r.alixShare||0),0),pin:rep.rows.reduce((s,r)=>s+(r.pinShare||0),0)},importAudit:{type:"xlsx",archiveName:rep.archiveName,mathErrors,reconciliation,replacedExisting:!!replaceExisting}});
    save();
@@ -8801,6 +8801,26 @@ let sundayWizardTargetDate=null;
 const SUNDAY_STEPS=["Import","Reconcile","Financial","Invoice","Payment"];
 function ensureCompletedSundayCycles(){if(!Array.isArray(db.completedSundayCycles))db.completedSundayCycles=[];}
 function isSundayCycleComplete(date){ensureCompletedSundayCycles();return db.completedSundayCycles.some(x=>x&&x.date===date&&x.status==="complete");}
+function normalizeActiveSundayCycle(){
+  ensureCompletedSundayCycles();
+  const active=db.activeSundayCycleDate||null;
+  if(!active)return null;
+  const hasReport=(db.sundayImports||[]).some(r=>r&&r.date===active);
+  const latestCompleted=(db.completedSundayCycles||[])
+    .filter(x=>x&&x.status==="complete"&&x.date)
+    .map(x=>String(x.date))
+    .sort((a,b)=>b.localeCompare(a))[0]||null;
+  // An active Sunday must still exist, must not already be complete, and can never
+  // sit behind a newer completed Sunday. Historical report replacement/mapping
+  // work must not resurrect an old workflow on the dashboard.
+  const stale=!hasReport||isSundayCycleComplete(active)||(latestCompleted&&String(active)<latestCompleted);
+  if(stale){
+    db.activeSundayCycleDate=null;
+    localStorage.setItem("mdpin-db",JSON.stringify(db));
+    return null;
+  }
+  return active;
+}
 function completeSundayCycle(state){
   const date=state?.items?.[0]?.report?.date;if(!date||!state.paymentSaved)return false;
   ensureCompletedSundayCycles();
@@ -8869,7 +8889,7 @@ function latestWizardReports(){
   if(sundayWizardTargetDate)return wizardReportsForDate(sundayWizardTargetDate);
   // Normal Sunday Wizard resumes ONLY a cycle that was explicitly started by an import.
   // Historical unresolved reports are never auto-selected as current work.
-  const activeDate=db.activeSundayCycleDate||null;
+  const activeDate=normalizeActiveSundayCycle();
   if(!activeDate)return [];
   if(isSundayCycleComplete(activeDate)){db.activeSundayCycleDate=null;localStorage.setItem("mdpin-db",JSON.stringify(db));return [];}
   const items=wizardReportsForDate(activeDate);
@@ -9941,7 +9961,7 @@ function validateBackupPackage(pkg){
 }
 async function createCompleteTransferPackage(kind="FULL_TRANSFER"){
  const sourceFiles=await exportArchivedSourceFiles(),counts=backupCounts();
- return {format:BACKUP_FORMAT,schema:BACKUP_SCHEMA,appVersion:"0.10.57",backupKind:kind,createdAt:new Date().toISOString(),counts,sourceFilesCount:sourceFiles.length,data:JSON.parse(JSON.stringify(db)),sourceFiles};
+ return {format:BACKUP_FORMAT,schema:BACKUP_SCHEMA,appVersion:"0.10.58",backupKind:kind,createdAt:new Date().toISOString(),counts,sourceFilesCount:sourceFiles.length,data:JSON.parse(JSON.stringify(db)),sourceFiles};
 }
 async function savePackageFile(pkg,prefix="Magic-Pin-Data"){
  const blob=new Blob([JSON.stringify(pkg)],{type:"application/json"});
