@@ -4180,7 +4180,7 @@ body.deliveryMode .deliveryEditLineCard{
 
 
 <style id="v01047-line-pane-below-controls">
-/* v0.10.54 TEST — hard-separate New Delivery controls from added lines.
+/* v0.10.55 TEST — hard-separate New Delivery controls from added lines.
    iPhone Safari was allowing the first reusable line card/select to paint back
    underneath the stationary control deck.  Use a simple column flex layout
    for New Delivery: controls = fixed natural height, line list = the only
@@ -4241,7 +4241,7 @@ window.addEventListener("error",e=>{const b=document.getElementById("runtimeErro
       <button class="heroHomeHotspot noPrint" type="button" aria-label="Return to Dashboard" title="Dashboard" onclick="returnToDashboardFromHeader()"></button>
     </div>
     <div class="heroActions noPrint">
-      <span class="app-version">v0.10.54 TEST</span>
+      <span class="app-version">v0.10.55 TEST</span>
       <button class="heroMenuButton" id="heroMenuButton" type="button" aria-expanded="false">Menu</button>
     </div>
   </div>
@@ -4332,6 +4332,11 @@ window.addEventListener("error",e=>{const b=document.getElementById("runtimeErro
         <button class="btn alt" id="clearXlsxSelection" disabled>Clear Selection</button>
         
         <div id="xlsxResults" style="margin-top:10px"></div>
+<div id="mappingReviewPanel" class="mappingReviewPanel" style="display:none">
+<h3 style="margin:0">Product Mapping Review</h3>
+<div class="small">Only new or changed shop names appear here. Confirm once and the alias is remembered for previous and future imports.</div>
+<div id="mappingActionNotice" class="mappingActionNotice" role="status" aria-live="polite"></div>
+<div id="mappingReviewList"></div></div>
         <div id="excelReconPanel" class="excelReconPanel" style="display:none">
           <div class="excelReconHead">
             <div>
@@ -4341,11 +4346,6 @@ window.addEventListener("error",e=>{const b=document.getElementById("runtimeErro
           </div>
           <div id="excelReconSummary" class="grid" style="margin:10px 0"></div>
           <div id="excelReconReports"></div></div>
-<div id="mappingReviewPanel" class="mappingReviewPanel" style="display:none">
-<h3 style="margin:0">Product Mapping Review</h3>
-<div class="small">Only new or changed shop names appear here. Confirm once and the alias is remembered for previous and future imports.</div>
-<div id="mappingActionNotice" class="mappingActionNotice" role="status" aria-live="polite"></div>
-<div id="mappingReviewList"></div></div>
       </div></div>
       
       <details id="integrityDetails" class="card compactUtility" style="margin-top:14px">
@@ -6683,7 +6683,7 @@ function buildFullBackupPayload(kind="SUPPORT",note=""){
   return {
     magicDragonBackup:true,
     app:"Magic Dragon Pin",
-    appVersion:"0.10.54",
+    appVersion:"0.10.55",
     backupKind:String(kind||"SUPPORT").toUpperCase(),
     createdAt:new Date().toISOString(),
     note:String(note||""),
@@ -7949,6 +7949,43 @@ function renderCatalogueIntegrity(){
  box.innerHTML=html;
 }
 
+let sundayImportAutoAdvance=false;
+function currentActiveSundayReconciliations(){
+  const date=db.activeSundayCycleDate||null;
+  if(!date)return [];
+  ensureSundayArchive();
+  return (db.sundayImports||[]).filter(r=>r.date===date).map(r=>reconcileExcelReport(r));
+}
+function refreshCurrentSundayImportReconciliation(){
+  const reports=currentActiveSundayReconciliations();
+  if(reports.length)renderExcelReconciliation(reports);
+}
+function scrollSundayImportToNextStep(){
+  if(!sundayImportAutoAdvance)return;
+  renderMappingReview();
+  refreshCurrentSundayImportReconciliation();
+  const pending=collectUnmappedProductNames();
+  const target=pending.length?document.getElementById("mappingReviewPanel"):document.getElementById("excelReconPanel");
+  if(pending.length){
+    const n=document.getElementById("mappingActionNotice");
+    if(n&&!String(n.textContent||"").trim())setMappingActionNotice(`Import complete — next, review ${pending.length} new or changed product name${pending.length===1?"":"s"}.`,"defer");
+  }
+  setTimeout(()=>target?.scrollIntoView({block:"start",behavior:"smooth"}),180);
+}
+function continueSundayImportAfterMapping(){
+  if(!sundayImportAutoAdvance)return;
+  refreshCurrentSundayImportReconciliation();
+  const pending=collectUnmappedProductNames();
+  if(pending.length){
+    setTimeout(()=>document.querySelector(".mappingReviewItem")?.scrollIntoView({block:"center",behavior:"smooth"}),160);
+    return;
+  }
+  sundayImportAutoAdvance=false;
+  const n=document.getElementById("mappingActionNotice");
+  if(n){n.textContent="Mapping complete — continuing to stock reconciliation.";n.className="mappingActionNotice ok";}
+  setTimeout(()=>document.getElementById("excelReconPanel")?.scrollIntoView({block:"start",behavior:"smooth"}),650);
+}
+
 function collectUnmappedProductNames(){
  const seen=new Map();ensureSundayArchive();
  db.sundayImports.forEach(r=>(r.rows||[]).forEach(rr=>{const pm=canonicalProductMatchRow(rr);if(pm.product)return;const key=normalizeProductKey(rr.product);if(db.deferredMappings?.[key])return;if(!seen.has(key))seen.set(key,{key,name:rr.product,examples:[],best:null,bestScore:0});const it=seen.get(key);it.examples.push(`${r.branch} ${r.date}`);db.products.forEach(p=>{const s=similarity(key,normalizeProductKey(p.name));if(s>it.bestScore){it.bestScore=s;it.best=p}})}));
@@ -7973,7 +8010,7 @@ function renderMappingReview(){
  panel.style.display="block";
  box.innerHTML=`<div class="small" style="margin:8px 0"><b>${items.length} new/changed name${items.length===1?"":"s"} to review</b></div>`+items.map(it=>`<div class="mappingReviewItem" data-mapkey="${it.key}"><b>${it.name}</b><div class="small">${[...new Set(it.examples)].join(" • ")}</div><div class="mappingSuggestion"><select class="mappingTarget">${db.products.map(p=>`<option value="${p.id}" ${it.best?.id===p.id?"selected":""}>${p.name}</option>`).join("")}</select><span class="reconStatus warn">${Math.round(it.bestScore*100)}% suggestion</span></div><div class="mappingActions"><button class="btn" onclick="confirmMapping('${it.key.replace(/'/g,"\\'")}')">Merge as same product</button><button class="btn alt" onclick="keepMappingSeparate('${it.key.replace(/'/g,"\\'")}')">Keep separate</button><button class="btn alt mappingLaterBtn" onclick="deferMapping('${it.key.replace(/'/g,"\\'")}')">Unsure — Check Later</button></div></div>`).join("");
 }
-window.confirmMapping=key=>{const row=[...document.querySelectorAll(".mappingReviewItem")].find(x=>x.dataset.mapkey===key),pid=row?.querySelector(".mappingTarget")?.value,name=row?.querySelector("b")?.textContent;if(!pid||!name)return;const p=db.products.find(x=>x.id===pid);if(!p)return;if(!confirm(`Merge "${name}" with "${p.name}"?\n\nThis will apply to previous and future imports.`))return;saveProductAlias(name,pid);retroactivelyRemapAllImports();setMappingActionNotice(`Saved — “${name}” will now always map to “${p.name}”, including previous and future imports.`,"ok");renderMappingReview();renderMappingManager();renderAll()};
+window.confirmMapping=key=>{const row=[...document.querySelectorAll(".mappingReviewItem")].find(x=>x.dataset.mapkey===key),pid=row?.querySelector(".mappingTarget")?.value,name=row?.querySelector("b")?.textContent;if(!pid||!name)return;const p=db.products.find(x=>x.id===pid);if(!p)return;if(!confirm(`Merge "${name}" with "${p.name}"?\n\nThis will apply to previous and future imports.`))return;saveProductAlias(name,pid);retroactivelyRemapAllImports();setMappingActionNotice(`Saved — “${name}” will now always map to “${p.name}”, including previous and future imports.`,"ok");renderMappingReview();renderMappingManager();renderAll();continueSundayImportAfterMapping()};
 
 window.deferMapping=key=>{
   ensureProductAliases();
@@ -7984,8 +8021,9 @@ window.deferMapping=key=>{
   setMappingActionNotice(`Saved for later — “${name}” has been removed from the active review list and can be reopened from Product mappings.`,"defer");
   renderMappingReview();
   renderMappingManager();
+  continueSundayImportAfterMapping();
 };
-window.keepMappingSeparate=key=>{const row=[...document.querySelectorAll(".mappingReviewItem")].find(x=>x.dataset.mapkey===key),name=row?.querySelector("b")?.textContent;if(!name)return;const id="P"+Date.now()+Math.random().toString(36).slice(2,5);db.products.push({id,name,type:"flower",cost:0,retail:0,branches:["BM Bangrak","Lamai"]});saveProductAlias(name,id);retroactivelyRemapAllImports();setMappingActionNotice(`Saved — “${name}” is now its own catalogue product and will not be suggested as an alias again.`,"ok");renderMappingReview();renderMappingManager();renderCatalogue()};
+window.keepMappingSeparate=key=>{const row=[...document.querySelectorAll(".mappingReviewItem")].find(x=>x.dataset.mapkey===key),name=row?.querySelector("b")?.textContent;if(!name)return;const id="P"+Date.now()+Math.random().toString(36).slice(2,5);db.products.push({id,name,type:"flower",cost:0,retail:0,branches:["BM Bangrak","Lamai"]});saveProductAlias(name,id);retroactivelyRemapAllImports();setMappingActionNotice(`Saved — “${name}” is now its own catalogue product and will not be suggested as an alias again.`,"ok");renderMappingReview();renderMappingManager();renderCatalogue();continueSundayImportAfterMapping()};
 function retroactivelyRemapAllImports(doSave=true){ensureSundayArchive();db.sundayImports.forEach(r=>(r.rows||[]).forEach(rr=>{const pm=canonicalProductMatchRow(rr);rr.productId=pm.product?.id||null}));db.weeks.forEach(w=>{if(!/Excel/i.test(String(w.source||"")))return;(w.rows||[]).forEach(rr=>{const pm=canonicalProductMatch(rr.sourceProductName||"",{cost:rr.cost,retail:rr.sellPrice});if(pm.product)rr.productId=pm.product.id})});refreshStoredReconciliations(false);if(doSave)save()}
 
 window.reopenDeferredMapping=key=>{
@@ -8367,7 +8405,13 @@ document.getElementById("importXlsx").onclick=async()=>{
      :`Nothing was imported — ${keptExisting} existing Sunday report${keptExisting===1?" was":"s were"} kept exactly as-is.`;
  const finalType=(replacedExistingCount||newImportedCount)?"ok":"info";
  resetSundayImportSelection(finalMessage,finalType);
- const finalNotice=document.getElementById("xlsxActionNotice");if(finalNotice&&finalNotice.textContent)finalNotice.scrollIntoView({block:"nearest",behavior:"smooth"});
+ if(replacedExistingCount||newImportedCount){
+   sundayImportAutoAdvance=true;
+   scrollSundayImportToNextStep();
+ }else{
+   sundayImportAutoAdvance=false;
+   const finalNotice=document.getElementById("xlsxActionNotice");if(finalNotice&&finalNotice.textContent)finalNotice.scrollIntoView({block:"nearest",behavior:"smooth"});
+ }
  if(document.body.classList.contains("workflowMode")){sundayWizardStep=1;renderSundayWizard();}
 };
 
@@ -9878,7 +9922,7 @@ document.getElementById("exportData").onclick=async()=>{
  const btn=document.getElementById("exportData");if(btn.disabled)return;btn.disabled=true;backupStatus("Preparing complete backup…");
  try{
   const sourceFiles=await exportArchivedSourceFiles(),counts=backupCounts();
-  const pkg={format:BACKUP_FORMAT,schema:BACKUP_SCHEMA,appVersion:"0.10.54",createdAt:new Date().toISOString(),counts,sourceFilesCount:sourceFiles.length,data:JSON.parse(JSON.stringify(db)),sourceFiles};
+  const pkg={format:BACKUP_FORMAT,schema:BACKUP_SCHEMA,appVersion:"0.10.55",createdAt:new Date().toISOString(),counts,sourceFilesCount:sourceFiles.length,data:JSON.parse(JSON.stringify(db)),sourceFiles};
   await downloadBackupPackage(pkg);
   backupStatus(`Backup ready: ${counts.deliveries} deliveries, ${counts.sundayReports} Sunday reports, ${counts.invoices} invoices, ${sourceFiles.length} archived source file${sourceFiles.length===1?"":"s"}.`);
  }catch(e){console.error(e);backupStatus("Backup could not be created. No app data was changed.",true);alert("The full backup could not be created. Your current app data has not been changed.")}

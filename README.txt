@@ -1,6 +1,6 @@
-MAGIC DRAGON PIN v0.10.54 — TEST
+MAGIC DRAGON PIN v0.10.55 — TEST
 
-WHAT CHANGED IN v0.10.54
+WHAT CHANGED IN v0.10.55
 - Mapping review cleanup: only new/changed names remain in the active queue; permanent alias behavior preserved; Unsure — Check Later preserved; explicit saved/deferred confirmation added after every mapping action.
 - No changes to the locked Delivery form, Sunday multi-week detection, duplicate handling, safe deletion, or catalogue discrepancy logic.
 
@@ -23,5 +23,8 @@ TEST
 4. No import is required for this visual test.
 
 BUILD
-- App badge: v0.10.54 TEST
-- Service-worker cache: magic-pin-v0.10.54-test
+- App badge: v0.10.55 TEST
+- Service-worker cache: magic-pin-v0.10.55-test
+
+
+v0.10.55 TEST: Sunday import handoff is now guided top-to-bottom: Import -> Product Mapping Review (only when needed) -> Independent Reconciliation. After import the next required block is scrolled into view automatically; after the final mapping decision the screen continues automatically to reconciliation. Existing import, mapping and reconciliation calculations are unchanged.
