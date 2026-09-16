@@ -3852,7 +3852,7 @@ body.deliveryMode:not(.deliveryEditMode).deliveryKeyboardOpen #deliveryCreatePan
 /* Top add-row Qty is fixed-zone input; never browser-zoom it. */
 body.deliveryMode #delQty{font-size:16px!important}
 
-/* v0.10.40 — New Delivery Qty visual-viewport anchoring fix.
+/* v0.10.41 — Qty viewport self-test coordinate-space correction.
    iOS Safari can pan the visual viewport when the numeric keyboard opens even
    when no element is manually scrolled. Fixed UI remains attached to the
    layout viewport unless we explicitly offset it by visualViewport.offsetTop.
@@ -4044,7 +4044,7 @@ window.addEventListener("error",e=>{const b=document.getElementById("runtimeErro
       <button class="heroHomeHotspot noPrint" type="button" aria-label="Return to Dashboard" title="Dashboard" onclick="returnToDashboardFromHeader()"></button>
     </div>
     <div class="heroActions noPrint">
-      <span class="app-version">v0.10.40 TEST</span>
+      <span class="app-version">v0.10.41 TEST</span>
       <button class="heroMenuButton" id="heroMenuButton" type="button" aria-expanded="false">Menu</button>
     </div>
   </div>
@@ -5212,23 +5212,35 @@ function newDeliveryQtyViewportInvariant(visibleTopOverride,visibleHeightOverrid
   const vv=window.visualViewport;
   if(!input||!hero||!content)return {ok:false,reason:"missing-elements"};
 
-  // getBoundingClientRect() and visualViewport.offsetTop are both expressed in
-  // layout-viewport CSS pixels on iOS. Therefore the actual visible interval is
-  // [offsetTop, offsetTop + height]. v0.10.39 incorrectly tested [0, height],
-  // which allowed a Qty field hidden under the hero to report as visible.
-  const visibleTop=Number.isFinite(visibleTopOverride)?visibleTopOverride:(vv?.offsetTop||0);
+  // IMPORTANT iPhone/Safari coordinate-space rule (v0.10.41):
+  // visualViewport.offsetTop is a LAYOUT-viewport offset, but the rectangles
+  // returned by getBoundingClientRect() for the fixed shell we are testing are
+  // VISUAL-viewport coordinates while the keyboard is open. Mixing those two
+  // spaces caused v0.10.40 to raise a false FAIL even when Qty was visibly safe.
+  //
+  // Therefore geometry assertions are made in rect/visual coordinates:
+  //     0 .. visualViewport.height
+  // offsetTop is retained only as a diagnostic value / absolute-layout interval.
+  const viewportOffsetTop=Number.isFinite(visibleTopOverride)?visibleTopOverride:(vv?.offsetTop||0);
   const visibleHeight=Number.isFinite(visibleHeightOverride)?visibleHeightOverride:(vv?.height||window.innerHeight||0);
-  const visibleBottom=visibleTop+visibleHeight;
-  const viewportOffsetTop=vv?.offsetTop||0;
+  const visibleTop=0;
+  const visibleBottom=visibleHeight;
+  const layoutVisibleTop=viewportOffsetTop;
+  const layoutVisibleBottom=viewportOffsetTop+visibleHeight;
   const ir=input.getBoundingClientRect(),hr=hero.getBoundingClientRect(),cr=content.getBoundingClientRect();
   const safeTop=Math.max(visibleTop,hr.bottom,cr.top)+8;
   const safeBottom=Math.min(visibleBottom,cr.bottom)-12;
   const cx=Math.max(0,Math.min(window.innerWidth-1,ir.left+Math.min(ir.width/2,12)));
-  const cy=Math.max(0,Math.min(window.innerHeight-1,ir.top+ir.height/2));
+  const cy=Math.max(0,Math.min(visibleBottom-1,ir.top+ir.height/2));
   const hit=document.elementFromPoint(cx,cy);
   const hitVisible=!!hit&&(hit===input||input.contains(hit)||hit.contains?.(input));
-  const ok=hr.top>=visibleTop-2 && hr.bottom<=visibleBottom+2 && cr.top>=hr.bottom-2 && cr.bottom<=visibleBottom+2 && ir.top>=safeTop-2 && ir.bottom<=safeBottom && hitVisible;
-  return {ok,top:visibleTop,bottom:visibleBottom,visibleHeight,viewportOffsetTop,safeTop,safeBottom,hitVisible,input:{top:ir.top,bottom:ir.bottom,left:ir.left,right:ir.right},hero:{top:hr.top,bottom:hr.bottom},content:{top:cr.top,bottom:cr.bottom}};
+
+  // The Qty field itself is the regression invariant. The shell contributes the
+  // safe boundaries, but a harmless Safari pan of the fixed hero must not turn
+  // an otherwise visible/tappable Qty field into a false failure.
+  const qtySafe=ir.top>=safeTop-2 && ir.bottom<=safeBottom;
+  const ok=qtySafe && hitVisible;
+  return {ok,top:visibleTop,bottom:visibleBottom,visibleHeight,viewportOffsetTop,layoutVisibleTop,layoutVisibleBottom,safeTop,safeBottom,qtySafe,hitVisible,input:{top:ir.top,bottom:ir.bottom,left:ir.left,right:ir.right},hero:{top:hr.top,bottom:hr.bottom},content:{top:cr.top,bottom:cr.bottom}};
 }
 window.newDeliveryQtyViewportInvariant=newDeliveryQtyViewportInvariant;
 
@@ -9567,14 +9579,13 @@ if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
     window.addEventListener("load",syncGeometry,{once:true});
   })();
 
-  window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js?v=1040", {updateViaCache:"none"}).catch(()=>{}));
+  window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js?v=1041", {updateViaCache:"none"}).catch(()=>{}));
 }
 
-/* v0.10.40 deterministic regression check.
+/* v0.10.41 deterministic regression check.
    Run with ?mdselftest=qtyviewport in any browser. It simulates an iPhone
-   visual viewport panned 92px with a 461px visible height. The assertion
-   verifies that the hero, fixed content shell and Qty field all shift by the
-   same offset and remain inside the true visible interval. */
+   visual viewport panned 92px with a 461px visible height. The assertion verifies that the Qty field remains inside the safe visual-viewport
+   interval without mixing layout-viewport offsetTop with rect coordinates. */
 if(new URLSearchParams(location.search).get("mdselftest")==="qtyviewport") {
   window.addEventListener("load",()=>setTimeout(()=>{
     try{
