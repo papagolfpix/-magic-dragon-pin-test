@@ -4189,7 +4189,7 @@ body.deliveryMode .deliveryEditLineCard{
 
 
 <style id="v01047-line-pane-below-controls">
-/* v0.10.59 TEST — hard-separate New Delivery controls from added lines.
+/* v0.10.60 TEST — hard-separate New Delivery controls from added lines.
    iPhone Safari was allowing the first reusable line card/select to paint back
    underneath the stationary control deck.  Use a simple column flex layout
    for New Delivery: controls = fixed natural height, line list = the only
@@ -4250,7 +4250,7 @@ window.addEventListener("error",e=>{const b=document.getElementById("runtimeErro
       <button class="heroHomeHotspot noPrint" type="button" aria-label="Return to Dashboard" title="Dashboard" onclick="returnToDashboardFromHeader()"></button>
     </div>
     <div class="heroActions noPrint">
-      <span class="app-version">v0.10.59 TEST</span>
+      <span class="app-version">v0.10.60 TEST</span>
       <button class="heroMenuButton" id="heroMenuButton" type="button" aria-expanded="false">Menu</button>
     </div>
   </div>
@@ -6706,7 +6706,7 @@ function buildFullBackupPayload(kind="SUPPORT",note=""){
   return {
     magicDragonBackup:true,
     app:"Magic Dragon Pin",
-    appVersion:"0.10.59",
+    appVersion:"0.10.60",
     backupKind:String(kind||"SUPPORT").toUpperCase(),
     createdAt:new Date().toISOString(),
     note:String(note||""),
@@ -9961,7 +9961,7 @@ function validateBackupPackage(pkg){
 }
 async function createCompleteTransferPackage(kind="FULL_TRANSFER"){
  const sourceFiles=await exportArchivedSourceFiles(),counts=backupCounts();
- return {format:BACKUP_FORMAT,schema:BACKUP_SCHEMA,appVersion:"0.10.59",backupKind:kind,createdAt:new Date().toISOString(),counts,sourceFilesCount:sourceFiles.length,data:JSON.parse(JSON.stringify(db)),sourceFiles};
+ return {format:BACKUP_FORMAT,schema:BACKUP_SCHEMA,appVersion:"0.10.60",backupKind:kind,createdAt:new Date().toISOString(),counts,sourceFilesCount:sourceFiles.length,data:JSON.parse(JSON.stringify(db)),sourceFiles};
 }
 async function savePackageFile(pkg,prefix="Magic-Pin-Data"){
  const blob=new Blob([JSON.stringify(pkg)],{type:"application/json"});
@@ -10020,35 +10020,36 @@ document.getElementById("transferPreviewCommit").onclick=async()=>{
   const continueSafety=confirm(
    "Safety backup required before replacing this device's data.\n\n"+
    "Magic Dragon will first create a copy of the CURRENT app data on this device.\n\n"+
-   "Next, your iPhone Share / Save sheet will open with a file named Magic-Pin-SAFETY-....json. Choose Save to Files (or another safe location), then return here.\n\n"+
-   "If you cancel, the import will stop and NOTHING will be changed.\n\n"+
-   "Tap OK to create and save the safety backup."
+   "On iPhone, the backup may either open the Share / Save sheet OR save automatically to Downloads, depending on Safari.\n\n"+
+   "The replacement will not begin until the safety-backup step has completed.\n\n"+
+   "Tap OK to create the safety backup."
   );
   if(!continueSafety){backupStatus("Import paused before safety backup. Nothing on this device was changed.");return}
   backupStatus("Creating pre-import safety backup…");
   safety=await createCompleteTransferPackage("PRE_IMPORT_SAFETY");
   const saved=await savePackageFile(safety,"Magic-Pin-SAFETY");
   if(saved.cancelled||!saved.saved){backupStatus("Import stopped because the pre-import safety backup was not saved. Nothing changed.",true);return}
-  backupStatus("Safety backup saved. Replacing this device's data…");
+  const safetyWhere=saved.method==="download"
+   ? `Safety backup created successfully and saved automatically to your iPhone Downloads as:
+
+${saved.fileName}`
+   : `Safety backup step completed successfully:
+
+${saved.fileName}`;
+  const continueReplace=confirm(
+   `${safetyWhere}\n\nYour CURRENT app data is now protected.\n\nTap OK to replace this device with the selected backup, or Cancel to stop here without changing the app data.`
+  );
+  if(!continueReplace){backupStatus(`Safety backup created (${saved.fileName}), but the data replacement was cancelled. Nothing on this device was changed.`);return}
+  backupStatus("Safety backup confirmed. Replacing this device's data…");
   await replaceArchivedSourceFiles(pkg.sourceFiles||[]);
   changed=true;
   Object.keys(db).forEach(k=>delete db[k]);Object.assign(db,JSON.parse(JSON.stringify(pkg.data)));
   localStorage.setItem("mdpin-db",JSON.stringify(db));
   const check=await verifyImportedTransfer(pkg);
   if(!check.ok)throw new Error(`Import verification failed: ${check.mismatches.join(", ")}. The pre-import safety backup is available for recovery.`);
-  sessionStorage.setItem("mdpin-transfer-result",JSON.stringify({at:new Date().toISOString(),sourceVersion:pkg.appVersion||"unknown",counts:check.actual,sourceFiles:check.actualSources}));
+  sessionStorage.setItem("mdpin-transfer-result",JSON.stringify({at:new Date().toISOString(),sourceVersion:pkg.appVersion||"unknown",counts:check.actual,sourceFiles:check.actualSources,safetyFile:saved?.fileName||""}));
   closeTransferPreview();
-  backupStatus("Import verified successfully. Reloading…");
-  alert(`Complete app data imported and verified successfully.
-
-Products: ${check.actual.products}
-Aliases: ${check.actual.aliases}
-Sunday reports: ${check.actual.sundayReports}
-Deliveries: ${check.actual.deliveries}
-Invoices: ${check.actual.invoices}
-Archived source files: ${check.actualSources}
-
-Magic Dragon will now reload.`);
+  backupStatus("Import verified successfully. Reloading to finish…");
   location.reload();
  }catch(err){
   console.error(err);
@@ -10071,7 +10072,14 @@ Magic Dragon will now reload.`);
  finally{commit.disabled=false;const input=document.getElementById("importData");if(input)input.value=""}
 };
 function showLastTransferResult(){
- try{const raw=sessionStorage.getItem("mdpin-transfer-result");if(!raw)return;sessionStorage.removeItem("mdpin-transfer-result");const r=JSON.parse(raw),c=r.counts||{};backupStatus(`Transfer verified after reload — ${c.products||0} products, ${c.aliases||0} aliases, ${c.sundayReports||0} Sunday reports, ${c.deliveries||0} deliveries, ${c.invoices||0} invoices, ${r.sourceFiles>=0?r.sourceFiles:"?"} archived source files.`)}catch(e){}
+ try{
+  const raw=sessionStorage.getItem("mdpin-transfer-result");if(!raw)return;
+  sessionStorage.removeItem("mdpin-transfer-result");
+  const r=JSON.parse(raw),c=r.counts||{};
+  const summary=`Restore complete and verified.\n\nThis device is now using the imported app data.\n\nProducts: ${c.products||0}\nAliases / mappings: ${c.aliases||0}\nSunday reports: ${c.sundayReports||0}\nDelivery dockets: ${c.deliveries||0}\nInvoices: ${c.invoices||0}\nArchived source files: ${r.sourceFiles>=0?r.sourceFiles:"?"}\n\nSource app: v${r.sourceVersion||"unknown"}${r.safetyFile?`\nSafety backup: ${r.safetyFile}`:""}\n\nEverything passed the post-import integrity check.`;
+  backupStatus(`Restore complete and verified — ${c.products||0} products, ${c.aliases||0} aliases, ${c.sundayReports||0} Sunday reports, ${c.deliveries||0} deliveries, ${c.invoices||0} invoices, ${r.sourceFiles>=0?r.sourceFiles:"?"} archived source files.`);
+  setTimeout(()=>alert(summary),150);
+ }catch(e){}
 }
 document.getElementById("masterProductSearch").oninput=filterMasterProductSetup;
 document.getElementById("fillMasterCurrent").onclick=()=>renderMasterProductSetup(true);
