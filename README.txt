@@ -1,6 +1,6 @@
-MAGIC DRAGON PIN v0.10.68 — TEST
+MAGIC DRAGON PIN v0.10.69 — TEST
 
-WHAT CHANGED IN v0.10.68
+WHAT CHANGED IN v0.10.69
 - Settings now uses focus mode: when one settings accordion is open, all other settings chevrons temporarily disappear to reclaim vertical screen space.
 - Collapsing the open accordion restores the full Settings menu.
 - Adds the TEST Sync Marker used for the first real cross-device state-change test.
