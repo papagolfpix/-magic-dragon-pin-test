@@ -1,34 +1,25 @@
-MAGIC DRAGON PIN v0.10.39 — TEST
+MAGIC DRAGON PIN v0.10.40 — TEST
 
-Purpose of this build:
-- Correct the Qty viewport self-test false FAIL exposed by the iPhone screenshot from 16 Sep 2026.
-- Do not change the proven Qty focus, keyboard, shell positioning, reparenting, scrolling or refocus behaviour.
-- Preserve the v0.10.38 visual-viewport shell fix unchanged.
+PURPOSE
+Fix the New Delivery Qty/iPhone keyboard regression shown in the 16 Sep screenshots.
 
-Root cause corrected in the test:
-- getBoundingClientRect() returns viewport-client coordinates.
-- visualViewport.offsetTop is a layout-viewport offset.
-- The v0.10.38 runtime assertion compared those two different coordinate spaces, so Safari visual pan could be counted twice and produce a false FAIL even when Qty was visible.
+ROOT CAUSE
+v0.10.39 moved the fixed Magic Dragon hero by visualViewport.offsetTop when Safari panned the visual viewport, but the fixed contentViewport was still anchored only to --content-top. When offsetTop became about 94px, the Product / Variant / Qty row moved upward underneath the hero. The old self-test then compared against the wrong visible interval and could report misleading geometry.
 
-Correct invariant:
-- DOMRect visible range is client 0..visualViewport.height.
-- Safe Qty top is max(0, branded-header bottom).
-- Safe Qty bottom is visualViewport.height minus the existing 12px keyboard margin.
-- visualViewport.offsetTop is retained only as diagnostic data; it is not added to DOMRect positions.
+FIX
+- Hero and contentViewport now use the same visualViewport.offsetTop origin.
+- contentViewport top = offsetTop + content-top.
+- contentViewport height = visualViewport.height - content-top - bottom margin.
+- Open Menu is shifted by the same offset while Qty owns focus.
+- Runtime Qty self-test now evaluates the true visible interval: offsetTop .. offsetTop + height.
+- Self-test measures the active Qty input and also requires it to pass element hit-testing, so a field hidden behind another layer cannot falsely pass.
+- No input reparenting/refocus workaround was reintroduced.
 
-Diagnostic banner:
-- PASS remains silent.
-- FAIL now reports visible client range, visualViewport offsetTop, calculated safe range, header range and Qty range.
-- This makes any future regression numerically diagnosable from one screenshot.
+EXPECTED IPHONE BEHAVIOUR
+Tap Qty -> numeric keyboard opens -> Product / Variant / Qty row remains visible below the branded header -> no large upward jump -> Qty remains tappable and visible.
 
-Deterministic regression test:
-- Open index.html with ?mdselftest=qtyviewport.
-- It simulates the shell shift from a 92px Safari visual pan and checks against a 461px client-visible height.
-- The deterministic test calls the same invariant function used by the on-device runtime test, so the two checks cannot silently drift apart.
-
-Manual iPhone checkpoint:
-1. Open New Delivery.
-2. Tap Qty and leave the numeric keyboard open.
-3. Product / Variant / Qty / Add must remain visible.
-4. No red self-test banner should appear when Qty is inside the safe client area.
-5. Closing the keyboard must restore the normal shell without a jump.
+RELEASE CHECKS
+- App badge: v0.10.40 TEST
+- Service-worker cache: magic-pin-v0.10.40-test
+- Service-worker registration cache-buster: v=1040
+- Inline JavaScript syntax checked with Node.

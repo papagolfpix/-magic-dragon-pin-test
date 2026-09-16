@@ -3852,7 +3852,7 @@ body.deliveryMode:not(.deliveryEditMode).deliveryKeyboardOpen #deliveryCreatePan
 /* Top add-row Qty is fixed-zone input; never browser-zoom it. */
 body.deliveryMode #delQty{font-size:16px!important}
 
-/* v0.10.39 — Qty viewport self-test coordinate correction.
+/* v0.10.40 — New Delivery Qty visual-viewport anchoring fix.
    iOS Safari can pan the visual viewport when the numeric keyboard opens even
    when no element is manually scrolled. Fixed UI remains attached to the
    layout viewport unless we explicitly offset it by visualViewport.offsetTop.
@@ -3862,12 +3862,15 @@ body.deliveryMode.deliveryNewQtyViewport .hero{
   top:calc(var(--md-vv-top,0px) + 8px)!important;
 }
 body.deliveryMode.deliveryNewQtyViewport .contentViewport{
-  top:var(--content-top,98px)!important;
+  /* Keep the fixed content shell in the SAME visual position when Safari pans
+     the visual viewport. The old v0.10.39 rule omitted --md-vv-top here, so
+     the content moved upward underneath the fixed hero by exactly offsetTop. */
+  top:calc(var(--md-vv-top,0px) + var(--content-top,98px))!important;
   bottom:auto!important;
-  height:max(0px,calc(var(--md-vv-top,0px) + var(--md-vv-height,100dvh) - var(--content-top,98px) - 8px))!important;
+  height:max(0px,calc(var(--md-vv-height,100dvh) - var(--content-top,98px) - 8px))!important;
 }
 body.deliveryMode.deliveryNewQtyViewport .tabs.menuOpen{
-  top:var(--menu-top,98px)!important;
+  top:calc(var(--md-vv-top,0px) + var(--menu-top,98px))!important;
 }
 
 
@@ -4041,7 +4044,7 @@ window.addEventListener("error",e=>{const b=document.getElementById("runtimeErro
       <button class="heroHomeHotspot noPrint" type="button" aria-label="Return to Dashboard" title="Dashboard" onclick="returnToDashboardFromHeader()"></button>
     </div>
     <div class="heroActions noPrint">
-      <span class="app-version">v0.10.39 TEST</span>
+      <span class="app-version">v0.10.40 TEST</span>
       <button class="heroMenuButton" id="heroMenuButton" type="button" aria-expanded="false">Menu</button>
     </div>
   </div>
@@ -5202,27 +5205,30 @@ function clearNewDeliveryQtyVisualViewport(){
   requestAnimationFrame(()=>window.syncShellGeometry?.());
 }
 
-function newDeliveryQtyViewportInvariant(visibleHeightOverride){
-  const input=document.getElementById("delQty");
+function newDeliveryQtyViewportInvariant(visibleTopOverride,visibleHeightOverride){
+  const input=document.activeElement?.id==="delQty"?document.activeElement:document.getElementById("delQty");
   const hero=document.querySelector(".hero");
   const content=document.querySelector(".contentViewport");
   const vv=window.visualViewport;
   if(!input||!hero||!content)return {ok:false,reason:"missing-elements"};
 
-  // DOMRect values from getBoundingClientRect() are viewport-client coordinates.
-  // visualViewport.offsetTop is a layout-viewport offset and must NOT be added to
-  // those DOMRect coordinates. Doing so double-counts Safari's visual pan and
-  // creates a false FAIL even while Qty is plainly visible above the keyboard.
-  const visibleTop=0;
-  const visibleBottom=Number.isFinite(visibleHeightOverride)
-    ? visibleHeightOverride
-    : (vv?.height||window.innerHeight||0);
+  // getBoundingClientRect() and visualViewport.offsetTop are both expressed in
+  // layout-viewport CSS pixels on iOS. Therefore the actual visible interval is
+  // [offsetTop, offsetTop + height]. v0.10.39 incorrectly tested [0, height],
+  // which allowed a Qty field hidden under the hero to report as visible.
+  const visibleTop=Number.isFinite(visibleTopOverride)?visibleTopOverride:(vv?.offsetTop||0);
+  const visibleHeight=Number.isFinite(visibleHeightOverride)?visibleHeightOverride:(vv?.height||window.innerHeight||0);
+  const visibleBottom=visibleTop+visibleHeight;
   const viewportOffsetTop=vv?.offsetTop||0;
   const ir=input.getBoundingClientRect(),hr=hero.getBoundingClientRect(),cr=content.getBoundingClientRect();
-  const safeTop=Math.max(visibleTop,hr.bottom);
-  const safeBottom=visibleBottom-12;
-  const ok=hr.top>=visibleTop-2 && hr.bottom<=visibleBottom+2 && cr.top>=hr.bottom-2 && ir.top>=safeTop-2 && ir.bottom<=safeBottom;
-  return {ok,top:visibleTop,bottom:visibleBottom,viewportOffsetTop,safeTop,safeBottom,input:{top:ir.top,bottom:ir.bottom},hero:{top:hr.top,bottom:hr.bottom},content:{top:cr.top,bottom:cr.bottom}};
+  const safeTop=Math.max(visibleTop,hr.bottom,cr.top)+8;
+  const safeBottom=Math.min(visibleBottom,cr.bottom)-12;
+  const cx=Math.max(0,Math.min(window.innerWidth-1,ir.left+Math.min(ir.width/2,12)));
+  const cy=Math.max(0,Math.min(window.innerHeight-1,ir.top+ir.height/2));
+  const hit=document.elementFromPoint(cx,cy);
+  const hitVisible=!!hit&&(hit===input||input.contains(hit)||hit.contains?.(input));
+  const ok=hr.top>=visibleTop-2 && hr.bottom<=visibleBottom+2 && cr.top>=hr.bottom-2 && cr.bottom<=visibleBottom+2 && ir.top>=safeTop-2 && ir.bottom<=safeBottom && hitVisible;
+  return {ok,top:visibleTop,bottom:visibleBottom,visibleHeight,viewportOffsetTop,safeTop,safeBottom,hitVisible,input:{top:ir.top,bottom:ir.bottom,left:ir.left,right:ir.right},hero:{top:hr.top,bottom:hr.bottom},content:{top:cr.top,bottom:cr.bottom}};
 }
 window.newDeliveryQtyViewportInvariant=newDeliveryQtyViewportInvariant;
 
@@ -9561,14 +9567,14 @@ if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
     window.addEventListener("load",syncGeometry,{once:true});
   })();
 
-  window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js?v=1039", {updateViaCache:"none"}).catch(()=>{}));
+  window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js?v=1040", {updateViaCache:"none"}).catch(()=>{}));
 }
 
-/* v0.10.39 deterministic regression check.
+/* v0.10.40 deterministic regression check.
    Run with ?mdselftest=qtyviewport in any browser. It simulates an iPhone
-   visual viewport panned 92px with a 461px visible height. The assertion uses
-   viewport-client coordinates for DOMRect values and records offsetTop only as
-   diagnostic metadata, preventing the iOS visual-pan offset being counted twice. */
+   visual viewport panned 92px with a 461px visible height. The assertion
+   verifies that the hero, fixed content shell and Qty field all shift by the
+   same offset and remain inside the true visible interval. */
 if(new URLSearchParams(location.search).get("mdselftest")==="qtyviewport") {
   window.addEventListener("load",()=>setTimeout(()=>{
     try{
@@ -9577,12 +9583,12 @@ if(new URLSearchParams(location.search).get("mdselftest")==="qtyviewport") {
       deliveryKeyboardActiveInput=document.getElementById("delQty");
       applyNewDeliveryQtyVisualViewport(syntheticTop,syntheticHeight);
       setTimeout(()=>{
-        const metrics=newDeliveryQtyViewportInvariant(syntheticHeight);
+        const metrics=newDeliveryQtyViewportInvariant(syntheticTop,syntheticHeight);
         const ok=!!metrics.ok;
         const out=document.createElement("pre");
         out.id="mdSelfTestResult";
         out.dataset.status=ok?"PASS":"FAIL";
-        out.textContent=JSON.stringify({status:ok?"PASS":"FAIL",syntheticTop,syntheticHeight,coordinateSpace:"viewport-client",metrics},null,2);
+        out.textContent=JSON.stringify({status:ok?"PASS":"FAIL",syntheticTop,syntheticHeight,coordinateSpace:"layout-css-pixels",metrics},null,2);
         document.body.appendChild(out);
         document.documentElement.dataset.mdSelfTest=ok?"PASS":"FAIL";
       },350);
