@@ -1,6 +1,6 @@
-MAGIC DRAGON PIN v0.10.72 — TEST
+MAGIC DRAGON PIN v0.10.73 — TEST
 
-WHAT CHANGED IN v0.10.72
+WHAT CHANGED IN v0.10.73
 - Record-level delivery pull results now distinguish THIS pull from prior sync history.
 - If nothing changed, message says all cloud dockets were already identical.
 - New/updated cloud dockets are remembered and highlighted in Records.
@@ -23,3 +23,8 @@ TEST TARGET
 4. On iPad sign in, Pull delivery records. The docket should appear without a whole-app restore.
 5. Edit that same docket on iPad, then upload the selected docket again.
 6. On iPhone Pull delivery records and verify the edited docket arrives.
+
+
+v0.10.73
+- Fixes iPad/tablet Settings shell so the Magic Dragon header remains visible while Settings content scrolls.
+- Tablet-only shell patch; proven iPhone header/keyboard behaviour is left unchanged.
