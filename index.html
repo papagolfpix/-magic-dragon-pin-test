@@ -3556,7 +3556,12 @@ body.deliveryEditMode .deliveryEditLineCard.keyboardTarget{
 .backupRecoveryCard small{display:block;margin-top:2px;color:#667085;font-size:8.5px;line-height:1.3}
 .backupRecoveryActions{display:flex;gap:7px;flex-wrap:wrap}
 .backupRecoveryCard .btn,.backupRecoveryAdvanced .btn,.backupFileButton{min-height:36px;padding:7px 10px;box-sizing:border-box;font-size:10px!important;font-weight:850!important}
-.backupRecoveryStatus{margin-top:9px;padding:8px 9px;border:1px solid #e1e5eb;border-radius:8px;background:#fafbfc;color:#667085;font-size:9px}
+ .backupRecoveryStatus{margin-top:10px;padding:11px 12px;border:1px solid #d0d5dd;border-radius:10px;background:#f8fafc;color:#344054;font-size:12px;line-height:1.35;font-weight:700}
+.backupRecoveryStatus.info{background:#eff6ff;border-color:#93c5fd;color:#1e3a8a}
+.backupRecoveryStatus.good{background:#ecfdf3;border-color:#86efac;color:#166534}
+.backupRecoveryStatus.bad{background:#fef2f2;border-color:#fca5a5;color:#991b1b}
+.backupRecoveryStatus.good::before{content:"✓ ";font-weight:900}
+.backupRecoveryStatus.bad::before{content:"⚠ ";font-weight:900}
 .transferPreviewOverlay{position:fixed;inset:0;z-index:10050;background:rgba(15,23,42,.56);display:none;align-items:center;justify-content:center;padding:18px;box-sizing:border-box}
 .transferPreviewOverlay.open{display:flex}
 .transferPreviewCard{width:min(100%,520px);max-height:min(82vh,680px);overflow:auto;background:#fff;border-radius:18px;padding:18px;box-shadow:0 24px 70px rgba(0,0,0,.28);color:#172033}
@@ -4189,7 +4194,7 @@ body.deliveryMode .deliveryEditLineCard{
 
 
 <style id="v01047-line-pane-below-controls">
-/* v0.10.61 TEST — hard-separate New Delivery controls from added lines.
+/* v0.10.62 TEST — hard-separate New Delivery controls from added lines.
    iPhone Safari was allowing the first reusable line card/select to paint back
    underneath the stationary control deck.  Use a simple column flex layout
    for New Delivery: controls = fixed natural height, line list = the only
@@ -4250,7 +4255,7 @@ window.addEventListener("error",e=>{const b=document.getElementById("runtimeErro
       <button class="heroHomeHotspot noPrint" type="button" aria-label="Return to Dashboard" title="Dashboard" onclick="returnToDashboardFromHeader()"></button>
     </div>
     <div class="heroActions noPrint">
-      <span class="app-version">v0.10.61 TEST</span>
+      <span class="app-version">v0.10.62 TEST</span>
       <button class="heroMenuButton" id="heroMenuButton" type="button" aria-expanded="false">Menu</button>
     </div>
   </div>
@@ -6741,7 +6746,7 @@ function buildFullBackupPayload(kind="SUPPORT",note=""){
   return {
     magicDragonBackup:true,
     app:"Magic Dragon Pin",
-    appVersion:"0.10.61",
+    appVersion:"0.10.62",
     backupKind:String(kind||"SUPPORT").toUpperCase(),
     createdAt:new Date().toISOString(),
     note:String(note||""),
@@ -9952,25 +9957,52 @@ const MD_TEST_WORKSPACE="magic-dragon-pin-test";
 const MD_TEST_STATE_TABLE="md_test_device_state";
 let mdCloudSession=null;
 function cloudEl(id){return document.getElementById(id)}
-function cloudStatus(msg,bad=false){const el=cloudEl("cloudStatus");if(el){el.textContent=msg;el.classList.toggle("good",!bad);el.classList.toggle("bad",!!bad)}}
+function cloudStatus(msg,state="info"){const el=cloudEl("cloudStatus");if(el){el.textContent=msg;el.classList.remove("good","bad","info");el.classList.add(state==="bad"?"bad":state==="good"?"good":"info")}}
 function detectCloudDeviceLabel(){const ua=navigator.userAgent||"";if(/iPhone/i.test(ua))return "iPhone";if(/iPad/i.test(ua)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1))return "iPad";return "Test device"}
-function initCloudFields(){const e=cloudEl("cloudEmail"),d=cloudEl("cloudDeviceLabel");if(e)e.value=localStorage.getItem("mdpin-cloud-email")||"";if(d)d.value=localStorage.getItem("mdpin-cloud-device")||detectCloudDeviceLabel();try{const raw=sessionStorage.getItem("mdpin-cloud-session");if(raw)mdCloudSession=JSON.parse(raw)}catch(e){}if(mdCloudSession?.access_token)cloudStatus(`Signed in to TEST Cloud as ${mdCloudSession.user?.email||"test user"}.`)}
+function initCloudFields(){const e=cloudEl("cloudEmail"),d=cloudEl("cloudDeviceLabel");if(e)e.value=localStorage.getItem("mdpin-cloud-email")||"";if(d)d.value=localStorage.getItem("mdpin-cloud-device")||detectCloudDeviceLabel();try{const raw=sessionStorage.getItem("mdpin-cloud-session");if(raw)mdCloudSession=JSON.parse(raw)}catch(e){}if(mdCloudSession?.access_token)cloudStatus(`Signed in as ${mdCloudSession.user?.email||"test user"}.`,"good")}
 async function mdCloudFetch(path,{method="GET",body=null,auth=true,headers={}}={}){
  const h={apikey:MD_TEST_SUPABASE_KEY,...headers};
  if(auth&&mdCloudSession?.access_token)h.Authorization=`Bearer ${mdCloudSession.access_token}`;
  if(body!=null&&!h["Content-Type"])h["Content-Type"]="application/json";
- const r=await fetch(MD_TEST_SUPABASE_URL+path,{method,headers:h,body:body==null?undefined:(typeof body==="string"?body:JSON.stringify(body))});
+ const r=await fetch(MD_TEST_SUPABASE_URL+path,{method,headers:h,cache:"no-store",body:body==null?undefined:(typeof body==="string"?body:JSON.stringify(body))});
  const text=await r.text();let data=null;try{data=text?JSON.parse(text):null}catch(e){data=text}
  if(!r.ok)throw new Error(data?.message||data?.error_description||data?.hint||data?.error||`${r.status} ${r.statusText}`);
  return data;
 }
-async function cloudSignIn(){const email=(cloudEl("cloudEmail")?.value||"").trim(),password=cloudEl("cloudPassword")?.value||"";if(!email||!password)return alert("Enter the TEST Supabase email and password.");cloudStatus("Signing in…");try{const data=await mdCloudFetch('/auth/v1/token?grant_type=password',{method:'POST',body:{email,password},auth:false});mdCloudSession=data;sessionStorage.setItem("mdpin-cloud-session",JSON.stringify(data));localStorage.setItem("mdpin-cloud-email",email);const label=(cloudEl("cloudDeviceLabel")?.value||detectCloudDeviceLabel()).trim();localStorage.setItem("mdpin-cloud-device",label);cloudEl("cloudPassword").value="";await cloudRefresh();}catch(e){console.error(e);cloudStatus(`TEST Cloud sign-in failed: ${e.message}`,true)}}
-function cloudSignOut(){mdCloudSession=null;sessionStorage.removeItem("mdpin-cloud-session");cloudStatus("Signed out of TEST Cloud.");const m=cloudEl("cloudMeta");if(m)m.textContent=""}
+async function cloudSignIn(){const email=(cloudEl("cloudEmail")?.value||"").trim(),password=cloudEl("cloudPassword")?.value||"";if(!email||!password)return alert("Enter the TEST Supabase email and password.");cloudStatus("Signing in…","info");try{const data=await mdCloudFetch('/auth/v1/token?grant_type=password',{method:'POST',body:{email,password},auth:false});mdCloudSession=data;sessionStorage.setItem("mdpin-cloud-session",JSON.stringify(data));localStorage.setItem("mdpin-cloud-email",email);const label=(cloudEl("cloudDeviceLabel")?.value||detectCloudDeviceLabel()).trim();localStorage.setItem("mdpin-cloud-device",label);cloudEl("cloudPassword").value="";await cloudRefresh();}catch(e){console.error(e);cloudStatus(`Sign-in failed — ${e.message}`,"bad")}}
+function cloudSignOut(){mdCloudSession=null;sessionStorage.removeItem("mdpin-cloud-session");cloudStatus("Signed out of TEST Cloud.","info");const m=cloudEl("cloudMeta");if(m)m.textContent=""}
 async function cloudGetMeta(){const rows=await mdCloudFetch(`/rest/v1/${MD_TEST_STATE_TABLE}?workspace_id=eq.${encodeURIComponent(MD_TEST_WORKSPACE)}&select=workspace_id,revision,updated_at,updated_by_device,app_version,payload_hash&limit=1`);return Array.isArray(rows)&&rows.length?rows[0]:null}
-async function cloudRefresh(){if(!mdCloudSession?.access_token){cloudStatus("Sign in to TEST Cloud first.",true);return null}cloudStatus("Checking TEST Cloud…");try{const shops=await mdCloudFetch('/rest/v1/shops?select=name&order=name.asc&limit=5');const meta=await cloudGetMeta();cloudStatus(`Connected securely • ${Array.isArray(shops)?shops.length:0} shops visible.`);const m=cloudEl("cloudMeta");if(m)m.innerHTML=meta?`<b>Shared revision ${meta.revision}</b> · ${escapeHtml(meta.updated_by_device||"unknown device")} · app v${escapeHtml(meta.app_version||"?")}<br>${escapeHtml(new Date(meta.updated_at).toLocaleString())}`:'No shared TEST snapshot uploaded yet.';return meta}catch(e){console.error(e);cloudStatus(`TEST Cloud check failed: ${e.message}`,true);return null}}
+async function cloudRefresh(){if(!mdCloudSession?.access_token){cloudStatus("Sign in to TEST Cloud first.","bad");return null}cloudStatus("Checking TEST Cloud…","info");try{const shops=await mdCloudFetch('/rest/v1/shops?select=name&order=name.asc&limit=5');const meta=await cloudGetMeta();cloudStatus(`Cloud connection OK • ${Array.isArray(shops)?shops.length:0} shops visible.`,"good");const m=cloudEl("cloudMeta");if(m)m.innerHTML=meta?`<b>Shared revision ${meta.revision}</b> · ${escapeHtml(meta.updated_by_device||"unknown device")} · app v${escapeHtml(meta.app_version||"?")}<br>${escapeHtml(new Date(meta.updated_at).toLocaleString())}`:'No shared TEST snapshot uploaded yet.';return meta}catch(e){console.error(e);cloudStatus(`Cloud check failed — ${e.message}`,"bad");return null}}
+function stableJson(value){
+ if(value===null||typeof value!=="object")return JSON.stringify(value);
+ if(Array.isArray(value))return "["+value.map(stableJson).join(",")+"]";
+ return "{"+Object.keys(value).sort().map(k=>JSON.stringify(k)+":"+stableJson(value[k])).join(",")+"}";
+}
 async function sha256Text(text){const bytes=new TextEncoder().encode(text),hash=await crypto.subtle.digest("SHA-256",bytes);return Array.from(new Uint8Array(hash)).map(b=>b.toString(16).padStart(2,"0")).join("")}
-async function cloudPush(){if(!mdCloudSession?.access_token)return cloudStatus("Sign in to TEST Cloud first.",true);const label=(cloudEl("cloudDeviceLabel")?.value||detectCloudDeviceLabel()).trim()||"Test device";localStorage.setItem("mdpin-cloud-device",label);cloudStatus("Preparing TEST cloud snapshot…");try{const before=await cloudGetMeta();const pkg=await createCompleteTransferPackage("TEST_CLOUD_STATE");const json=JSON.stringify(pkg),hash=await sha256Text(json),revision=(Number(before?.revision)||0)+1;const c=pkg.counts;if(!confirm(`Upload this device to TEST Cloud?\n\nRevision ${revision}\n${c.products} products · ${c.aliases} aliases · ${c.sundayReports} Sunday reports · ${c.deliveries} deliveries · ${c.invoices} invoices\n\nThis is the TEST workspace only.`)){cloudStatus("Cloud upload cancelled.");return}const row={workspace_id:MD_TEST_WORKSPACE,revision,app_version:"0.10.61",payload:pkg,payload_hash:hash,updated_by:mdCloudSession.user?.id||null,updated_by_device:label,updated_at:new Date().toISOString()};const saved=await mdCloudFetch(`/rest/v1/${MD_TEST_STATE_TABLE}?on_conflict=workspace_id`,{method:"POST",body:row,headers:{Prefer:"resolution=merge-duplicates,return=representation"}});const after=await cloudGetMeta();if(!after||Number(after.revision)!==revision||after.payload_hash!==hash)throw new Error("Cloud read-back verification did not match the uploaded snapshot.");cloudStatus(`TEST Cloud upload verified — revision ${revision} from ${label}.`);await cloudRefresh()}catch(e){console.error(e);cloudStatus(`TEST Cloud upload failed: ${e.message}`,true)}}
-async function cloudPull(){if(!mdCloudSession?.access_token)return cloudStatus("Sign in to TEST Cloud first.",true);cloudStatus("Downloading TEST cloud snapshot…");try{const rows=await mdCloudFetch(`/rest/v1/${MD_TEST_STATE_TABLE}?workspace_id=eq.${encodeURIComponent(MD_TEST_WORKSPACE)}&select=workspace_id,revision,updated_at,updated_by_device,app_version,payload_hash,payload&limit=1`);if(!Array.isArray(rows)||!rows.length)throw new Error("No TEST cloud snapshot exists yet.");const row=rows[0],pkg=row.payload;validateBackupPackage(pkg);const hash=await sha256Text(JSON.stringify(pkg));if(row.payload_hash&&hash!==row.payload_hash)throw new Error("Cloud snapshot integrity check failed.");showTransferPreview(pkg);cloudStatus(`Cloud revision ${row.revision} downloaded from ${row.updated_by_device||"another test device"}. Preview only — nothing changed yet.`)}catch(e){console.error(e);cloudStatus(`TEST Cloud download failed: ${e.message}`,true)}}
+async function cloudPush(){
+ if(!mdCloudSession?.access_token)return cloudStatus("Sign in to TEST Cloud first.","bad");
+ const label=(cloudEl("cloudDeviceLabel")?.value||detectCloudDeviceLabel()).trim()||"Test device";
+ localStorage.setItem("mdpin-cloud-device",label);
+ cloudStatus("Preparing this device for upload…","info");
+ try{
+  const before=await cloudGetMeta();
+  const pkg=await createCompleteTransferPackage("TEST_CLOUD_STATE");
+  const hash=await sha256Text(stableJson(pkg)),revision=(Number(before?.revision)||0)+1;
+  const c=pkg.counts;
+  if(!confirm(`Upload this device to TEST Cloud?\n\nRevision ${revision}\n${c.products} products · ${c.aliases} aliases · ${c.sundayReports} Sunday reports · ${c.deliveries} deliveries · ${c.invoices} invoices\n\nTEST workspace only.`)){cloudStatus("Upload cancelled — nothing changed.","info");return}
+  const row={workspace_id:MD_TEST_WORKSPACE,revision,app_version:"0.10.62",payload:pkg,payload_hash:hash,updated_by:mdCloudSession.user?.id||null,updated_by_device:label,updated_at:new Date().toISOString()};
+  const saved=await mdCloudFetch(`/rest/v1/${MD_TEST_STATE_TABLE}?on_conflict=workspace_id`,{method:"POST",body:row,headers:{Prefer:"resolution=merge-duplicates,return=representation"}});
+  const written=Array.isArray(saved)&&saved.length?saved[0]:null;
+  if(!written||Number(written.revision)!==revision||written.payload_hash!==hash)throw new Error("Database did not confirm the uploaded revision.");
+  let after=null;
+  for(let i=0;i<3;i++){after=await cloudGetMeta();if(after&&Number(after.revision)===revision&&after.payload_hash===hash)break;await new Promise(r=>setTimeout(r,200));}
+  if(!after||Number(after.revision)!==revision||after.payload_hash!==hash)throw new Error("Upload saved, but read-back verification did not match. Please retry Check TEST Cloud.");
+  cloudStatus(`Upload successful — revision ${revision} saved from ${label}.`,"good");
+  const m=cloudEl("cloudMeta");
+  if(m)m.innerHTML=`<b>Shared revision ${revision}</b> · ${escapeHtml(label)} · app v0.10.62<br>${escapeHtml(new Date(after.updated_at).toLocaleString())}`;
+ }catch(e){console.error(e);cloudStatus(`Upload failed — ${e.message}`,"bad")}
+}
+async function cloudPull(){if(!mdCloudSession?.access_token)return cloudStatus("Sign in to TEST Cloud first.","bad");cloudStatus("Downloading shared TEST data…","info");try{const rows=await mdCloudFetch(`/rest/v1/${MD_TEST_STATE_TABLE}?workspace_id=eq.${encodeURIComponent(MD_TEST_WORKSPACE)}&select=workspace_id,revision,updated_at,updated_by_device,app_version,payload_hash,payload&limit=1`);if(!Array.isArray(rows)||!rows.length)throw new Error("No TEST cloud snapshot exists yet.");const row=rows[0],pkg=row.payload;validateBackupPackage(pkg);const hash=await sha256Text(stableJson(pkg));if(row.payload_hash&&hash!==row.payload_hash)throw new Error("Cloud snapshot integrity check failed.");showTransferPreview(pkg);cloudStatus(`Revision ${row.revision} downloaded from ${row.updated_by_device||"another test device"}. Preview only — this device has not changed.`,"good")}catch(e){console.error(e);cloudStatus(`Download failed — ${e.message}`,"bad")}}
 
 const BACKUP_FORMAT="magic-dragon-pin-full-backup";
 const BACKUP_SCHEMA=1;
@@ -10022,7 +10054,7 @@ function validateBackupPackage(pkg){
 }
 async function createCompleteTransferPackage(kind="FULL_TRANSFER"){
  const sourceFiles=await exportArchivedSourceFiles(),counts=backupCounts();
- return {format:BACKUP_FORMAT,schema:BACKUP_SCHEMA,appVersion:"0.10.61",backupKind:kind,createdAt:new Date().toISOString(),counts,sourceFilesCount:sourceFiles.length,data:JSON.parse(JSON.stringify(db)),sourceFiles};
+ return {format:BACKUP_FORMAT,schema:BACKUP_SCHEMA,appVersion:"0.10.62",backupKind:kind,createdAt:new Date().toISOString(),counts,sourceFilesCount:sourceFiles.length,data:JSON.parse(JSON.stringify(db)),sourceFiles};
 }
 async function savePackageFile(pkg,prefix="Magic-Pin-Data"){
  const blob=new Blob([JSON.stringify(pkg)],{type:"application/json"});

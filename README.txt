@@ -1,6 +1,6 @@
-MAGIC DRAGON PIN v0.10.61 — TEST
+MAGIC DRAGON PIN v0.10.62 — TEST
 
-WHAT CHANGED IN v0.10.61
+WHAT CHANGED IN v0.10.62
 
 - Complete App Data import now explains the pre-import safety-backup step BEFORE iPhone opens the native Share / Save sheet.
 - The prompt tells the user why the Magic-Pin-SAFETY file is being created, what to do with it, and that cancelling leaves the device unchanged.
@@ -29,7 +29,7 @@ TEST PROCEDURE
 8. Reload once more and confirm imported state persists.
 
 VERSION CHECK
-- App badge: v0.10.61 TEST
-- Service-worker cache: magic-pin-v0.10.61-test
+- App badge: v0.10.62 TEST
+- Service-worker cache: magic-pin-v0.10.62-test
 
 Filename update v0.10.57: user-facing export/backup files use the short Magic-Pin-* naming convention for easier identification on iPhone.
