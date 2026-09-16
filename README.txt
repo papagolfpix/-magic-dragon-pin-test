@@ -1,6 +1,6 @@
-MAGIC DRAGON PIN v0.10.48 — TEST
+MAGIC DRAGON PIN v0.10.49 — TEST
 
-WHAT CHANGED IN v0.10.48
+WHAT CHANGED IN v0.10.49
 - Added explicit duplicate Sunday-week protection to the Excel import preflight.
 - Existing branch/date reports are highlighted before import.
 - Default action is KEEP EXISTING; replacement must be explicitly selected.
@@ -17,5 +17,12 @@ TEST
 5. Select two files containing the same branch/date: import must stop and ask you to uncheck one copy.
 
 VERSION / CACHE
-- App badge: v0.10.48 TEST
-- Service-worker cache: magic-pin-v0.10.48-test
+- App badge: v0.10.49 TEST
+- Service-worker cache: magic-pin-v0.10.49-test
+
+
+v0.10.49 duplicate-import UX refinement:
+- Existing-report conflict box now spans the full available width on mobile.
+- Keep Existing gives an immediate visible no-change confirmation.
+- Replace Existing gives a clear success confirmation and clears the processed file so the same conflict screen is not immediately redisplayed.
+- Delivery docket v0.10.47 Lego block unchanged.

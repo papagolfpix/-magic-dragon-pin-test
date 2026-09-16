@@ -228,7 +228,8 @@ tr.kanja td{background:var(--green)}tr.preroll td{background:var(--pink)}tr.edib
 .xlsxResult.ok{border-left:4px solid #15803d}
 .xlsxResult.warn{border-left:4px solid #b45309}
 .xlsxResult.bad{border-left:4px solid #b42318}
-.duplicateWeek{border:1px solid #f59e0b;background:#fffbeb;border-radius:12px;padding:9px;margin-top:7px}
+.duplicateWeek{border:1px solid #f59e0b;background:#fffbeb;border-radius:12px;padding:10px;margin-top:7px;grid-column:1/-1;width:100%;box-sizing:border-box}
+.xlsxActionNotice{display:none;margin:10px 0;padding:11px 12px;border-radius:12px;border:1px solid #bfdbfe;background:#eff6ff;color:#1e3a8a;font-weight:700}.xlsxActionNotice.ok{display:block;border-color:#86efac;background:#f0fdf4;color:#166534}.xlsxActionNotice.info{display:block}.xlsxActionNotice.warn{display:block;border-color:#fcd34d;background:#fffbeb;color:#92400e}
 .duplicateWeek b{color:#92400e}.duplicateWeek select{width:100%;min-height:40px;margin-top:7px}
 .detectedBlock.duplicateExisting{background:#fffbeb;border-color:#fcd34d}.detectedBlock.duplicateBatch{background:#fff7ed;border-color:#fdba74}
 .archiveRow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;padding:9px 0;border-bottom:1px solid #eef2f7;align-items:center}
@@ -4178,7 +4179,7 @@ body.deliveryMode .deliveryEditLineCard{
 
 
 <style id="v01047-line-pane-below-controls">
-/* v0.10.48 TEST — hard-separate New Delivery controls from added lines.
+/* v0.10.49 TEST — hard-separate New Delivery controls from added lines.
    iPhone Safari was allowing the first reusable line card/select to paint back
    underneath the stationary control deck.  Use a simple column flex layout
    for New Delivery: controls = fixed natural height, line list = the only
@@ -4239,7 +4240,7 @@ window.addEventListener("error",e=>{const b=document.getElementById("runtimeErro
       <button class="heroHomeHotspot noPrint" type="button" aria-label="Return to Dashboard" title="Dashboard" onclick="returnToDashboardFromHeader()"></button>
     </div>
     <div class="heroActions noPrint">
-      <span class="app-version">v0.10.48 TEST</span>
+      <span class="app-version">v0.10.49 TEST</span>
       <button class="heroMenuButton" id="heroMenuButton" type="button" aria-expanded="false">Menu</button>
     </div>
   </div>
@@ -4321,6 +4322,7 @@ window.addEventListener("error",e=>{const b=document.getElementById("runtimeErro
         <div class="importPrimaryHead"><h3>Excel Sunday Reports</h3></div>
         <label class="btn gold" style="display:inline-block">Choose Excel file(s)<input id="xlsxFiles" type="file" accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" multiple hidden></label>
         <div id="xlsxSelectionCard" class="selectionCard empty"><b>No Excel files selected</b><div class="small">Choose one or both Sunday report files.</div></div>
+        <div id="xlsxActionNotice" class="xlsxActionNotice" role="status" aria-live="polite"></div>
         <div id="detectedBlocksPanel" class="detectedBlocksPanel" style="display:none">
 <div class="detectedBlocksHead"><div><b id="detectedBlocksTitle">Detected weekly reports</b><div class="small">Choose which weeks to import. Each selected block becomes its own Sunday report.</div></div></div>
 <div id="detectedBlocksList"></div></div>
@@ -6679,7 +6681,7 @@ function buildFullBackupPayload(kind="SUPPORT",note=""){
   return {
     magicDragonBackup:true,
     app:"Magic Dragon Pin",
-    appVersion:"0.10.48",
+    appVersion:"0.10.49",
     backupKind:String(kind||"SUPPORT").toUpperCase(),
     createdAt:new Date().toISOString(),
     note:String(note||""),
@@ -8179,7 +8181,7 @@ async function preflightSelectedXlsxFiles(){
      const old=b.existingMatches[0];
      status='<span class="reconStatus warn">Already imported</span>';
      const when=old?.importedAt?new Date(old.importedAt).toLocaleString():'earlier';
-     conflict=`<div class="duplicateWeek" style="grid-column:2/-1"><b>Existing Sunday report found</b><div class="small">Imported ${escapeHtml(when)} • ${old?.rows?.length||0} product rows</div><select data-duplicate-action="${b.id}"><option value="keep" selected>Keep existing — do not import this copy</option><option value="replace">Replace existing with this selected report</option></select></div>`;
+     conflict=`<div class="duplicateWeek"><b>Existing Sunday report found</b><div class="small">Imported ${escapeHtml(when)} • ${old?.rows?.length||0} product rows</div><select data-duplicate-action="${b.id}"><option value="keep" selected>Keep existing — do not import this copy</option><option value="replace">Replace existing with this selected report</option></select></div>`;
    }
    return `<div class="detectedBlock${cls}"><input type="checkbox" data-blockid="${b.id}" ${b.selected?'checked':''}><div><b>${escapeHtml(b.rep.branch||"Unknown")} · ${escapeHtml(b.rep.date)}</b><div class="detectedBlockMeta">${meta}</div></div>${status}${conflict}</div>`;
  }).join("");
@@ -8194,11 +8196,16 @@ function updateDetectedBlockSelectionUI(){
   const title=document.getElementById("detectedBlocksTitle");
   const btn=document.getElementById("importXlsx");
   if(title) title.textContent=`${valid.length} weekly report${valid.length===1?"":"s"} detected`;
-  if(btn) btn.textContent=`Import ${selected.length} Selected Report${selected.length===1?"":"s"}`;
+  if(btn){
+    const keepOnly=selected.length&&selected.every(b=>b.duplicateExisting&&b.duplicateAction!=="replace");
+    const replaceCount=selected.filter(b=>b.duplicateExisting&&b.duplicateAction==="replace").length;
+    btn.textContent=keepOnly?"Keep Existing — No Import Needed":(replaceCount?`Replace / Import ${selected.length} Selected Report${selected.length===1?"":"s"}`:`Import ${selected.length} Selected Report${selected.length===1?"":"s"}`);
+  }
 }
 
 document.getElementById("xlsxFiles").onchange=e=>{
   selectedXlsxFiles=[...e.target.files];
+  const notice=document.getElementById("xlsxActionNotice");if(notice){notice.className="xlsxActionNotice";notice.textContent="";}
   const box=document.getElementById("xlsxSelectionCard");
   if(!selectedXlsxFiles.length){
     box.className="selectionCard empty";
@@ -8220,6 +8227,7 @@ document.getElementById("clearXlsxSelection").onclick=()=>{
   box.className="selectionCard empty";
   box.innerHTML="<b>No Excel files selected</b><div class=\"small\">Choose one or both Sunday report files.</div>";
   document.getElementById("xlsxResults").innerHTML="";
+  const notice=document.getElementById("xlsxActionNotice");if(notice){notice.className="xlsxActionNotice";notice.textContent="";}
   const panel=document.getElementById("detectedBlocksPanel");if(panel)panel.style.display="none";
 };
 
@@ -8232,13 +8240,14 @@ document.getElementById("importXlsx").onclick=async()=>{
  const keyCounts={};chosen.forEach(b=>{const k=sundayReportKey(b.rep);keyCounts[k]=(keyCounts[k]||0)+1;});
  const batchConflicts=Object.entries(keyCounts).filter(([,n])=>n>1);
  if(batchConflicts.length)return alert("Duplicate Sunday weeks are selected in this batch.\n\nUncheck all but one copy for each branch/date, then import again. Nothing has been changed.");
- ensureSundayArchive();const results=document.getElementById("xlsxResults");results.innerHTML="";const reconReports=[],importedDates=[];
+ ensureSundayArchive();const results=document.getElementById("xlsxResults");results.innerHTML="";const notice=document.getElementById("xlsxActionNotice");if(notice){notice.className="xlsxActionNotice";notice.textContent="";}const reconReports=[],importedDates=[];let keptExisting=0,replacedExistingCount=0,newImportedCount=0;
  for(const block of chosen){
   const file=block.file,rep=block.rep;
   try{
    const same=existingSundayMatches(rep);
    const replaceExisting=same.length && block.duplicateAction==="replace";
    if(same.length&&!replaceExisting){
+     keptExisting++;
      results.insertAdjacentHTML("beforeend",`<div class="xlsxResult warn"><b>${escapeHtml(rep.archiveName)}</b><br><span class="small">${escapeHtml(displayBranchName(rep.branch))} • ${escapeHtml(rep.date)} — existing report kept. No data changed.</span></div>`);
      continue;
    }
@@ -8249,7 +8258,7 @@ document.getElementById("importXlsx").onclick=async()=>{
      db.sundayImports=db.sundayImports.filter(x=>!(x.branch===rep.branch&&x.date===rep.date));
      db.weeks=db.weeks.filter(w=>!(w.branch===rep.branch&&w.date===rep.date&&/Excel/i.test(String(w.source||""))));
    }
-   db.sundayImports.push(record);reconReports.push(reconciliation);importedDates.push(rep.date);
+   db.sundayImports.push(record);reconReports.push(reconciliation);importedDates.push(rep.date);if(replaceExisting)replacedExistingCount++;else newImportedCount++;
    const weeklyRows=rep.rows.map(rr=>{const pm=canonicalProductMatchRow(rr),p=pm.product;return {productId:p?.id||null,sourceProductName:rr.product,opening:rr.oldStock,delivered:rr.newDeliver||0,takeout:rr.takeOut||0,closing:rr.inStock,reportedSold:rr.sold,sellPrice:rr.sellPrice,cost:rr.cost,historyKnown:rr.oldStock!=null,source:"Excel"}});
    db.weeks.push({id:"W"+Date.now()+Math.random().toString(36).slice(2,5),branch:rep.branch,date:rep.date,source:"Excel Sunday import",sourceArchiveId:id,rows:weeklyRows,totals:{sales:rep.rows.reduce((s,r)=>s+(r.totalSales||0),0),cost:rep.rows.reduce((s,r)=>s+(r.totalCost||0),0),profit:rep.rows.reduce((s,r)=>s+(r.totalProfit||0),0),bm:rep.rows.reduce((s,r)=>s+(r.bmShare||0),0),alix:rep.rows.reduce((s,r)=>s+(r.alixShare||0),0),pin:rep.rows.reduce((s,r)=>s+(r.pinShare||0),0)},importAudit:{type:"xlsx",archiveName:rep.archiveName,mathErrors,reconciliation,replacedExisting:!!replaceExisting}});
    save();
@@ -8262,7 +8271,18 @@ document.getElementById("importXlsx").onclick=async()=>{
    localStorage.setItem("mdpin-db",JSON.stringify(db));
  }
  cleanupDataIntegrity();refreshStoredReconciliations();retroactivelyRemapAllImports();renderArchive();renderExcelReconciliation(reconReports);renderMappingReview();renderMappingManager();renderAll();
- await preflightSelectedXlsxFiles();
+ if(notice){
+   if(replacedExistingCount){notice.className="xlsxActionNotice ok";notice.textContent=`Replacement complete — ${replacedExistingCount} existing Sunday report${replacedExistingCount===1?"":"s"} replaced successfully${newImportedCount?` and ${newImportedCount} new report${newImportedCount===1?"":"s"} imported`:""}.`; }
+   else if(newImportedCount){notice.className="xlsxActionNotice ok";notice.textContent=`Import complete — ${newImportedCount} Sunday report${newImportedCount===1?"":"s"} imported successfully.`;}
+   else if(keptExisting){notice.className="xlsxActionNotice info";notice.textContent=`No import made — ${keptExisting} existing Sunday report${keptExisting===1?" was":"s were"} kept exactly as-is.`;}
+ }
+ if(replacedExistingCount||newImportedCount){
+   selectedXlsxFiles=[];detectedWorkbookBlocks=[];
+   const input=document.getElementById("xlsxFiles");if(input)input.value="";
+   const card=document.getElementById("xlsxSelectionCard");if(card){card.className="selectionCard empty";card.innerHTML="<b>No Excel files selected</b><div class=\"small\">Choose another file only if you want to import another report.</div>";}
+   const panel=document.getElementById("detectedBlocksPanel");if(panel)panel.style.display="none";
+ }else{await preflightSelectedXlsxFiles();}
+ if(notice&&notice.classList.contains("ok"))notice.scrollIntoView({block:"nearest",behavior:"smooth"});
  if(document.body.classList.contains("workflowMode")){sundayWizardStep=1;renderSundayWizard();}
 };
 
@@ -9773,7 +9793,7 @@ document.getElementById("exportData").onclick=async()=>{
  const btn=document.getElementById("exportData");if(btn.disabled)return;btn.disabled=true;backupStatus("Preparing complete backup…");
  try{
   const sourceFiles=await exportArchivedSourceFiles(),counts=backupCounts();
-  const pkg={format:BACKUP_FORMAT,schema:BACKUP_SCHEMA,appVersion:"0.10.48",createdAt:new Date().toISOString(),counts,sourceFilesCount:sourceFiles.length,data:JSON.parse(JSON.stringify(db)),sourceFiles};
+  const pkg={format:BACKUP_FORMAT,schema:BACKUP_SCHEMA,appVersion:"0.10.49",createdAt:new Date().toISOString(),counts,sourceFilesCount:sourceFiles.length,data:JSON.parse(JSON.stringify(db)),sourceFiles};
   await downloadBackupPackage(pkg);
   backupStatus(`Backup ready: ${counts.deliveries} deliveries, ${counts.sundayReports} Sunday reports, ${counts.invoices} invoices, ${sourceFiles.length} archived source file${sourceFiles.length===1?"":"s"}.`);
  }catch(e){console.error(e);backupStatus("Backup could not be created. No app data was changed.",true);alert("The full backup could not be created. Your current app data has not been changed.")}
