@@ -4179,7 +4179,7 @@ body.deliveryMode .deliveryEditLineCard{
 
 
 <style id="v01047-line-pane-below-controls">
-/* v0.10.50 TEST — hard-separate New Delivery controls from added lines.
+/* v0.10.51 TEST — hard-separate New Delivery controls from added lines.
    iPhone Safari was allowing the first reusable line card/select to paint back
    underneath the stationary control deck.  Use a simple column flex layout
    for New Delivery: controls = fixed natural height, line list = the only
@@ -4240,7 +4240,7 @@ window.addEventListener("error",e=>{const b=document.getElementById("runtimeErro
       <button class="heroHomeHotspot noPrint" type="button" aria-label="Return to Dashboard" title="Dashboard" onclick="returnToDashboardFromHeader()"></button>
     </div>
     <div class="heroActions noPrint">
-      <span class="app-version">v0.10.50 TEST</span>
+      <span class="app-version">v0.10.51 TEST</span>
       <button class="heroMenuButton" id="heroMenuButton" type="button" aria-expanded="false">Menu</button>
     </div>
   </div>
@@ -6681,7 +6681,7 @@ function buildFullBackupPayload(kind="SUPPORT",note=""){
   return {
     magicDragonBackup:true,
     app:"Magic Dragon Pin",
-    appVersion:"0.10.50",
+    appVersion:"0.10.51",
     backupKind:String(kind||"SUPPORT").toUpperCase(),
     createdAt:new Date().toISOString(),
     note:String(note||""),
@@ -8078,14 +8078,47 @@ function refreshStoredReconciliations(doSave=true){
   return ordered.map(r=>r.reconciliation);
 }
 
+function sundayReportDeleteDependencies(r){
+  const date=String(r?.date||"");
+  const branch=canonicalBranchName(r?.branch||"");
+  ensureCompletedSundayCycles();
+  const invoices=(db.invoices||[]).filter(i=>i&&i.status!=="void"&&!i.supersededBy&&String(i.reportDate||"")===date);
+  const completed=(db.completedSundayCycles||[]).filter(x=>x&&x.status==="complete"&&String(x.date||"")===date);
+  const adjustments=(db.adjustments||[]).filter(a=>a&&a.status!=="resolved"&&String(a.sourceDate||"")===date);
+  const corrections=(db.pendingCorrections||[]).filter(c=>c&&c.status!=="resolved"&&String(c.sourceDate||"")===date);
+  const calculatedSuggestions=(db.deliveries||[]).filter(d=>
+    d&&d.generatedFromSundaySuggestion&&!d.deliveredAt&&!d.userEditedSuggestedDraft&&
+    String(d.sourceSundayDate||"")===date&&canonicalBranchName(d.branch||"")===branch
+  );
+  const protectedDockets=(db.deliveries||[]).filter(d=>
+    d&&String(d.sourceSundayDate||"")===date&&canonicalBranchName(d.branch||"")===branch&&
+    (d.deliveredAt||d.userEditedSuggestedDraft)
+  );
+  return {invoices,completed,adjustments,corrections,calculatedSuggestions,protectedDockets};
+}
+
 window.deleteSundayReport=async id=>{
   ensureSundayArchive();
   const r=db.sundayImports.find(x=>x.id===id);
   if(!r) return;
-  const ok=confirm(`Delete this Sunday report?\n\n${r.branch} • ${r.date}\n${r.archiveName}\n\nThis removes the active report, its linked weekly record and the locally archived source file from this device.`);
+  const dep=sundayReportDeleteDependencies(r);
+  if(dep.invoices.length||dep.completed.length||dep.adjustments.length||dep.corrections.length){
+    const why=[];
+    if(dep.completed.length)why.push("the Sunday workflow for this date has been completed");
+    if(dep.invoices.length)why.push(`${dep.invoices.length} saved invoice${dep.invoices.length===1?" is":"s are"} linked to this week`);
+    if(dep.adjustments.length||dep.corrections.length)why.push("there are unresolved financial corrections linked to this week");
+    alert(`This Sunday report cannot be deleted safely.\n\n${displayBranchName(r.branch)} • ${r.date}\n\n${why.join("\n")}\n\nNothing was deleted. If the worksheet itself is wrong, use Import Sunday Worksheet and choose Replace existing instead.`);
+    return;
+  }
+  const linkedWeeks=(db.weeks||[]).filter(w=>w.sourceArchiveId===id || (w.branch===r.branch&&w.date===r.date&&/Excel/i.test(w.source||""))).length;
+  const derived=dep.calculatedSuggestions.length;
+  const protectedNote=dep.protectedDockets.length?`\n\n${dep.protectedDockets.length} delivered or manually edited docket${dep.protectedDockets.length===1?"":"s"} will be preserved.`:"";
+  const ok=confirm(`Delete this Sunday report?\n\n${displayBranchName(r.branch)} • ${r.date}\n${r.archiveName||"Sunday worksheet"}\n\nThis will remove:\n• the Sunday report\n• ${linkedWeeks} linked weekly record${linkedWeeks===1?"":"s"}\n• the locally archived source workbook${derived?`\n• ${derived} unedited calculated suggested docket${derived===1?"":"s"} generated from this report`:""}${protectedNote}\n\nThis cannot be undone unless you import the worksheet again.`);
   if(!ok) return;
   db.sundayImports=db.sundayImports.filter(x=>x.id!==id);
   db.weeks=db.weeks.filter(w=>w.sourceArchiveId!==id && !(w.branch===r.branch&&w.date===r.date&&/Excel/i.test(w.source||"")));
+  const removedSuggestionIds=new Set(dep.calculatedSuggestions.map(d=>d.id));
+  if(removedSuggestionIds.size)db.deliveries=(db.deliveries||[]).filter(d=>!removedSuggestionIds.has(d.id));
   await deleteArchivedSourceFile(id);
   cleanupDataIntegrity();
   const recs=refreshStoredReconciliations();
@@ -8093,7 +8126,7 @@ window.deleteSundayReport=async id=>{
   renderArchive();
   renderExcelReconciliation(recs.slice(-4));
   renderAll();
-  alert("Sunday report deleted.");
+  alert(`Sunday report deleted safely.\n\n${displayBranchName(r.branch)} • ${r.date}\n${linkedWeeks} linked weekly record${linkedWeeks===1?"":"s"} removed${derived?`\n${derived} unedited suggested docket${derived===1?"":"s"} removed`:""}.`);
 };
 
 window.toggleSundayImportPanel=()=>{
@@ -9800,7 +9833,7 @@ document.getElementById("exportData").onclick=async()=>{
  const btn=document.getElementById("exportData");if(btn.disabled)return;btn.disabled=true;backupStatus("Preparing complete backup…");
  try{
   const sourceFiles=await exportArchivedSourceFiles(),counts=backupCounts();
-  const pkg={format:BACKUP_FORMAT,schema:BACKUP_SCHEMA,appVersion:"0.10.50",createdAt:new Date().toISOString(),counts,sourceFilesCount:sourceFiles.length,data:JSON.parse(JSON.stringify(db)),sourceFiles};
+  const pkg={format:BACKUP_FORMAT,schema:BACKUP_SCHEMA,appVersion:"0.10.51",createdAt:new Date().toISOString(),counts,sourceFilesCount:sourceFiles.length,data:JSON.parse(JSON.stringify(db)),sourceFiles};
   await downloadBackupPackage(pkg);
   backupStatus(`Backup ready: ${counts.deliveries} deliveries, ${counts.sundayReports} Sunday reports, ${counts.invoices} invoices, ${sourceFiles.length} archived source file${sourceFiles.length===1?"":"s"}.`);
  }catch(e){console.error(e);backupStatus("Backup could not be created. No app data was changed.",true);alert("The full backup could not be created. Your current app data has not been changed.")}

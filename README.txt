@@ -1,21 +1,20 @@
-MAGIC DRAGON PIN v0.10.50 — TEST
+MAGIC DRAGON PIN v0.10.51 — TEST
 
-WHAT CHANGED IN v0.10.50
-- Refined the duplicate Sunday-report completion flow only.
-- After Keep Existing, Replace Existing, or a successful new import, the selected file(s), detected-week cards, conflict selectors, result cards, and import action state are cleared.
-- A single clear completion message remains at the top of the import area.
-- Keep Existing now reports: “Nothing was imported … kept exactly as-is.”
-- Import and Clear Selection buttons are disabled until a new Excel file is chosen, preventing accidental repeat actions.
-- Existing multi-week detection, duplicate protection, Sunday data logic, and the locked v0.10.47 Delivery form Lego block are unchanged.
+WHAT CHANGED IN v0.10.51
+- Added safety guardrails to Delete Sunday Report.
+- A Sunday report is blocked from deletion when its date is already tied to a completed Sunday workflow, a live saved invoice, or unresolved financial correction.
+- Blocked deletion changes nothing and directs the operator to Replace existing instead when the worksheet itself is wrong.
+- For an unprotected report, the confirmation now states exactly what will be removed before deletion.
+- Deletion removes the Sunday report, its linked Excel weekly record, its locally archived source workbook, and only unedited/undelivered calculated suggested dockets generated from that exact report.
+- Delivered or manually edited dockets are preserved.
+- Existing multi-week detection, duplicate Keep/Replace flow, catalogue integrity, mapping system, backup system and v0.10.47 Delivery form Lego block are unchanged.
 
 TEST
-1. Choose a workbook containing already imported weeks.
-2. Leave all detected conflicts on Keep Existing and tap the black action button.
-3. Confirm the selection/conflict area clears and only the “Nothing was imported” message remains.
-4. Repeat, choose Replace for one week, and run it.
-5. Confirm the selection/conflict area clears and only the replacement-complete message remains.
-6. Choose a new workbook and confirm the import controls become active again.
+1. Open Sunday Reports and expand a report in the archive.
+2. Tap Delete on a report that is NOT part of a completed/invoiced week. Confirm the preview is clear, cancel once, then repeat and confirm deletion if it is safe test data.
+3. Tap Delete on a completed/invoiced week. It should refuse and say nothing was deleted.
+4. Confirm Delivery docket behaviour remains unchanged.
 
-VERSION / CACHE
-- App badge: v0.10.50 TEST
-- Service-worker cache: magic-pin-v0.10.50-test
+VERSION
+- App badge: v0.10.51 TEST
+- Service-worker cache: magic-pin-v0.10.51-test
