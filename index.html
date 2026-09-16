@@ -4196,7 +4196,7 @@ body.deliveryMode .deliveryEditLineCard{
 
 
 <style id="v01047-line-pane-below-controls">
-/* v0.10.63 TEST — hard-separate New Delivery controls from added lines.
+/* v0.10.64 TEST — hard-separate New Delivery controls from added lines.
    iPhone Safari was allowing the first reusable line card/select to paint back
    underneath the stationary control deck.  Use a simple column flex layout
    for New Delivery: controls = fixed natural height, line list = the only
@@ -4257,7 +4257,7 @@ window.addEventListener("error",e=>{const b=document.getElementById("runtimeErro
       <button class="heroHomeHotspot noPrint" type="button" aria-label="Return to Dashboard" title="Dashboard" onclick="returnToDashboardFromHeader()"></button>
     </div>
     <div class="heroActions noPrint">
-      <span class="app-version">v0.10.63 TEST</span>
+      <span class="app-version">v0.10.64 TEST</span>
       <button class="heroMenuButton" id="heroMenuButton" type="button" aria-expanded="false">Menu</button>
     </div>
   </div>
@@ -6748,7 +6748,7 @@ function buildFullBackupPayload(kind="SUPPORT",note=""){
   return {
     magicDragonBackup:true,
     app:"Magic Dragon Pin",
-    appVersion:"0.10.63",
+    appVersion:"0.10.64",
     backupKind:String(kind||"SUPPORT").toUpperCase(),
     createdAt:new Date().toISOString(),
     note:String(note||""),
@@ -10031,14 +10031,17 @@ async function cloudPush(){
    const known=baseRevision?`revision ${baseRevision}`:"no established sync base";
    cloudRememberSeen(before);
    const m=cloudEl("cloudMeta");if(m)m.innerHTML=cloudMetaHtml(before,'<span style="color:#9a3412;font-weight:800">Upload blocked until this device is brought up to date.</span>');
-   cloudStatus(`Upload blocked — cloud is revision ${currentRevision} from ${before.updated_by_device||"another device"}, while this device has ${known}. Check/preview cloud first.`,"warn");
+   cloudStatus(`Upload blocked — cloud is revision ${currentRevision} from ${before.updated_by_device||"another device"}, while this device has ${known}.`,"warn");
+   const resolveNow=confirm(`This device cannot upload yet because TEST Cloud has newer data.\n\nCloud: revision ${currentRevision} from ${before.updated_by_device||"another device"}\nThis device: ${known}\n\nTap OK to preview the newer cloud data now. Nothing on this device changes until you approve Replace This Device's Data.\n\nTap Cancel to leave this device unchanged.`);
+   if(resolveNow){await cloudPull();}
+   else{cloudStatus(`Conflict left unresolved — this device is unchanged and upload remains blocked until revision ${currentRevision} is reviewed.`,"warn");}
    return;
   }
   const pkg=await createCompleteTransferPackage("TEST_CLOUD_STATE");
   const hash=await sha256Text(stableJson(pkg)),fingerprint=await cloudStateFingerprint(pkg),revision=currentRevision+1;
   const c=pkg.counts;
   if(!confirm(`Upload this device to TEST Cloud?\n\nRevision ${revision}\n${c.products} products · ${c.aliases} aliases · ${c.sundayReports} Sunday reports · ${c.deliveries} deliveries · ${c.invoices} invoices\n\nTEST workspace only.`)){cloudStatus("Upload cancelled — nothing changed.","info");return}
-  const row={workspace_id:MD_TEST_WORKSPACE,revision,app_version:"0.10.63",payload:pkg,payload_hash:hash,updated_by:mdCloudSession.user?.id||null,updated_by_device:label,updated_at:new Date().toISOString()};
+  const row={workspace_id:MD_TEST_WORKSPACE,revision,app_version:"0.10.64",payload:pkg,payload_hash:hash,updated_by:mdCloudSession.user?.id||null,updated_by_device:label,updated_at:new Date().toISOString()};
   let saved;
   if(currentRevision===0){
    saved=await mdCloudFetch(`/rest/v1/${MD_TEST_STATE_TABLE}`,{method:"POST",body:row,headers:{Prefer:"return=representation"}});
@@ -10124,7 +10127,7 @@ function validateBackupPackage(pkg){
 }
 async function createCompleteTransferPackage(kind="FULL_TRANSFER"){
  const sourceFiles=await exportArchivedSourceFiles(),counts=backupCounts();
- return {format:BACKUP_FORMAT,schema:BACKUP_SCHEMA,appVersion:"0.10.63",backupKind:kind,createdAt:new Date().toISOString(),counts,sourceFilesCount:sourceFiles.length,data:JSON.parse(JSON.stringify(db)),sourceFiles};
+ return {format:BACKUP_FORMAT,schema:BACKUP_SCHEMA,appVersion:"0.10.64",backupKind:kind,createdAt:new Date().toISOString(),counts,sourceFilesCount:sourceFiles.length,data:JSON.parse(JSON.stringify(db)),sourceFiles};
 }
 async function savePackageFile(pkg,prefix="Magic-Pin-Data"){
  const blob=new Blob([JSON.stringify(pkg)],{type:"application/json"});
