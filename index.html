@@ -3852,6 +3852,24 @@ body.deliveryMode:not(.deliveryEditMode).deliveryKeyboardOpen #deliveryCreatePan
 /* Top add-row Qty is fixed-zone input; never browser-zoom it. */
 body.deliveryMode #delQty{font-size:16px!important}
 
+/* v0.10.38 — canonical iPhone visual-viewport shell anchor.
+   iOS Safari can pan the visual viewport when the numeric keyboard opens even
+   when no element is manually scrolled. Fixed UI remains attached to the
+   layout viewport unless we explicitly offset it by visualViewport.offsetTop.
+   This block anchors the existing Magic Dragon shell to the *visible* viewport
+   only while New Delivery Qty owns focus. It moves the shell, never the input. */
+body.deliveryMode.deliveryNewQtyViewport .hero{
+  top:calc(var(--md-vv-top,0px) + 8px)!important;
+}
+body.deliveryMode.deliveryNewQtyViewport .contentViewport{
+  top:var(--content-top,98px)!important;
+  bottom:auto!important;
+  height:max(0px,calc(var(--md-vv-top,0px) + var(--md-vv-height,100dvh) - var(--content-top,98px) - 8px))!important;
+}
+body.deliveryMode.deliveryNewQtyViewport .tabs.menuOpen{
+  top:var(--menu-top,98px)!important;
+}
+
 
 /* v0.10.14 PRODUCTION — Delivery editor state isolation */
 body.deliveryMode #deliveryArchivePane{
@@ -4023,7 +4041,7 @@ window.addEventListener("error",e=>{const b=document.getElementById("runtimeErro
       <button class="heroHomeHotspot noPrint" type="button" aria-label="Return to Dashboard" title="Dashboard" onclick="returnToDashboardFromHeader()"></button>
     </div>
     <div class="heroActions noPrint">
-      <span class="app-version">v0.10.37 TEST</span>
+      <span class="app-version">v0.10.38 TEST</span>
       <button class="heroMenuButton" id="heroMenuButton" type="button" aria-expanded="false">Menu</button>
     </div>
   </div>
@@ -5161,18 +5179,80 @@ function updateDeliveryKeyboardViewport(){
 }
 
 
+function applyNewDeliveryQtyVisualViewport(top,height){
+  const vv=window.visualViewport;
+  const vvTop=Number.isFinite(top)?top:(vv?.offsetTop||0);
+  const vvHeight=Number.isFinite(height)?height:(vv?.height||window.innerHeight||0);
+  document.documentElement.style.setProperty("--md-vv-top",`${Math.max(0,Math.round(vvTop))}px`);
+  document.documentElement.style.setProperty("--md-vv-height",`${Math.max(0,Math.round(vvHeight))}px`);
+  document.body.classList.add("deliveryNewQtyViewport");
+
+  // Header/content geometry depends on the shifted hero position. Recalculate
+  // after the CSS variable lands; this is shell geometry, not input scrolling.
+  requestAnimationFrame(()=>{
+    window.syncShellGeometry?.();
+    requestAnimationFrame(()=>window.syncShellGeometry?.());
+  });
+}
+
+function clearNewDeliveryQtyVisualViewport(){
+  document.body.classList.remove("deliveryNewQtyViewport");
+  document.documentElement.style.removeProperty("--md-vv-top");
+  document.documentElement.style.removeProperty("--md-vv-height");
+  requestAnimationFrame(()=>window.syncShellGeometry?.());
+}
+
+function newDeliveryQtyViewportInvariant(){
+  const input=document.getElementById("delQty");
+  const hero=document.querySelector(".hero");
+  const content=document.querySelector(".contentViewport");
+  const vv=window.visualViewport;
+  if(!input||!hero||!content)return {ok:false,reason:"missing-elements"};
+  const top=vv?.offsetTop||0;
+  const bottom=top+(vv?.height||window.innerHeight||0);
+  const ir=input.getBoundingClientRect(),hr=hero.getBoundingClientRect(),cr=content.getBoundingClientRect();
+  const ok=hr.top>=top-2 && hr.bottom<=bottom+2 && cr.top>=hr.bottom-2 && ir.top>=top-2 && ir.bottom<=bottom-12;
+  return {ok,top,bottom,input:{top:ir.top,bottom:ir.bottom},hero:{top:hr.top,bottom:hr.bottom},content:{top:cr.top,bottom:cr.bottom}};
+}
+window.newDeliveryQtyViewportInvariant=newDeliveryQtyViewportInvariant;
+
+function runNewDeliveryQtyRuntimeCheck(){
+  if(deliveryKeyboardActiveInput?.id!=="delQty")return;
+  const result=newDeliveryQtyViewportInvariant();
+  window.__mdQtyViewportLastCheck=result;
+  let flag=document.getElementById("qtyViewportTestFlag");
+  if(result.ok){flag?.remove();return;}
+  if(!flag){
+    flag=document.createElement("div");
+    flag.id="qtyViewportTestFlag";
+    flag.style.cssText="position:fixed;left:8px;right:8px;z-index:20000;padding:6px 8px;border-radius:8px;background:#7f1d1d;color:#fff;font:11px -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-weight:800;box-shadow:0 2px 8px #0004";
+    document.body.appendChild(flag);
+  }
+  flag.style.top=`${Math.round((window.visualViewport?.offsetTop||0)+4)}px`;
+  flag.textContent=`QTY VIEWPORT SELF-TEST FAIL · visible ${Math.round(result.top)}–${Math.round(result.bottom)} · header ${Math.round(result.hero?.top||0)}–${Math.round(result.hero?.bottom||0)} · Qty ${Math.round(result.input?.top||0)}–${Math.round(result.input?.bottom||0)}`;
+}
+
 window.newDeliveryQtyFocus=(input)=>{
-  // Deliberately passive. This field is already visible before the keyboard opens.
-  // The only state we keep is enough to make every global viewport callback ignore it.
   deliveryKeyboardActiveInput=input;
   document.body.classList.remove("deliveryKeyboardOpen");
   document.documentElement.style.removeProperty("--md-keyboard-height");
+  applyNewDeliveryQtyVisualViewport();
+  [40,120,240,420].forEach(ms=>setTimeout(()=>{
+    if(document.activeElement===input)applyNewDeliveryQtyVisualViewport();
+  },ms));
+  // Automatic on-device regression check after the iOS keyboard animation.
+  // PASS is silent. FAIL puts exact viewport/header/Qty geometry on screen.
+  setTimeout(()=>{if(document.activeElement===input)runNewDeliveryQtyRuntimeCheck()},700);
 };
 
 window.newDeliveryQtyBlur=(input)=>{
   setTimeout(()=>{
-    if(document.activeElement!==input)deliveryKeyboardActiveInput=null;
-  },100);
+    if(document.activeElement!==input){
+      deliveryKeyboardActiveInput=null;
+      clearNewDeliveryQtyVisualViewport();
+      document.getElementById("qtyViewportTestFlag")?.remove();
+    }
+  },120);
 };
 
 window.deliveryQtyFocus=(input)=>{
@@ -5197,8 +5277,14 @@ window.deliveryQtyBlur=(input)=>{
 };
 
 if(window.visualViewport){
-  window.visualViewport.addEventListener("resize",updateDeliveryKeyboardViewport,{passive:true});
-  window.visualViewport.addEventListener("scroll",updateDeliveryKeyboardViewport,{passive:true});
+  window.visualViewport.addEventListener("resize",()=>{
+    if(deliveryKeyboardActiveInput?.id==="delQty")applyNewDeliveryQtyVisualViewport();
+    updateDeliveryKeyboardViewport();
+  },{passive:true});
+  window.visualViewport.addEventListener("scroll",()=>{
+    if(deliveryKeyboardActiveInput?.id==="delQty")applyNewDeliveryQtyVisualViewport();
+    updateDeliveryKeyboardViewport();
+  },{passive:true});
 }
 window.addEventListener("orientationchange",()=>{
   setTimeout(()=>{
@@ -9254,6 +9340,11 @@ function renderSundayWizard(){
 document.getElementById("recordsSearch")?.addEventListener("input",renderHistory);
 document.getElementById("recordsType")?.addEventListener("change",renderHistory);
 function setDeliveryView(mode){
+  if(mode!=="create"){
+    deliveryKeyboardActiveInput=null;
+    clearNewDeliveryQtyVisualViewport?.();
+    document.getElementById("qtyViewportTestFlag")?.remove();
+  }
   const archive=document.getElementById("deliveryArchivePane");
   const create=document.getElementById("deliveryCreatePane");
   const isCreate=mode==="create";
@@ -9460,8 +9551,39 @@ if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
     window.addEventListener("load",syncGeometry,{once:true});
   })();
 
-  window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js?v=0973", {updateViaCache:"none"}).catch(()=>{}));
+  window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js?v=1038", {updateViaCache:"none"}).catch(()=>{}));
 }
+
+/* v0.10.38 deterministic regression check.
+   Run with ?mdselftest=qtyviewport in any browser. It simulates an iPhone
+   visual viewport panned 92px with a 461px visible height and fails unless
+   the fixed shell + Qty picker remain inside that synthetic visible region. */
+if(new URLSearchParams(location.search).get("mdselftest")==="qtyviewport") {
+  window.addEventListener("load",()=>setTimeout(()=>{
+    try{
+      openDeliveryCreate();
+      const syntheticTop=92,syntheticHeight=461;
+      deliveryKeyboardActiveInput=document.getElementById("delQty");
+      applyNewDeliveryQtyVisualViewport(syntheticTop,syntheticHeight);
+      setTimeout(()=>{
+        const input=document.getElementById("delQty"),hero=document.querySelector(".hero"),content=document.querySelector(".contentViewport");
+        const ir=input?.getBoundingClientRect(),hr=hero?.getBoundingClientRect(),cr=content?.getBoundingClientRect();
+        const bottom=syntheticTop+syntheticHeight;
+        const ok=!!(ir&&hr&&cr&&hr.top>=syntheticTop-2&&hr.bottom<=bottom+2&&cr.top>=hr.bottom-2&&ir.top>=syntheticTop-2&&ir.bottom<=bottom-12);
+        const out=document.createElement("pre");
+        out.id="mdSelfTestResult";
+        out.dataset.status=ok?"PASS":"FAIL";
+        out.textContent=JSON.stringify({status:ok?"PASS":"FAIL",syntheticTop,syntheticHeight,visibleBottom:bottom,hero:hr&&{top:hr.top,bottom:hr.bottom},content:cr&&{top:cr.top,bottom:cr.bottom},qty:ir&&{top:ir.top,bottom:ir.bottom}},null,2);
+        document.body.appendChild(out);
+        document.documentElement.dataset.mdSelfTest=ok?"PASS":"FAIL";
+      },350);
+    }catch(err){
+      document.documentElement.dataset.mdSelfTest="FAIL";
+      const out=document.createElement("pre");out.id="mdSelfTestResult";out.dataset.status="FAIL";out.textContent=String(err?.stack||err);document.body.appendChild(out);
+    }
+  },250),{once:true});
+}
+
 document.getElementById("auditBranch").onchange=renderAudit;
 document.getElementById("auditSearch").oninput=renderAudit;
 document.getElementById("histBranch").onchange=renderHistorical;

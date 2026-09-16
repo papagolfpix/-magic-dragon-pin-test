@@ -1,28 +1,30 @@
-MAGIC DRAGON PIN v0.10.37 — TEST
+MAGIC DRAGON PIN v0.10.38 — TEST
 
 Purpose of this build:
-- Regression-only repair for New Delivery Qty on iPhone Safari.
-- Restore the previously proven shared keyboard-safe input Lego block instead of using DOM reparenting or a new keyboard dock.
+- Fix the underlying iPhone Safari visual-viewport shell movement revealed by the v0.10.37 screenshot.
+- Do not redesign, scroll, reparent, refocus or manually move the New Delivery Qty input.
+- Reuse the existing fixed Magic Dragon shell, but anchor that shell to visualViewport.offsetTop while New Delivery Qty has focus.
 
-Blueprint / Lego-block rule applied:
-- New Delivery Qty stays in its normal DOM position and is a standard keyboardSafeInput.
-- The existing shared mobileKeyboardSafeFocus / visualViewport logic moves the real app scroll owner, not the input itself.
-- No pointerdown preventDefault, no synthetic refocus, and no reparenting of the Qty field. These can suppress the iOS numeric keyboard.
-- Keep the field at 16px to avoid iPhone focus zoom.
+Root cause now addressed:
+- iOS Safari can pan the visual viewport when the numeric keyboard opens.
+- The app header/content shell was position:fixed against the layout viewport, so the whole shell could end up above the visible viewport.
+- The screenshot showing the top of the Magic Dragon banner cut off proves this is a shell/viewport problem, not a Qty-field-only problem.
 
-Preserved unchanged from the immediately prior test build:
-- IN STOCK / OUT OF STOCK catalogue toggle.
-- Target-stock replenishment safeguards and review flow.
-- Combined Suggested Delivery UI and PDF/share behavior.
+New reusable Lego block:
+- iPhone visual-viewport shell anchor: when a fixed mobile form is active and Safari pans the visual viewport, anchor the fixed shell to visualViewport.offsetTop and size the content area to visualViewport.height.
+- This moves the shell, never the focused input.
+- Existing Edit/Suggested Delivery line-item keyboard behavior remains unchanged.
 
-TEST CHECK:
-Tap New Delivery Qty. The numeric keyboard must open normally, the Qty field must remain visible above it, and the layout must restore after the keyboard closes.
+Automatic regression test:
+- Open index.html with ?mdselftest=qtyviewport.
+- The app simulates a 92px visual-viewport pan and a 461px visible keyboard viewport.
+- The test is PASS only if the branded header, content top and New Delivery Qty field all remain inside the synthetic visible viewport.
+- Release packaging should not proceed if this self-test reports FAIL.
 
-
-v0.10.37 TEST: iPhone New Delivery Qty keyboard fix. The top #delQty field is now explicitly excluded from edit-line positioning and all manual docket scroll correction while the keyboard is open. Safari owns focus/keyboard scrolling; Edit/Suggested Delivery Qty positioning remains unchanged.
-
-
-v0.10.37 targeted iPhone correction:
-- New Delivery Qty is fully exempt from keyboard-layout handling.
-- No deliveryKeyboardOpen class, header collapse, select(), scroll, reparent, refocus or viewport correction is permitted for #delQty.
-- Edit/Suggested Delivery line-item Qty keeps the existing scroll-list keyboard Lego block.
+Manual iPhone checkpoint:
+1. Open New Delivery.
+2. Tap Qty.
+3. Leave the numeric keyboard open.
+4. The Magic Dragon header must remain fully visible.
+5. Product / Variant / Qty / Add must remain visible below it.
+6. Closing the keyboard must restore the normal shell without a jump.
