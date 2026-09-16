@@ -578,6 +578,9 @@ html,body{max-width:100%;overflow-x:hidden}
 .settingGroup[open]>summary{background:#f8fafc;border-bottom:1px solid #e5e7eb}
 .settingGroup[open]>summary::after{transform:rotate(180deg)}
 .settingGroupBody{padding:11px 13px}
+/* v0.10.67 Settings focus mode: while one accordion is open, hide the other settings choices to reclaim vertical space. */
+#settings .card.settingsFocusMode>.settingGroup:not([open]){display:none}
+#settings .card.settingsFocusMode>.settingsIntro{display:none}
 .settingGroupBody>h2:first-child,.settingGroupBody>h3:first-child{margin-top:0}
 #settings .card{padding:12px}
 #settings .splitbox{gap:6px}
@@ -4205,7 +4208,7 @@ body.deliveryMode .deliveryEditLineCard{
 
 
 <style id="v01047-line-pane-below-controls">
-/* v0.10.65 TEST — hard-separate New Delivery controls from added lines.
+/* v0.10.67 TEST — hard-separate New Delivery controls from added lines.
    iPhone Safari was allowing the first reusable line card/select to paint back
    underneath the stationary control deck.  Use a simple column flex layout
    for New Delivery: controls = fixed natural height, line list = the only
@@ -4266,7 +4269,7 @@ window.addEventListener("error",e=>{const b=document.getElementById("runtimeErro
       <button class="heroHomeHotspot noPrint" type="button" aria-label="Return to Dashboard" title="Dashboard" onclick="returnToDashboardFromHeader()"></button>
     </div>
     <div class="heroActions noPrint">
-      <span class="app-version">v0.10.65 TEST</span>
+      <span class="app-version">v0.10.67 TEST</span>
       <button class="heroMenuButton" id="heroMenuButton" type="button" aria-expanded="false">Menu</button>
     </div>
   </div>
@@ -4632,6 +4635,14 @@ window.addEventListener("error",e=>{const b=document.getElementById("runtimeErro
             <div class="cloudOverviewCard"><div class="k">Cloud</div><div class="v" id="cloudOverviewCloud">Not checked</div></div>
             <div class="cloudOverviewCard"><div class="k">This device</div><div class="v" id="cloudOverviewBase">No sync base</div></div>
             <div class="cloudOverviewCard"><div class="k">Status</div><div class="v" id="cloudOverviewState">Sign in / check</div></div>
+          </div>
+          <div class="backupRecoveryCard" style="margin-top:10px">
+            <div><b>TEST Sync Marker</b><small>Harmless TEST-only value used to prove a real state change moves between devices.</small></div>
+            <div class="row" style="margin-top:8px;align-items:flex-end">
+              <div class="field" style="flex:1"><label>Marker</label><input id="cloudTestMarker" type="text" maxlength="80" placeholder="e.g. iPhone test 1"></div>
+              <button class="btn alt" id="saveCloudTestMarker" type="button">Save marker</button>
+            </div>
+            <div id="cloudTestMarkerStatus" class="small" style="margin-top:6px"></div>
           </div>
 
           <div class="backupRecoveryCards" style="margin-top:10px">
@@ -6762,7 +6773,7 @@ function buildFullBackupPayload(kind="SUPPORT",note=""){
   return {
     magicDragonBackup:true,
     app:"Magic Dragon Pin",
-    appVersion:"0.10.65",
+    appVersion:"0.10.67",
     backupKind:String(kind||"SUPPORT").toUpperCase(),
     createdAt:new Date().toISOString(),
     note:String(note||""),
@@ -9991,6 +10002,27 @@ function renderCloudOverview(meta=null,state="idle"){
 }
 function detectCloudDeviceLabel(){const ua=navigator.userAgent||"";if(/iPhone/i.test(ua))return "iPhone";if(/iPad/i.test(ua)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1))return "iPad";return "Test device"}
 function initCloudFields(){const e=cloudEl("cloudEmail"),d=cloudEl("cloudDeviceLabel");if(e)e.value=localStorage.getItem("mdpin-cloud-email")||"";if(d)d.value=localStorage.getItem("mdpin-cloud-device")||detectCloudDeviceLabel();try{const raw=sessionStorage.getItem("mdpin-cloud-session");if(raw)mdCloudSession=JSON.parse(raw)}catch(e){}if(mdCloudSession?.access_token)cloudStatus(`Signed in as ${mdCloudSession.user?.email||"test user"}.`,"good")}
+function renderCloudTestMarker(){
+ const input=cloudEl("cloudTestMarker"),status=cloudEl("cloudTestMarkerStatus");
+ const value=String(db.testSyncMarker||"");
+ if(input&&document.activeElement!==input)input.value=value;
+ if(status)status.textContent=value?`Current local marker: ${value}`:"No TEST marker saved on this device yet.";
+}
+function saveCloudTestMarker(){
+ const input=cloudEl("cloudTestMarker"),status=cloudEl("cloudTestMarkerStatus");
+ if(!input)return;
+ db.testSyncMarker=String(input.value||"").trim();
+ localStorage.setItem("mdpin-db",JSON.stringify(db));
+ if(status)status.textContent=db.testSyncMarker?`Saved locally: ${db.testSyncMarker}`:"Marker cleared locally.";
+ cloudStatus("Local TEST change saved — ready to upload when cloud is current.","info");
+ const metaRev=cloudNumStorage(MD_CLOUD_SEEN_REV_KEY),base=cloudNumStorage(MD_CLOUD_BASE_REV_KEY);
+ if(metaRev&&base===metaRev){
+   const meta={revision:metaRev,updated_by_device:"cloud",app_version:"0.10.67"};
+   const cloud=cloudEl("cloudOverviewCloud"),baseEl=cloudEl("cloudOverviewBase"),stateEl=cloudEl("cloudOverviewState"),wrap=cloudEl("cloudOverview");
+   if(cloud)cloud.textContent=`Rev ${metaRev}`;if(baseEl)baseEl.textContent=`Base rev ${base}`;if(stateEl)stateEl.textContent="LOCAL CHANGE — UPLOAD";
+   if(wrap){[...wrap.querySelectorAll(".cloudOverviewCard")].forEach(x=>{x.classList.remove("good","bad","warn");x.classList.add("warn")})}
+ }
+}
 async function mdCloudFetch(path,{method="GET",body=null,auth=true,headers={}}={}){
  const h={apikey:MD_TEST_SUPABASE_KEY,...headers};
  if(auth&&mdCloudSession?.access_token)h.Authorization=`Bearer ${mdCloudSession.access_token}`;
@@ -10025,7 +10057,7 @@ async function cloudRefresh(){
   const shops=await mdCloudFetch('/rest/v1/shops?select=name&order=name.asc&limit=5');
   const state=await cloudGetState();
   const m=cloudEl("cloudMeta");
-  if(!state){cloudStatus(`Cloud connection OK • ${Array.isArray(shops)?shops.length:0} shops visible. No shared snapshot yet.`,"good");if(m)m.textContent='No shared TEST snapshot uploaded yet.';return null}
+  if(!state){cloudStatus(`Cloud connection OK • ${Array.isArray(shops)?shops.length:0} shops visible. No shared snapshot yet.`,"good");if(m)m.textContent='No shared TEST snapshot uploaded yet.';renderCloudOverview(null,"good");return null}
   cloudRememberSeen(state);
   let extra="";
   try{
@@ -10037,10 +10069,12 @@ async function cloudRefresh(){
     cloudRememberBase(state,localFp);
     cloudStatus(`Cloud connection OK • local data matches revision ${state.revision}.`,"good");
     extra='<span style="color:#166534;font-weight:800">Local data matches this cloud revision.</span>';
+    renderCloudOverview(state,"good");
    }else{
     const base=cloudNumStorage(MD_CLOUD_BASE_REV_KEY);
-    cloudStatus(base&&Number(state.revision)>base?`Cloud revision ${state.revision} is newer than this device\'s sync base ${base}. Preview cloud before uploading.`:`Cloud data differs from this device. Preview cloud before uploading.`,"warn");
-    extra='<span style="color:#9a3412;font-weight:800">Cloud and local data differ — upload guard is active.</span>';
+    cloudStatus(base&&Number(state.revision)>base?`Cloud revision ${state.revision} is newer than this device\'s sync base ${base}. Preview cloud before uploading.`:`Local data differs from cloud revision ${state.revision}. Upload is allowed only if this device is based on that revision.`,"warn");
+    extra='<span style="color:#9a3412;font-weight:800">Cloud and local data differ — revision guard is active.</span>';
+    renderCloudOverview(state,base&&Number(state.revision)>base?"warn":"preview");
    }
   }catch(compareErr){console.warn("Cloud comparison unavailable",compareErr);cloudStatus(`Cloud connection OK • ${Array.isArray(shops)?shops.length:0} shops visible.`,"good")}
   if(m)m.innerHTML=cloudMetaHtml(state,extra);
@@ -10070,7 +10104,7 @@ async function cloudPush(){
   const hash=await sha256Text(stableJson(pkg)),fingerprint=await cloudStateFingerprint(pkg),revision=currentRevision+1;
   const c=pkg.counts;
   if(!confirm(`Upload this device to TEST Cloud?\n\nRevision ${revision}\n${c.products} products · ${c.aliases} aliases · ${c.sundayReports} Sunday reports · ${c.deliveries} deliveries · ${c.invoices} invoices\n\nTEST workspace only.`)){cloudStatus("Upload cancelled — nothing changed.","info");return}
-  const row={workspace_id:MD_TEST_WORKSPACE,revision,app_version:"0.10.65",payload:pkg,payload_hash:hash,updated_by:mdCloudSession.user?.id||null,updated_by_device:label,updated_at:new Date().toISOString()};
+  const row={workspace_id:MD_TEST_WORKSPACE,revision,app_version:"0.10.67",payload:pkg,payload_hash:hash,updated_by:mdCloudSession.user?.id||null,updated_by_device:label,updated_at:new Date().toISOString()};
   let saved;
   if(currentRevision===0){
    saved=await mdCloudFetch(`/rest/v1/${MD_TEST_STATE_TABLE}`,{method:"POST",body:row,headers:{Prefer:"return=representation"}});
@@ -10086,6 +10120,7 @@ async function cloudPush(){
   cloudRememberBase(after,fingerprint);
   cloudStatus(`Upload successful — revision ${revision} saved from ${label}.`,"good");
   const m=cloudEl("cloudMeta");if(m)m.innerHTML=cloudMetaHtml(after,'<span style="color:#166534;font-weight:800">This device is now based on the latest cloud revision.</span>');
+  renderCloudOverview(after,"good");renderCloudTestMarker();
  }catch(e){
   console.error(e);
   const msg=String(e?.message||e||"");
@@ -10104,6 +10139,7 @@ async function cloudPull(){
   Object.defineProperty(pkg,"_mdCloudMeta",{value:{revision:Number(row.revision),updated_by_device:row.updated_by_device||"",updated_at:row.updated_at||"",payload_hash:row.payload_hash||""},enumerable:false,configurable:true});
   showTransferPreview(pkg);
   cloudStatus(`Revision ${row.revision} downloaded from ${row.updated_by_device||"another test device"}. Preview only — this device has not changed.`,"good");
+  renderCloudOverview(row,"preview");
  }catch(e){console.error(e);cloudStatus(`Download failed — ${e.message}`,"bad")}
 }
 const BACKUP_FORMAT="magic-dragon-pin-full-backup";
@@ -10156,7 +10192,7 @@ function validateBackupPackage(pkg){
 }
 async function createCompleteTransferPackage(kind="FULL_TRANSFER"){
  const sourceFiles=await exportArchivedSourceFiles(),counts=backupCounts();
- return {format:BACKUP_FORMAT,schema:BACKUP_SCHEMA,appVersion:"0.10.65",backupKind:kind,createdAt:new Date().toISOString(),counts,sourceFilesCount:sourceFiles.length,data:JSON.parse(JSON.stringify(db)),sourceFiles};
+ return {format:BACKUP_FORMAT,schema:BACKUP_SCHEMA,appVersion:"0.10.67",backupKind:kind,createdAt:new Date().toISOString(),counts,sourceFilesCount:sourceFiles.length,data:JSON.parse(JSON.stringify(db)),sourceFiles};
 }
 async function savePackageFile(pkg,prefix="Magic-Pin-Data"){
  const blob=new Blob([JSON.stringify(pkg)],{type:"application/json"});
@@ -10291,7 +10327,25 @@ if(cloudEl("cloudSignOut"))cloudEl("cloudSignOut").onclick=cloudSignOut;
 if(cloudEl("cloudRefresh"))cloudEl("cloudRefresh").onclick=cloudRefresh;
 if(cloudEl("cloudPush"))cloudEl("cloudPush").onclick=cloudPush;
 if(cloudEl("cloudPull"))cloudEl("cloudPull").onclick=cloudPull;
-initCloudFields();renderCloudOverview(null,"idle");
+if(cloudEl("saveCloudTestMarker"))cloudEl("saveCloudTestMarker").onclick=saveCloudTestMarker;
+
+/* v0.10.67 Settings focus accordion. Opening one settings group temporarily hides the other chevrons. Collapsing it restores the full menu. */
+(()=>{
+ const card=document.querySelector("#settings>.card");
+ const groups=[...document.querySelectorAll("#settings>.card>.settingGroup")];
+ if(!card||!groups.length)return;
+ const sync=()=>{
+   const open=groups.find(g=>g.open);
+   card.classList.toggle("settingsFocusMode",!!open);
+ };
+ groups.forEach(g=>g.addEventListener("toggle",()=>{
+   if(g.open){groups.forEach(other=>{if(other!==g&&other.open)other.open=false;});}
+   requestAnimationFrame(sync);
+ }));
+ sync();
+})();
+
+initCloudFields();renderCloudOverview(null,"idle");renderCloudTestMarker();
 document.getElementById("masterProductSearch").oninput=filterMasterProductSetup;
 document.getElementById("fillMasterCurrent").onclick=()=>renderMasterProductSetup(true);
 document.getElementById("saveMasterProducts").onclick=applyMasterProductSetup;

@@ -1,6 +1,13 @@
-MAGIC DRAGON PIN v0.10.65 — TEST
+MAGIC DRAGON PIN v0.10.67 — TEST
 
-WHAT CHANGED IN v0.10.65
+WHAT CHANGED IN v0.10.67
+- Settings now uses focus mode: when one settings accordion is open, all other settings chevrons temporarily disappear to reclaim vertical screen space.
+- Collapsing the open accordion restores the full Settings menu.
+- Adds the TEST Sync Marker used for the first real cross-device state-change test.
+- Cloud overview now updates more clearly after Check, Upload and Preview operations.
+- No change to proven Delivery, Sunday import, transfer safety, Supabase RLS, revision guard or conflict protection logic.
+
+WHAT CHANGED IN v0.10.66
 - Guided stale-write conflict resolution for TEST Cloud.
 - If an upload is blocked because the cloud revision is newer, the app now offers to preview the newer cloud data immediately.
 - Choosing OK opens the existing safe cloud preview; no local data changes until Replace This Device's Data is explicitly approved.
@@ -52,9 +59,12 @@ TEST PROCEDURE
 8. Reload once more and confirm imported state persists.
 
 VERSION CHECK
-- App badge: v0.10.65 TEST
-- Service-worker cache: magic-pin-v0.10.65-test
+- App badge: v0.10.66 TEST
+- Service-worker cache: magic-pin-v0.10.66-test
 
 Filename update v0.10.57: user-facing export/backup files use the short Magic-Pin-* naming convention for easier identification on iPhone.
 
-UI refinement v0.10.65: TEST Cloud now shows a prominent 3-part status summary (Cloud revision/device, this-device sync base, and current state). After a cloud restore, Backup & Recovery collapses, TEST Cloud opens, and the app highlights the new sync base.
+UI refinement v0.10.66: TEST Cloud now shows a prominent 3-part status summary (Cloud revision/device, this-device sync base, and current state). After a cloud restore, Backup & Recovery collapses, TEST Cloud opens, and the app highlights the new sync base.
+
+
+v0.10.66 TEST: Added TEST Sync Marker for real cross-device state-change proof. Marker is stored in app data and therefore travels through the same complete cloud snapshot/restore path. Cloud check now distinguishes local changes ready to upload from a newer-cloud conflict.
