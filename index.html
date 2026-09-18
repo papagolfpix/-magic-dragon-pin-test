@@ -4260,6 +4260,94 @@ TEST runner deliberately excluded.
 .deliveryEditAutoSummary{margin:0 0 8px;padding:8px 9px;border:1px solid #d9dee7;border-radius:9px;background:#f8fafc}.deliveryEditAutoSummary b{display:block;font-size:11px;margin-bottom:4px}.deliveryEditAutoSummary ul{margin:0;padding-left:18px}.deliveryEditAutoSummary li{font-size:10px;line-height:1.35;color:#475467;margin:2px 0}
 .deliveryAuditTrail{margin-top:10px;padding:9px 10px;border:1px solid #d9dee7;border-radius:11px;background:#f8fafc}.deliveryAuditTrail>summary{font-weight:900;cursor:pointer}.deliveryAuditItem{padding:8px 0;border-top:1px solid #e5e9ef}.deliveryAuditItem:first-of-type{border-top:0}.deliveryAuditMeta{font-size:10px;color:#667085;margin-top:2px}.deliveryAuditReason{font-size:12px;font-weight:800;margin-top:3px}.deliveryAuditChanges{font-size:10px;color:#475467;margin-top:4px}
 .cloudConflictPanel{display:none;margin-top:10px;padding:10px;border:1px solid #f0b764;border-radius:13px;background:#fff8eb}.cloudConflictPanel.show{display:block}.cloudConflictHeader{display:flex;justify-content:space-between;gap:8px;align-items:flex-start;margin-bottom:8px}.cloudConflictHeader b{font-size:14px}.cloudConflictHeader span{font-size:11px;color:#9a3412;font-weight:800}.cloudConflictCard{border:1px solid #e7c98e;border-radius:10px;background:#fff;padding:9px;margin-top:8px}.cloudConflictTitle{font-weight:900;font-size:13px}.cloudConflictMeta{font-size:10px;color:#667085;margin-top:2px}.cloudConflictDiff{margin-top:7px;border-top:1px solid #ece2cf}.cloudConflictDiffRow{display:grid;grid-template-columns:minmax(86px,.8fr) 1fr 1fr;gap:5px;padding:6px 0;border-bottom:1px solid #f1eadf;font-size:10px;align-items:start}.cloudConflictDiffRow.head{font-weight:900;color:#667085}.cloudConflictDiffRow b{font-size:10px}.cloudConflictActions{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:9px}.cloudConflictActions .btn{min-height:38px;padding:7px;font-size:12px}.cloudConflictLater{font-size:10px;color:#667085;text-align:center;margin-top:6px}
+
+/* v0.10.99 TEST — saved-docket viewport correction.
+   Header/navigation and bottom actions stay fixed; only docket body scrolls. */
+body.docketMode #docket.active{
+  overflow:hidden!important;
+}
+body.docketMode #docket>.deliveryModuleCard{
+  display:flex!important;
+  flex-direction:column!important;
+  min-height:0!important;
+  overflow:hidden!important;
+}
+body.docketMode .deliveryModuleHead{
+  flex:0 0 auto!important;
+  position:relative!important;
+  z-index:6!important;
+}
+body.docketMode #deliveryArchivePane{
+  display:flex!important;
+  flex:1 1 0!important;
+  min-height:0!important;
+  overflow:hidden!important;
+}
+body.docketMode #docketArchive{
+  display:flex!important;
+  flex-direction:column!important;
+  flex:1 1 0!important;
+  min-height:0!important;
+  overflow:hidden!important;
+}
+body.docketMode .docketSelectorList{
+  flex:0 0 auto!important;
+  overflow:visible!important;
+}
+body.docketMode .docketActivePanel{
+  display:flex!important;
+  flex-direction:column!important;
+  flex:1 1 0!important;
+  height:auto!important;
+  min-height:0!important;
+  max-height:none!important;
+  overflow:hidden!important;
+}
+body.docketMode .docketActiveScroll{
+  display:block!important;
+  flex:1 1 0!important;
+  height:auto!important;
+  min-height:0!important;
+  max-height:none!important;
+  overflow-y:scroll!important;
+  overflow-x:hidden!important;
+  -webkit-overflow-scrolling:touch!important;
+  touch-action:pan-y!important;
+  overscroll-behavior-y:contain!important;
+  padding-bottom:18px!important;
+}
+body.docketMode .docketActiveScroll>.docket{
+  min-height:min-content!important;
+  overflow:visible!important;
+}
+.deliveryArchiveHome{display:inline-flex}
+body.deliveryMode .deliveryArchiveHome{display:none!important}
+body.docketMode .deliveryModuleHeadActions{
+  display:flex!important;
+  align-items:center!important;
+  justify-content:flex-end!important;
+  gap:6px!important;
+  flex-wrap:wrap!important;
+}
+body.docketMode .deliveryModuleHeadActions .btn{
+  min-height:38px!important;
+  padding:7px 10px!important;
+  font-size:12px!important;
+}
+@media(max-width:430px){
+  body.docketMode .deliveryModuleHead{
+    align-items:flex-start!important;
+  }
+  body.docketMode .deliveryModuleHeadActions{
+    max-width:58%!important;
+  }
+  body.docketMode .deliveryModuleHeadActions .btn{
+    min-height:35px!important;
+    padding:6px 8px!important;
+    font-size:11px!important;
+  }
+}
+
 </style>
 
 <style id="v01046-fixed-delivery-controls">
@@ -4492,7 +4580,7 @@ window.addEventListener("error",e=>{const b=document.getElementById("runtimeErro
       <button class="heroHomeHotspot noPrint" type="button" aria-label="Return to Dashboard" title="Dashboard" onclick="returnToDashboardFromHeader()"></button>
     </div>
     <div class="heroActions noPrint">
-      <span class="app-version">v0.10.98 RC</span>
+      <span class="app-version">v0.10.99 TEST</span>
       <button class="heroMenuButton" id="heroMenuButton" type="button" aria-expanded="false">Menu</button>
     </div>
   </div>
@@ -4675,7 +4763,7 @@ window.addEventListener("error",e=>{const b=document.getElementById("runtimeErro
     <div class="card deliveryModuleCard">
       <div class="deliveryModuleHead">
         <div><h2 style="margin:0">Delivery dockets</h2><div class="small">Create a new delivery or open a saved docket.</div></div>
-        <div class="deliveryModuleHeadActions"><button class="btn alt deliveryModuleBack" id="deliveryModuleBack" type="button" onclick="openDeliveryArchive()">← Docket history</button><button class="btn gold deliveryModuleNew" type="button" onclick="openDeliveryCreate()">+ New Delivery</button></div>
+        <div class="deliveryModuleHeadActions"><button class="btn alt deliveryArchiveHome" id="deliveryArchiveHome" type="button" onclick="returnToDashboardFromHeader()">← Home</button><button class="btn alt deliveryModuleBack" id="deliveryModuleBack" type="button" onclick="openDeliveryArchive()">← Docket history</button><button class="btn gold deliveryModuleNew" type="button" onclick="openDeliveryCreate()">+ New Delivery</button></div>
       </div>
       <div id="deliveryArchivePane">
         <div id="docketArchive"></div>
@@ -5182,7 +5270,7 @@ if(!Array.isArray(db.docketAudit)) db.docketAudit=[];
 if(!Array.isArray(db.invoices)) db.invoices=[];
 if(!Array.isArray(db.adjustments)) db.adjustments=[];
 
-// v0.10.98 RC handoff sanitation:
+// v0.10.99 TEST handoff sanitation:
 // remove development-only cross-device test markers from real app data.
 // This does not alter products, quantities, delivery status, notes, invoices,
 // Sunday reports, mappings, prices, dates or audit history.
@@ -6461,7 +6549,16 @@ window.selectDocketArchive=id=>{
  const box=document.getElementById("docketArchive");
  activeDocketArchiveId=(activeDocketArchiveId===id)?null:id;
  renderDocketArchive(activeDocketArchiveId===null?null:activeDocketArchiveId);
- if(box){requestAnimationFrame(()=>{const panel=box.querySelector('.docketActivePanel');if(panel)panel.scrollIntoView({block:'nearest'});});}
+ // v0.10.99: never scroll the whole Delivery module when a docket opens.
+ // The docket body owns its own scroll viewport; the module header/navigation stays visible.
+ if(box){
+   box.scrollTop=0;
+   requestAnimationFrame(()=>{
+     box.scrollTop=0;
+     const scroller=box.querySelector('.docketActiveScroll');
+     if(scroller)scroller.scrollTop=0;
+   });
+ }
 };
 function renderDocket(d){ renderDocketArchive(d?.id); }
 window.editDocket=id=>{
@@ -7233,7 +7330,7 @@ function buildFullBackupPayload(kind="SUPPORT",note=""){
   return {
     magicDragonBackup:true,
     app:"Magic Dragon Pin",
-    appVersion:"0.10.98",
+    appVersion:"0.10.99",
     backupKind:String(kind||"SUPPORT").toUpperCase(),
     createdAt:new Date().toISOString(),
     note:String(note||""),
@@ -10626,6 +10723,8 @@ function setDeliveryView(mode){
   if(create)create.style.display=isCreate?"block":"none";
   const backButton=document.getElementById("deliveryModuleBack");
   if(backButton)backButton.style.display=isCreate?"inline-flex":"none";
+  const archiveHome=document.getElementById("deliveryArchiveHome");
+  if(archiveHome)archiveHome.style.display=isCreate?"none":"inline-flex";
 
   // Create and Archive are deliberately mutually exclusive.
   document.body.classList.toggle("deliveryMode",isCreate);
@@ -10741,7 +10840,7 @@ function saveCloudTestMarker(){
  cloudStatus("Local TEST change saved — ready to upload when cloud is current.","info");
  const metaRev=cloudNumStorage(MD_CLOUD_SEEN_REV_KEY),base=cloudNumStorage(MD_CLOUD_BASE_REV_KEY);
  if(metaRev&&base===metaRev){
-   const meta={revision:metaRev,updated_by_device:"cloud",app_version:"0.10.98"};
+   const meta={revision:metaRev,updated_by_device:"cloud",app_version:"0.10.99"};
    const cloud=cloudEl("cloudOverviewCloud"),baseEl=cloudEl("cloudOverviewBase"),stateEl=cloudEl("cloudOverviewState"),wrap=cloudEl("cloudOverview");
    if(cloud)cloud.textContent=`Rev ${metaRev}`;if(baseEl)baseEl.textContent=`Base rev ${base}`;if(stateEl)stateEl.textContent="LOCAL CHANGE — UPLOAD";
    if(wrap){[...wrap.querySelectorAll(".cloudOverviewCard")].forEach(x=>{x.classList.remove("good","bad","warn");x.classList.add("warn")})}
@@ -10883,7 +10982,7 @@ async function cloudPush(){
   const hash=await sha256Text(stableJson(pkg)),fingerprint=await cloudStateFingerprint(pkg),revision=currentRevision+1;
   const c=pkg.counts;
   if(!confirm(`Upload this device to TEST Cloud?\n\nRevision ${revision}\n${c.products} products · ${c.aliases} aliases · ${c.sundayReports} Sunday reports · ${c.deliveries} deliveries · ${c.invoices} invoices\n\nTEST workspace only.`)){cloudStatus("Upload cancelled — nothing changed.","info");return}
-  const row={workspace_id:MD_TEST_WORKSPACE,revision,app_version:"0.10.98",payload:pkg,payload_hash:hash,updated_by:mdCloudSession.user?.id||null,updated_by_device:label,updated_at:new Date().toISOString()};
+  const row={workspace_id:MD_TEST_WORKSPACE,revision,app_version:"0.10.99",payload:pkg,payload_hash:hash,updated_by:mdCloudSession.user?.id||null,updated_by_device:label,updated_at:new Date().toISOString()};
   let saved;
   if(currentRevision===0){
    saved=await mdCloudFetch(`/rest/v1/${MD_TEST_STATE_TABLE}`,{method:"POST",body:row,headers:{Prefer:"return=representation"}});
@@ -10971,7 +11070,7 @@ function validateBackupPackage(pkg){
 }
 async function createCompleteTransferPackage(kind="FULL_TRANSFER"){
  const sourceFiles=await exportArchivedSourceFiles(),counts=backupCounts();
- return {format:BACKUP_FORMAT,schema:BACKUP_SCHEMA,appVersion:"0.10.98",backupKind:kind,createdAt:new Date().toISOString(),counts,sourceFilesCount:sourceFiles.length,data:JSON.parse(JSON.stringify(db)),sourceFiles};
+ return {format:BACKUP_FORMAT,schema:BACKUP_SCHEMA,appVersion:"0.10.99",backupKind:kind,createdAt:new Date().toISOString(),counts,sourceFilesCount:sourceFiles.length,data:JSON.parse(JSON.stringify(db)),sourceFiles};
 }
 async function savePackageFile(pkg,prefix="Magic-Pin-Data"){
  const blob=new Blob([JSON.stringify(pkg)],{type:"application/json"});
@@ -11117,7 +11216,7 @@ function deliveryRecordStatus(msg,state="info"){
  el.textContent=msg;el.classList.remove("good","warn","bad");if(state==="good")el.classList.add("good");else if(state==="warn")el.classList.add("warn");else if(state==="bad")el.classList.add("bad");
 }
 function eligibleDeliveryRecords(){
- // v0.10.98: untouched auto-generated Sunday suggestions stay local-only,
+ // v0.10.99: untouched auto-generated Sunday suggestions stay local-only,
  // but once Pin edits one or marks it delivered it becomes a real docket
  // and must participate in record-level cloud sync.
  return [...(db.deliveries||[])].filter(d=>{
@@ -11254,7 +11353,7 @@ window.resolveDeliveryConflictKeepLocal=async id=>{
  try{
   const label=(cloudEl("cloudDeviceLabel")?.value||localStorage.getItem("mdpin-cloud-device")||detectCloudDeviceLabel()).trim()||"Test device";
   const fp=await deliveryPayloadFingerprint(local),next=Number(remote.revision)+1;
-  const row={revision:next,payload:JSON.parse(JSON.stringify(local)),payload_hash:fp,updated_by:mdCloudSession.user?.id||null,updated_by_device:label,updated_at:new Date().toISOString(),app_version:"0.10.98",deleted:false};
+  const row={revision:next,payload:JSON.parse(JSON.stringify(local)),payload_hash:fp,updated_by:mdCloudSession.user?.id||null,updated_by_device:label,updated_at:new Date().toISOString(),app_version:"0.10.99",deleted:false};
   const saved=await mdCloudFetch(`/rest/v1/${MD_TEST_DELIVERY_TABLE}?workspace_id=eq.${encodeURIComponent(MD_TEST_WORKSPACE)}&record_id=eq.${encodeURIComponent(id)}&revision=eq.${remote.revision}`,{method:"PATCH",body:row,headers:{Prefer:"return=representation"}});
   const written=Array.isArray(saved)&&saved.length?saved[0]:null;if(!written)throw new Error("Cloud changed again while you were reviewing. Check / Pull again.");
   const meta=deliverySyncMeta();meta[id]={revision:next,fingerprint:fp};saveDeliverySyncMeta(meta);deliveryConflictCache=deliveryConflictCache.filter(x=>x.id!==id);renderDeliveryConflictPanel();renderCloudDeliveryRecordUi();deliveryRecordStatus(`✓ Conflict resolved — this device is now cloud revision ${next}.`,"good");
@@ -11270,7 +11369,7 @@ async function cloudSyncDeliveryChanges(){
   for(const d of localRows){
    const id=d.id,localFp=await deliveryPayloadFingerprint(d),remote=remoteMap[id],base=meta[id]||null;
    if(!remote){
-    const row={workspace_id:MD_TEST_WORKSPACE,record_id:id,revision:1,payload:JSON.parse(JSON.stringify(d)),payload_hash:localFp,updated_by:mdCloudSession.user?.id||null,updated_by_device:label,updated_at:new Date().toISOString(),app_version:"0.10.98",deleted:false};
+    const row={workspace_id:MD_TEST_WORKSPACE,record_id:id,revision:1,payload:JSON.parse(JSON.stringify(d)),payload_hash:localFp,updated_by:mdCloudSession.user?.id||null,updated_by_device:label,updated_at:new Date().toISOString(),app_version:"0.10.99",deleted:false};
     const saved=await mdCloudFetch(`/rest/v1/${MD_TEST_DELIVERY_TABLE}`,{method:"POST",body:row,headers:{Prefer:"return=representation"}});const written=Array.isArray(saved)&&saved.length?saved[0]:null;
     if(!written){conflicts.push({id,reason:"cloud did not confirm new record",local:d,remote:null});continue;}meta[id]={revision:1,fingerprint:localFp};added++;continue;
    }
@@ -11279,7 +11378,7 @@ async function cloudSyncDeliveryChanges(){
    if(!base){conflicts.push({id,reason:"cloud copy already exists — pull first",local:d,remote});continue;}
    if(Number(base.revision)!==Number(remote.revision)){conflicts.push({id,reason:"cloud changed on another device — pull first",local:d,remote});continue;}
    if(localFp===base.fingerprint){conflicts.push({id,reason:"cloud has a newer change — pull first",local:d,remote});continue;}
-   const next=Number(remote.revision)+1,row={revision:next,payload:JSON.parse(JSON.stringify(d)),payload_hash:localFp,updated_by:mdCloudSession.user?.id||null,updated_by_device:label,updated_at:new Date().toISOString(),app_version:"0.10.98",deleted:false};
+   const next=Number(remote.revision)+1,row={revision:next,payload:JSON.parse(JSON.stringify(d)),payload_hash:localFp,updated_by:mdCloudSession.user?.id||null,updated_by_device:label,updated_at:new Date().toISOString(),app_version:"0.10.99",deleted:false};
    const saved=await mdCloudFetch(`/rest/v1/${MD_TEST_DELIVERY_TABLE}?workspace_id=eq.${encodeURIComponent(MD_TEST_WORKSPACE)}&record_id=eq.${encodeURIComponent(id)}&revision=eq.${remote.revision}`,{method:"PATCH",body:row,headers:{Prefer:"return=representation"}});const written=Array.isArray(saved)&&saved.length?saved[0]:null;
    if(!written){conflicts.push({id,reason:"revision conflict",local:d,remote});continue;}meta[id]={revision:next,fingerprint:localFp};updated++;
   }
@@ -11304,12 +11403,12 @@ async function cloudPushSelectedDeliveryRecord(){
      if(!base||Number(base.revision)!==Number(remote.revision)){
        return deliveryRecordStatus(`Upload blocked — ${id} is cloud revision ${remote.revision}${remote.updated_by_device?` from ${remote.updated_by_device}`:""}. Pull delivery records first.`,"warn");
      }
-     const next=Number(remote.revision)+1;const row={revision:next,payload:JSON.parse(JSON.stringify(d)),payload_hash:localFp,updated_by:mdCloudSession.user?.id||null,updated_by_device:label,updated_at:new Date().toISOString(),app_version:"0.10.98",deleted:false};
+     const next=Number(remote.revision)+1;const row={revision:next,payload:JSON.parse(JSON.stringify(d)),payload_hash:localFp,updated_by:mdCloudSession.user?.id||null,updated_by_device:label,updated_at:new Date().toISOString(),app_version:"0.10.99",deleted:false};
      const saved=await mdCloudFetch(`/rest/v1/${MD_TEST_DELIVERY_TABLE}?workspace_id=eq.${encodeURIComponent(MD_TEST_WORKSPACE)}&record_id=eq.${encodeURIComponent(id)}&revision=eq.${remote.revision}`,{method:"PATCH",body:row,headers:{Prefer:"return=representation"}});
      const written=Array.isArray(saved)&&saved.length?saved[0]:null;if(!written)throw new Error("Record revision conflict — another device changed this docket first.");
      meta[id]={revision:next,fingerprint:localFp};saveDeliverySyncMeta(meta);deliveryRecordStatus(`✓ Docket ${id} uploaded as record revision ${next} from ${label}.`,"good");
    }else{
-     const row={workspace_id:MD_TEST_WORKSPACE,record_id:id,revision:1,payload:JSON.parse(JSON.stringify(d)),payload_hash:localFp,updated_by:mdCloudSession.user?.id||null,updated_by_device:label,updated_at:new Date().toISOString(),app_version:"0.10.98",deleted:false};
+     const row={workspace_id:MD_TEST_WORKSPACE,record_id:id,revision:1,payload:JSON.parse(JSON.stringify(d)),payload_hash:localFp,updated_by:mdCloudSession.user?.id||null,updated_by_device:label,updated_at:new Date().toISOString(),app_version:"0.10.99",deleted:false};
      const saved=await mdCloudFetch(`/rest/v1/${MD_TEST_DELIVERY_TABLE}`,{method:"POST",body:row,headers:{Prefer:"return=representation"}});
      const written=Array.isArray(saved)&&saved.length?saved[0]:null;if(!written)throw new Error("The cloud did not confirm the new delivery record.");
      meta[id]={revision:1,fingerprint:localFp};saveDeliverySyncMeta(meta);deliveryRecordStatus(`✓ Docket ${id} uploaded as new record revision 1 from ${label}.`,"good");
