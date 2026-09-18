@@ -1,5 +1,5 @@
-WHAT CHANGED IN v0.10.119 TEST
-- TEST-only delivery copies are excluded from real Sunday and weekly stock arithmetic, without deleting any records.
-- Genuine dockets modified by an older conflict test use the preserved pre-test snapshot when available.
-- The forensic card explains excluded TEST units and the remaining real difference.
-- Every TEST docket remains visible and is labelled in the direct source choices.
+WHAT CHANGED IN v0.10.120 TEST
+- A Sunday top-up derived from a report never counts as a delivery into that same report, even if its saved date is earlier.
+- Existing dockets and completed invoices are not edited; any misdated delivered top-up remains visibly flagged for review.
+- Future marking of generated top-ups requires an actual delivery date after their source Sunday report.
+- TEST-copy exclusions and original docket snapshot handling from v0.10.119 remain.

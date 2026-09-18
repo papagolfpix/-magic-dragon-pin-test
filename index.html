@@ -4713,7 +4713,7 @@ window.addEventListener("error",e=>{const b=document.getElementById("runtimeErro
       <button class="heroHomeHotspot noPrint" type="button" aria-label="Return to Dashboard" title="Dashboard" onclick="returnToDashboardFromHeader()"></button>
     </div>
     <div class="heroActions noPrint">
-      <span class="app-version">v0.10.119 TEST</span>
+      <span class="app-version">v0.10.120 TEST</span>
       <button class="heroMenuButton" id="heroMenuButton" type="button" aria-expanded="false">Menu</button>
     </div>
   </div>
@@ -6766,7 +6766,7 @@ function openDeliveredDatePicker(id){
  const input=document.getElementById('deliveredDatePicker');setTimeout(()=>{try{input?.focus();if(input?.showPicker)input.showPicker();}catch(e){}},80);
 }
 function closeDeliveredDatePicker(){document.getElementById('deliveryDateOverlay')?.remove();}
-function confirmDeliveredDatePicker(id){const d=db.deliveries.find(x=>x.id===id),input=document.getElementById('deliveredDatePicker');if(!d||!input)return;const date=input.value;if(!/^\d{4}-\d{2}-\d{2}$/.test(date))return alert('Choose a delivery date.');const previousDate=d.date||'';d.deliveredAt=date+'T12:00:00';d.date=date;db.docketAudit.push({id:'DA'+Date.now(),action:'marked-delivered',at:new Date().toISOString(),docketId:d.id,date,previousDate,sourceSundayDate:d.sourceSundayDate||'',branch:d.branch||''});closeDeliveredDatePicker();save();renderDocketArchive(id);renderHistory();renderAudit();renderMetrics();}
+function confirmDeliveredDatePicker(id){const d=db.deliveries.find(x=>x.id===id),input=document.getElementById('deliveredDatePicker');if(!d||!input)return;const date=input.value;if(!/^\d{4}-\d{2}-\d{2}$/.test(date))return alert('Choose a delivery date.');if(d.generatedFromSundaySuggestion&&d.sourceSundayDate&&date<=d.sourceSundayDate)return alert(`This top-up was calculated from the ${d.sourceSundayDate} Sunday closing stock. Choose the actual delivery date after that report, or leave it Not Delivered.`);const previousDate=d.date||'';d.deliveredAt=date+'T12:00:00';d.date=date;db.docketAudit.push({id:'DA'+Date.now(),action:'marked-delivered',at:new Date().toISOString(),docketId:d.id,date,previousDate,sourceSundayDate:d.sourceSundayDate||'',branch:d.branch||''});closeDeliveredDatePicker();save();renderDocketArchive(id);renderHistory();renderAudit();renderMetrics();}
 window.openDeliveredDatePicker=openDeliveredDatePicker;window.closeDeliveredDatePicker=closeDeliveredDatePicker;window.confirmDeliveredDatePicker=confirmDeliveredDatePicker;
 
 window.toggleDocketDelivered=id=>{
@@ -6939,7 +6939,7 @@ window.printDocket=id=>{
 function deliveriesSinceLastWeek(branch,date){
  const previous=db.weeks.filter(w=>w.branch===branch && w.date<date).sort((a,b)=>a.date.localeCompare(b.date)).at(-1);
  const start=previous?.date||"0000-00-00";
- const map={}; db.deliveries.map(businessDeliverySource).filter(d=>d&&d.branch===branch && !!d.deliveredAt && d.date>start && d.date<=date).forEach(d=>d.lines.forEach(l=>map[l.productId]=(map[l.productId]||0)+l.qty));
+ const map={}; db.deliveries.map(businessDeliverySource).filter(d=>d&&!deliveryFromReportBeingChecked(d,date)&&d.branch===branch && !!d.deliveredAt && d.date>start && d.date<=date).forEach(d=>d.lines.forEach(l=>map[l.productId]=(map[l.productId]||0)+l.qty));
  return map;
 }
 function loadWeek(){
@@ -7484,7 +7484,7 @@ function buildFullBackupPayload(kind="SUPPORT",note=""){
   return {
     magicDragonBackup:true,
     app:"Magic Dragon Pin",
-    appVersion:"0.10.119",
+    appVersion:"0.10.120",
     backupKind:String(kind||"SUPPORT").toUpperCase(),
     createdAt:new Date().toISOString(),
     note:String(note||""),
@@ -8344,10 +8344,15 @@ function businessDeliverySource(d){
   }
   return d;
 }
+// A top-up calculated from Sunday's closing stock is for a subsequent period.
+// A stale/incorrect delivered date cannot feed that top-up back into its source report.
+function deliveryFromReportBeingChecked(d,reportDate){
+  return !!(d?.generatedFromSundaySuggestion&&d.sourceSundayDate&&String(d.sourceSundayDate)>=String(reportDate||""));
+}
 function appDeliveryQty(branch,startDate,endDate,productId){
   if(!productId) return null;
   return db.deliveries
-    .map(businessDeliverySource).filter(d=>d&&d.branch===branch && !!d.deliveredAt && d.date && d.date>startDate && d.date<=endDate)
+    .map(businessDeliverySource).filter(d=>d&&!deliveryFromReportBeingChecked(d,endDate)&&d.branch===branch && !!d.deliveredAt && d.date && d.date>startDate && d.date<=endDate)
     .reduce((sum,d)=>sum+(d.lines||[])
       .filter(l=>l.productId===productId)
       .reduce((a,l)=>a+(Number(l.qty)||0),0),0);
@@ -9988,6 +9993,7 @@ function wizardOpenSundayReport(id){
 function wizardForensicFinding(report,rec,detail,candidates){
   const f=detail.flow||{},shop=Number(f.shopDeliveries),saved=Number(f.ledgerDeliveries);
   const excluded=candidates.filter(x=>businessDeliverySource(x.d)===null);
+  const sourceTopups=candidates.filter(x=>businessDeliverySource(x.d)!==null&&deliveryFromReportBeingChecked(x.d,report.date));
   const restored=candidates.filter(x=>x.d.testConflictSeed&&businessDeliverySource(x.d)!==null&&businessDeliverySource(x.d)!==x.d);
   const unknownTest=candidates.filter(x=>x.d.testConflictSeed&&businessDeliverySource(x.d)===x.d);
   const inferred=candidates.filter(x=>x.d.deliveryStatusInferred);
@@ -9998,10 +10004,10 @@ function wizardForensicFinding(report,rec,detail,candidates){
   const fmt=n=>String(Number(n));
   let conclusion='The two records disagree. The app cannot establish which quantity was physically delivered from saved figures alone.';
   let evidence=`The shop says ${fmt(shop)} delivered; delivered dockets dated this week total ${fmt(saved)}.`;
-  if(excluded.length||restored.length){
-    const units=excluded.reduce((n,x)=>n+x.qty,0);
-    conclusion=`TEST records separated: ${excluded.length} TEST docket${excluded.length===1?' is':'s are'} excluded (${fmt(units)} units). ${restored.length?`${restored.length} real docket${restored.length===1?' was':'s were'} restored to its pre-test figures. `:''}The remaining real delivered-docket total is ${fmt(saved)}; the shop reports ${fmt(shop)}.`;
-    evidence=shopMath&&!actualMath?`The shop’s stock figures balance with ${fmt(shop)} deliveries (${fmt(open)} opening − ${fmt(sold)} sold = ${fmt(close)} closing when take-out is zero). The remaining real docket still needs checking.`:'The TEST copy does not affect real stock reconciliation. Review any remaining real docket difference.';
+  if(excluded.length||sourceTopups.length||restored.length){
+    const testUnits=excluded.reduce((n,x)=>n+x.qty,0),topupUnits=sourceTopups.reduce((n,x)=>n+x.qty,0);
+    conclusion=`${excluded.length?`${excluded.length} TEST copy excluded (${fmt(testUnits)} units). `:''}${sourceTopups.length?`${sourceTopups.length} suggested top-up from this Sunday report excluded (${fmt(topupUnits)} units): it was calculated from this report’s closing stock, so it cannot also be a delivery into the same report. `:''}${restored.length?`${restored.length} original docket snapshot${restored.length===1?'':'s'} restored. `:''}Counted deliveries for this week: ${fmt(saved)}; shop report: ${fmt(shop)}.`;
+    evidence=sourceTopups.length?'The suggestion is still saved and marked Delivered. Its physical delivery date or status needs review; the completed invoice is untouched.':(shopMath&&!actualMath?'The shop stock figures balance with its delivery quantity. Check the remaining real docket.':'TEST copies do not affect business reconciliation.');
   }else if(shopMath&&!actualMath){
     conclusion=`The shop’s stock figures support ${fmt(shop)} deliveries: ${fmt(open)} opening + ${fmt(shop)} delivered − ${fmt(take)} taken out − ${fmt(sold)} sold = ${fmt(close)} closing. Counting the saved dockets would give ${fmt(open+saved-take-sold)} closing instead.`;
     evidence='The saved dockets need a date, status, branch and source check. This arithmetic does not prove whether stock was physically received.';
@@ -10137,7 +10143,11 @@ function renderStockWizard(items){
       if(exact.length)issues=exact;
     }
     if(rec.status!=="ok")allGreen=false;
-    if(rec.status==="ok")return `<div class="wizardBranch"><div class="wizardBranchHead"><b>${escapeHtml(r.branch)}</b><span class="reconStatus ok">RECONCILED</span></div><div class="wizardBranchBody"><div class="wizardGood">✓ All ${rec.totalRows} products reconcile with the prior week.</div></div></div>`;
+    if(rec.status==="ok"){
+      const excludedTopups=(db.deliveries||[]).filter(d=>d.branch===r.branch&&!!d.deliveredAt&&d.date>rec.previousDate&&d.date<=r.date&&businessDeliverySource(d)!==null&&deliveryFromReportBeingChecked(d,r.date));
+      const note=excludedTopups.length?`<div class="wizardForensic"><b>Suggested top-up date needs review</b><div>${excludedTopups.length} saved top-up docket${excludedTopups.length===1?' is':'s are'} marked Delivered in the period used to calculate it. ${escapeHtml(r.date)} stock checks exclude those suggested quantities. The completed invoice and docket records are unchanged.</div><div class="wizardActions">${excludedTopups.map(d=>`<button class="btn" type="button" onclick='wizardOpenDeliveryDocket(${JSON.stringify(String(d.id))})'>Review ${escapeHtml(d.date)}</button>`).join('')}</div></div>`:'';
+      return `<div class="wizardBranch"><div class="wizardBranchHead"><b>${escapeHtml(r.branch)}</b><span class="reconStatus ok">RECONCILED</span></div><div class="wizardBranchBody"><div class="wizardGood">✓ All ${rec.totalRows} products reconcile with the prior week.</div>${note}</div></div>`;
+    }
     const visible=issues.slice(0,12).map(d=>{
       const reason=(d.issues||[])[0]?.msg||"Review this product.";
       const action=d.flags?.rowHasDeliveryIssue?['delivery','Open Delivery Dockets']:d.flags?.rowHasMapping?['mapping','Fix Product Mapping']:d.flags?.rowHasStockError?['import','Open Sunday Report']:['import','Open Sunday Report'];
@@ -10153,7 +10163,7 @@ function renderStockWizard(items){
       if(d.flags?.rowHasDeliveryIssue){
         const candidates=wizardMatchingDockets(r.branch,rec.previousDate,r.date,d.productId||d.flow?.productId||canonicalProductMatchRow((r.rows||[]).find(x=>x.product===d.product)||{}).product?.id);
         finding=wizardForensicFinding(r,rec,d,candidates);
-        const docketButtons=candidates.map(({d:source,qty})=>`<button class="btn ${businessDeliverySource(source)===null?'alt':''}" type="button" onclick='wizardOpenDeliveryDocket(${JSON.stringify(String(source.id))})'>${businessDeliverySource(source)===null?'Excluded TEST · ':''}Docket ${escapeHtml(source.date)} · ${escapeHtml(String(qty))}</button>`).join('');
+        const docketButtons=candidates.map(({d:source,qty})=>`<button class="btn ${businessDeliverySource(source)===null?'alt':''}" type="button" onclick='wizardOpenDeliveryDocket(${JSON.stringify(String(source.id))})'>${businessDeliverySource(source)===null?'Excluded TEST · ':deliveryFromReportBeingChecked(source,r.date)?'Excluded source top-up · ':''}Docket ${escapeHtml(source.date)} · ${escapeHtml(String(qty))}</button>`).join('');
         actionButtons=`<div class="wizardSourceChoice"><b>1. Check saved delivery${candidates.length===1?'':' dockets'}</b><div class="wizardMinimal">${candidates.length?`${candidates.length} matching delivered docket${candidates.length===1?'':'s'} for this week.`:'No matching delivered docket found; review the archive.'}</div><div class="wizardActions">${docketButtons||`<button class="btn" type="button" onclick="wizardAction('delivery')">Open Delivery Dockets</button>`}</div></div><div class="wizardSourceChoice"><b>2. Check the shop Sunday report</b><div class="wizardMinimal">Verify the delivery column against the shop’s original workbook.</div><div class="wizardActions"><button class="btn" type="button" onclick='wizardOpenSundayReport(${JSON.stringify(String(r.id))})'>Open ${escapeHtml(displayBranchName(r.branch))} · ${escapeHtml(r.date)}</button></div></div>`;
       }
       return `<details class="wizardIssue"><summary><div><div class="wizardIssueTitle">${escapeHtml(d.product)}</div><div class="wizardIssueReason">${escapeHtml(reason)}</div></div><span class="wizardIssueChevron">⌄</span></summary>${finding}<div class="wizardEvidence">${evidence}</div><div class="wizardEvidenceNote">${escapeHtml(hint)}</div><div class="wizardActions wizardSourceActions">${actionButtons}</div></details>`;
@@ -11611,7 +11621,7 @@ function validateBackupPackage(pkg){
 }
 async function createCompleteTransferPackage(kind="FULL_TRANSFER"){
  const sourceFiles=await exportArchivedSourceFiles(),counts=backupCounts();
- return {format:BACKUP_FORMAT,schema:BACKUP_SCHEMA,appVersion:"0.10.119",backupKind:kind,createdAt:new Date().toISOString(),counts,sourceFilesCount:sourceFiles.length,data:JSON.parse(JSON.stringify(db)),sourceFiles};
+ return {format:BACKUP_FORMAT,schema:BACKUP_SCHEMA,appVersion:"0.10.120",backupKind:kind,createdAt:new Date().toISOString(),counts,sourceFilesCount:sourceFiles.length,data:JSON.parse(JSON.stringify(db)),sourceFiles};
 }
 async function savePackageFile(pkg,prefix="Magic-Pin-Data"){
  const blob=new Blob([JSON.stringify(pkg)],{type:"application/json"});
