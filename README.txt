@@ -1,3 +1,27 @@
+MAGIC DRAGON PIN v0.10.98 — SUNDAY HANDOFF RELEASE CANDIDATE
+
+PURPOSE
+- Frozen Sunday-handoff candidate based directly on validated v0.10.97 TEST.
+- No new business feature has been added.
+- DEV/TEST Cloud Sync controls are hidden from the Pin handoff interface.
+- Development-only whole-snapshot and harmless cross-device markers are removed automatically on first run.
+- Normal Backup & Recovery remains available and is the supported Pin handoff/recovery path.
+
+VALIDATED BEFORE THIS CANDIDATE
+- Six real Sunday workbooks: 11 weekly blocks detected -> 7 unique branch/date reports.
+- Duplicate report protection and multi-week separation passed.
+- 13 Sep BM and Lamai linked to the immediately prior Sunday and fully reconciled.
+- Suggested branch dockets generated from Sunday stock.
+- Combined Suggested Delivery: 16 products / 107 units.
+- Combined packing PDF matched the calculation.
+- Suggested-docket Delivered date defaults to today, remains editable, and becomes the docket archive/sort date.
+- Delivery record cloud sync passed in both directions in the DEV/TEST workspace.
+- Cross-device conflict protection passed without silent overwrite.
+- Whole-app snapshot upload/preview/restore passed; Rev 7 restored and verified with a pre-import safety backup.
+
+IMPORTANT
+The proven cloud work remains a DEV/TEST Lego block. It is intentionally hidden in this Pin release candidate until a separate production cloud workspace is deliberately commissioned. Do not repurpose the DEV workspace as Pin's production cloud.
+
 MAGIC DRAGON PIN v0.10.97 — TEST
 
 WHAT CHANGED IN v0.10.97
