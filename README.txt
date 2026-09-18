@@ -1,3 +1,11 @@
+WHAT CHANGED IN v0.10.125 TEST
+
+- Release-candidate cleanup based on the validated v0.10.124 checkpoint.
+- Removed the dashboard-only “TEST ONLY · Create unpaid conflict test” control and its retired synthetic seed code.
+- On load, removes ONLY artifacts created by that helper (tagged test invoice/docket/correction/audit records such as MD-20260913-TEST); normal business records are not touched.
+- Preserves the validated v0.10.124 regression baseline: zero-difference correction closure, invoice/payment status, Sunday entry, docket status/actions, iPhone Qty keyboard behavior, compact Records lists, fixed docket action bar, and fully readable Retail/Amount headers.
+- This remains a TEST build. Production promotion still requires the final phone smoke test and creation of a separate -DEPLOY package.
+
 WHAT CHANGED IN v0.10.124 TEST
 
 - Fixed the expanded Delivery Docket table header on iPhone so Retail and Amount are fully readable instead of clipped.

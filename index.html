@@ -4735,7 +4735,7 @@ window.addEventListener("error",e=>{const b=document.getElementById("runtimeErro
       <button class="heroHomeHotspot noPrint" type="button" aria-label="Return to Dashboard" title="Dashboard" onclick="returnToDashboardFromHeader()"></button>
     </div>
     <div class="heroActions noPrint">
-      <span class="app-version">v0.10.124 TEST</span>
+      <span class="app-version">v0.10.125 TEST</span>
       <button class="heroMenuButton" id="heroMenuButton" type="button" aria-expanded="false">Menu</button>
     </div>
   </div>
@@ -4784,7 +4784,6 @@ window.addEventListener("error",e=>{const b=document.getElementById("runtimeErro
         </button>
       </div>
       <button class="pinAddProductQuick" type="button" onclick="openAddProductForm()">＋ Add Product</button>
-      <button class="btn alt noPrint" id="testConflictSeedButton" type="button" onclick="createUnpaidConflictTest()" style="width:100%;margin-top:6px;border-style:dashed">TEST ONLY · Create unpaid conflict test</button>
       <div id="dashboardBarcodeTask"></div>
       <div id="pinSuggestedDrafts" class="pinSuggestedDrafts" style="display:none"></div>
     </div>
@@ -5442,6 +5441,24 @@ if(!Array.isArray(db.adjustments)) db.adjustments=[];
       changed=true;
     }
   });
+  if(changed)localStorage.setItem("mdpin-db",JSON.stringify(db));
+})();
+
+// v0.10.125 TEST — release-candidate sanitation.
+// Remove ONLY synthetic records created by the retired unpaid-conflict test helper.
+// Normal dockets, Sunday reports, real invoices, payments, mappings and amounts are untouched.
+(function cleanupRetiredConflictTestArtifacts(){
+  const testInvoiceIds=new Set((db.invoices||[]).filter(i=>i&&(i.testOnlyConflictSeed===true||(/^INVTEST/.test(String(i.id||""))&&/-TEST$/i.test(String(i.number||""))))).map(i=>i.id));
+  const testDocketIds=new Set((db.deliveries||[]).filter(d=>d&&(d.testConflictSeed===true||/^DTESTCONFLICT/.test(String(d.id||"")))).map(d=>d.id));
+  let changed=false;
+  const filterAssign=(key,keep)=>{const before=Array.isArray(db[key])?db[key]:[];const after=before.filter(keep);if(after.length!==before.length){db[key]=after;changed=true;}};
+  filterAssign("invoices",i=>!testInvoiceIds.has(i?.id));
+  filterAssign("deliveries",d=>!testDocketIds.has(d?.id));
+  filterAssign("pendingCorrections",c=>!(c?.testOnlyConflictSeed===true||testInvoiceIds.has(c?.invoiceId)||testDocketIds.has(c?.docketId)));
+  filterAssign("adjustments",a=>!(testInvoiceIds.has(a?.oldInvoiceId)||testInvoiceIds.has(a?.newInvoiceId)));
+  filterAssign("docketAudit",a=>!(a?.testOnlyConflictSeed===true||testInvoiceIds.has(a?.affectedInvoiceId)||testDocketIds.has(a?.docketId)));
+  const resumeId=sessionStorage.getItem("mdpin-conflict-wizard-resume");
+  if(resumeId&&testInvoiceIds.has(resumeId))sessionStorage.removeItem("mdpin-conflict-wizard-resume");
   if(changed)localStorage.setItem("mdpin-db",JSON.stringify(db));
 })();
 function save(){localStorage.setItem("mdpin-db",JSON.stringify(db));renderAll()}
@@ -7506,7 +7523,7 @@ function buildFullBackupPayload(kind="SUPPORT",note=""){
   return {
     magicDragonBackup:true,
     app:"Magic Dragon Pin",
-    appVersion:"0.10.124",
+    appVersion:"0.10.125",
     backupKind:String(kind||"SUPPORT").toUpperCase(),
     createdAt:new Date().toISOString(),
     note:String(note||""),
@@ -10817,111 +10834,6 @@ window.saveInvoiceViewerPayment=saveInvoiceViewerPayment;
 
 
 
-/* v0.10.115 TEST — deterministic unpaid conflict seed for guided-wizard regression testing.
-   This helper is intentionally TEST-only. It creates an unpaid test invoice, ensures there
-   is a delivered docket inside that accounting cycle, applies one synthetic quantity edit,
-   records the same audit/correction structures used by normal editing, then opens the wizard. */
-window.createUnpaidConflictTest=()=>{
-  try{
-    ensureSundayArchive();
-    const reports=[...(db.sundayImports||[])].filter(r=>r&&r.date).sort((a,b)=>String(b.date).localeCompare(String(a.date)));
-    if(!reports.length)return alert("No Sunday report is available for the conflict test.");
-
-    // v0.10.115 TEST: seed only from a week that is already fully reconciled BEFORE
-    // we introduce the synthetic edit. Otherwise restoring the test quantity can never
-    // make Step 2 turn green, which makes the regression test misleading.
-    const candidateDates=[...new Set(reports.map(r=>String(r.date)))].sort((a,b)=>String(b).localeCompare(String(a)));
-    let reportDate="", base=null;
-    for(const d of candidateDates){
-      const state=currentWizardStateSafeForInvoice(d);
-      const invs=[...(db.invoices||[])].filter(i=>i&&i.reportDate===d&&!i.testOnlyConflictSeed).sort((a,b)=>Number(b.version||1)-Number(a.version||1));
-      if(state?.financialGreen&&invs.length){reportDate=d;base=invs[0];break;}
-    }
-    if(!reportDate||!base)return alert("No fully reconciled invoiced week is currently available for a clean conflict test. Resolve the existing Sunday discrepancies first, or restore a clean TEST backup.");
-    const weekReports=reports.filter(r=>String(r.date)===String(reportDate));
-
-    // TEST guard: never manufacture a second unresolved synthetic conflict.
-    // If one is already active, resume that exact workflow instead.
-    const activeTestCorrection=[...(db.pendingCorrections||[])].filter(c=>c?.testOnlyConflictSeed&&!['resolved','queued'].includes(c.status)).sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||'')))[0]||null;
-    if(activeTestCorrection){
-      const activeInv=(db.invoices||[]).find(i=>i.id===activeTestCorrection.invoiceId);
-      if(activeInv){
-        switchTab('home');
-        setTimeout(()=>openConflictResolutionWizard(activeInv.id),80);
-        return;
-      }
-    }
-
-    // No unresolved TEST conflict exists, so old resolved synthetic records can be replaced.
-    const oldTestIds=new Set((db.invoices||[]).filter(i=>i?.testOnlyConflictSeed).map(i=>i.id));
-    db.invoices=(db.invoices||[]).filter(i=>!i?.testOnlyConflictSeed);
-    db.pendingCorrections=(db.pendingCorrections||[]).filter(c=>!oldTestIds.has(c.invoiceId));
-    db.adjustments=(db.adjustments||[]).filter(a=>!oldTestIds.has(a.oldInvoiceId)&&!oldTestIds.has(a.newInvoiceId));
-
-    const wizardItems=wizardReportsForDate(reportDate);
-    const prevDates=wizardItems.map(x=>x?.rec?.previousDate).filter(Boolean).sort();
-    const prev=prevDates[0]||"";
-    const branches=new Set((base.branches||[]).map(b=>canonicalBranchName(b.branch)));
-
-    let docket=[...(db.deliveries||[])].filter(d=>d&&d.deliveredAt&&String(d.date||"")<=String(reportDate)&&(!prev||String(d.date||"")>prev)&&(!branches.size||branches.has(canonicalBranchName(d.branch||"")))&&(d.lines||[]).length)
-      .sort((a,b)=>Number(!!b.testOnlySuggestedCopy)-Number(!!a.testOnlySuggestedCopy)||String(b.updatedAt||b.editedAt||b.deliveredAt||"").localeCompare(String(a.updatedAt||a.editedAt||a.deliveredAt||"")))[0]||null;
-
-    if(!docket){
-      const report=weekReports[0];
-      if(!report)return alert("No Sunday report could be used to create a TEST docket.");
-      const bundle=sundaySuggestedBundle(report);
-      const lines=(bundle.lines||[]).map(l=>({...l}));
-      if(!lines.length)return alert("The Sunday report does not contain enough data to create the TEST conflict docket.");
-      const now=new Date().toISOString();
-      docket={id:"DTESTCONFLICT"+Date.now(),branch:canonicalBranchName(report.branch),date:reportDate,note:`TEST ONLY — conflict workflow seed for ${reportDate}`,lines,stockReviewLines:(bundle.reviews||[]).map(l=>({...l})),deliveredAt:now,lineChanges:[],generatedFromSundaySuggestion:true,sourceSundayDate:reportDate,suggestedRef:`TEST-CONFLICT-${String(reportDate).replace(/-/g,"")}`,suggestionMethod:"test-conflict-seed-v1",testOnlySuggestedCopy:true,testConflictSeed:true,userEditedSuggestedDraft:true,createdAt:now,updatedAt:now};
-      db.deliveries.push(docket);
-    }
-
-    const nowMs=Date.now();
-    const testId="INVTEST"+nowMs;
-    const maxVersion=(db.invoices||[]).filter(i=>i&&i.reportDate===reportDate).reduce((m,i)=>Math.max(m,Number(i.version||1)),0);
-    const testInvoice=JSON.parse(JSON.stringify(base));
-    testInvoice.id=testId;
-    testInvoice.number=`${base.number||sundayInvoiceNumber(reportDate)}-TEST`;
-    testInvoice.version=maxVersion+1;
-    testInvoice.createdDate=today();
-    testInvoice.createdAt=new Date(nowMs).toISOString();
-    testInvoice.updatedAt=testInvoice.createdAt;
-    testInvoice.status="unpaid";
-    testInvoice.payment={status:"unpaid",date:null,method:null,methodOther:"",note:"TEST ONLY — unpaid conflict workflow",savedAt:testInvoice.createdAt};
-    testInvoice.sent={status:"not_sent",date:null,note:"TEST ONLY"};
-    testInvoice.supersededBy=null;
-    testInvoice.supersededAt=null;
-    testInvoice.testOnlyConflictSeed=true;
-    testInvoice.testConflictSourceInvoiceId=base.id;
-    db.invoices.push(testInvoice);
-
-    const before=JSON.parse(JSON.stringify(docket));
-    const first=(docket.lines||[]).find(l=>Number(l.qty||0)>0)||(docket.lines||[])[0];
-    if(!first)return alert("The TEST docket has no editable line.");
-    const oldQty=Number(first.qty||0);
-    first.qty=oldQty+1;
-    const editAt=new Date(nowMs+25).toISOString();
-    docket.editedAt=editAt;
-    docket.updatedAt=editAt;
-    docket.testConflictSeed=true;
-    const change={before:{...first,qty:oldQty},after:{...first,qty:oldQty+1},at:editAt};
-    docket.lineChanges=[...(Array.isArray(docket.lineChanges)?docket.lineChanges:[]),change];
-    if(!Array.isArray(docket.editAudit))docket.editAudit=[];
-    docket.editAudit.push({at:editAt,reason:"TEST ONLY — create guided conflict",device:"TEST helper",user:"",summary:[`Quantity: ${deliveryLineName(first)} ${oldQty} → ${oldQty+1}`]});
-    db.docketAudit=db.docketAudit||[];
-    db.docketAudit.push({id:"DATEST"+(nowMs+25),action:"edited",at:editAt,docketId:docket.id,date:docket.date||reportDate,branch:docket.branch||"",note:docket.note||"",lines:(before.lines||[]).map(l=>({...l})),beforeSnapshot:before,resolutionChoice:null,affectedInvoiceId:testId,testOnlyConflictSeed:true,changes:[{before:{...change.before},after:{...change.after}}]});
-
-    db.pendingCorrections=db.pendingCorrections||[];
-    db.pendingCorrections.push({id:"CORTEST"+(nowMs+30),status:"pending",docketId:docket.id,invoiceId:testId,sourceDate:reportDate,choice:"",createdAt:new Date(nowMs+30).toISOString(),changes:[{before:{...change.before},after:{...change.after}}],message:"TEST ONLY — guided conflict waiting for review.",testOnlyConflictSeed:true});
-
-    localStorage.setItem("mdpin-db",JSON.stringify(db));
-    try{refreshReconciliationViews();}catch(e){console.warn("TEST conflict reconciliation refresh",e)}
-    renderAll();renderDashboardAlerts();renderHistory();
-    switchTab("home");
-    setTimeout(()=>openConflictResolutionWizard(testId),120);
-  }catch(e){console.error("TEST conflict seed failed",e);alert("Could not create the TEST conflict: "+(e?.message||e));}
-};
 
 let conflictWizardInvoiceId=null;
 const CONFLICT_WIZARD_RESUME_KEY="mdpin-conflict-wizard-resume";
@@ -11696,7 +11608,7 @@ function validateBackupPackage(pkg){
 }
 async function createCompleteTransferPackage(kind="FULL_TRANSFER"){
  const sourceFiles=await exportArchivedSourceFiles(),counts=backupCounts();
- return {format:BACKUP_FORMAT,schema:BACKUP_SCHEMA,appVersion:"0.10.124",backupKind:kind,createdAt:new Date().toISOString(),counts,sourceFilesCount:sourceFiles.length,data:JSON.parse(JSON.stringify(db)),sourceFiles};
+ return {format:BACKUP_FORMAT,schema:BACKUP_SCHEMA,appVersion:"0.10.125",backupKind:kind,createdAt:new Date().toISOString(),counts,sourceFilesCount:sourceFiles.length,data:JSON.parse(JSON.stringify(db)),sourceFiles};
 }
 async function savePackageFile(pkg,prefix="Magic-Pin-Data"){
  const blob=new Blob([JSON.stringify(pkg)],{type:"application/json"});
