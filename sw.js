@@ -1,4 +1,4 @@
-const CACHE_NAME = "magic-pin-v0.10.84-test";
+const CACHE_NAME = "magic-pin-v0.10.85-test";
 const APP_ASSETS = [
   "./",
   "./index.html",
@@ -28,7 +28,7 @@ self.addEventListener("activate", event => {
 self.addEventListener("fetch", event => {
   const reqUrl = new URL(event.request.url);
 
-  // v0.10.84: Never cache or serve stale cross-origin API/auth traffic.
+  // v0.10.85: Never cache or serve stale cross-origin API/auth traffic.
   // Supabase delivery sync must always hit the network.
   if (reqUrl.origin !== self.location.origin) {
     event.respondWith(fetch(event.request));
