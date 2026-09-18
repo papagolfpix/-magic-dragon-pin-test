@@ -4689,6 +4689,12 @@ body.deliveryMode:not(.deliveryEditMode).deliveryKeyboardOpen #deliveryCreatePan
   body.workflowMode #sundayWizard.active>.wizardHero{display:flex!important;flex-direction:column!important;height:100%!important;min-height:0!important;max-height:100%!important;overflow:hidden!important}
   body.workflowMode #wizardContent{flex:1 1 0!important;min-height:0!important;height:auto!important;overflow-y:auto!important;overflow-x:hidden!important;-webkit-overflow-scrolling:touch!important;touch-action:pan-y!important;overscroll-behavior-y:contain!important}
 }
+/* v0.10.117 TEST — direct, read-only source choices in reconciliation. */
+.wizardSourceActions{display:block!important}
+.wizardSourceChoice{border:1px solid #f2c6c6;border-radius:10px;background:#fff;padding:9px;margin-top:8px}
+.wizardSourceChoice>b{font-size:12px;color:#172033}
+.wizardSourceChoice .wizardActions{margin-top:5px}
+.wizardSourceChoice .btn{white-space:normal;text-align:left}
 </style>
 
 </head>
@@ -4704,7 +4710,7 @@ window.addEventListener("error",e=>{const b=document.getElementById("runtimeErro
       <button class="heroHomeHotspot noPrint" type="button" aria-label="Return to Dashboard" title="Dashboard" onclick="returnToDashboardFromHeader()"></button>
     </div>
     <div class="heroActions noPrint">
-      <span class="app-version">v0.10.116 TEST</span>
+      <span class="app-version">v0.10.117 TEST</span>
       <button class="heroMenuButton" id="heroMenuButton" type="button" aria-expanded="false">Menu</button>
     </div>
   </div>
@@ -7475,7 +7481,7 @@ function buildFullBackupPayload(kind="SUPPORT",note=""){
   return {
     magicDragonBackup:true,
     app:"Magic Dragon Pin",
-    appVersion:"0.10.116",
+    appVersion:"0.10.117",
     backupKind:String(kind||"SUPPORT").toUpperCase(),
     createdAt:new Date().toISOString(),
     note:String(note||""),
@@ -9953,6 +9959,21 @@ function wizardAction(type){
   else if(type==="mapping") switchTab("settings");
   else if(type==="weekly") switchTab("weekly");
 }
+// v0.10.117: source choices link to the exact records; neither changes business data.
+function wizardOpenDeliveryDocket(id){
+  document.body.classList.remove("workflowMode");
+  openDeliveryArchive(id);
+}
+function wizardOpenSundayReport(id){
+  document.body.classList.remove("workflowMode");
+  switchTab("import");
+  renderArchive(id);
+}
+function wizardMatchingDockets(branch,startDate,endDate,productId){
+  if(!productId)return [];
+  return (db.deliveries||[]).map(d=>({d,qty:(d.lines||[]).filter(l=>l.productId===productId).reduce((n,l)=>n+(Number(l.qty)||0),0)}))
+    .filter(({d,qty})=>d.branch===branch&&!!d.deliveredAt&&d.date&&d.date>startDate&&d.date<=endDate&&qty);
+}
 function wizardChooseExcel(){
   const input=document.getElementById("xlsxFiles");if(input)input.click();
 }
@@ -10076,11 +10097,17 @@ function renderStockWizard(items){
       const f=d.flow||{};
       const evidence=[['Prior close',f.previousClose],['This opening',f.sheetOpening],['Saved delivery',f.ledgerDeliveries],['Shop delivery',f.shopDeliveries],['Shop sold',f.sheetSold],['This close',f.sheetClosing]].map(([k,v])=>`<div class="wizardEvidenceCell"><div class="k">${k}</div><div class="v">${v==null?'—':escapeHtml(String(v))}</div></div>`).join('');
       let hint='Compare the figures below. The highlighted reason tells you which source needs correcting.';
-      if(d.flags?.rowHasDeliveryIssue)hint='The shop delivery quantity and Pin’s saved docket quantity differ. Open Delivery Dockets and correct the source docket if needed.';
+      if(d.flags?.rowHasDeliveryIssue)hint='Choose which source to check. These buttons open records; they do not alter quantities or delivery status.';
       else if(d.flags?.rowHasStockError)hint='The opening stock should equal the prior Sunday closing stock. Open the Sunday report and verify the shop figures.';
       else if(d.flags?.rowHasMapping)hint='This shop product name is not linked confidently to Pin’s master product. Fix the mapping once, then return here.';
       else if(d.flags?.rowHasHistoryPending)hint='The app cannot prove the prior-week stock chain for this product. Open the Sunday report to check its prior-week row.';
-      return `<details class="wizardIssue"><summary><div><div class="wizardIssueTitle">${escapeHtml(d.product)}</div><div class="wizardIssueReason">${escapeHtml(reason)}</div></div><span class="wizardIssueChevron">⌄</span></summary><div class="wizardEvidence">${evidence}</div><div class="wizardEvidenceNote">${escapeHtml(hint)}</div><div class="wizardActions"><button class="btn" onclick="event.preventDefault();event.stopPropagation();wizardAction('${action[0]}')">${action[1]}</button></div></details>`;
+      let actionButtons=`<button class="btn" onclick="event.preventDefault();event.stopPropagation();wizardAction('${action[0]}')">${action[1]}</button>`;
+      if(d.flags?.rowHasDeliveryIssue){
+        const candidates=wizardMatchingDockets(r.branch,rec.previousDate,r.date,d.productId||d.flow?.productId||canonicalProductMatchRow((r.rows||[]).find(x=>x.product===d.product)||{}).product?.id);
+        const docketButtons=candidates.map(({d:source,qty})=>`<button class="btn" type="button" onclick='wizardOpenDeliveryDocket(${JSON.stringify(String(source.id))})'>Docket ${escapeHtml(source.date)} · ${escapeHtml(String(qty))}</button>`).join('');
+        actionButtons=`<div class="wizardSourceChoice"><b>1. Check saved delivery${candidates.length===1?'':' dockets'}</b><div class="wizardMinimal">${candidates.length?`${candidates.length} matching delivered docket${candidates.length===1?'':'s'} for this week.`:'No matching delivered docket found; review the archive.'}</div><div class="wizardActions">${docketButtons||`<button class="btn" type="button" onclick="wizardAction('delivery')">Open Delivery Dockets</button>`}</div></div><div class="wizardSourceChoice"><b>2. Check the shop Sunday report</b><div class="wizardMinimal">Verify the delivery column against the shop’s original workbook.</div><div class="wizardActions"><button class="btn" type="button" onclick='wizardOpenSundayReport(${JSON.stringify(String(r.id))})'>Open ${escapeHtml(displayBranchName(r.branch))} · ${escapeHtml(r.date)}</button></div></div>`;
+      }
+      return `<details class="wizardIssue"><summary><div><div class="wizardIssueTitle">${escapeHtml(d.product)}</div><div class="wizardIssueReason">${escapeHtml(reason)}</div></div><span class="wizardIssueChevron">⌄</span></summary><div class="wizardEvidence">${evidence}</div><div class="wizardEvidenceNote">${escapeHtml(hint)}</div><div class="wizardActions wizardSourceActions">${actionButtons}</div></details>`;
     }).join("");
     return `<div class="wizardBranch"><div class="wizardBranchHead"><b>${escapeHtml(r.branch)}</b><span class="reconStatus bad">ACTION REQUIRED</span></div><div class="wizardBranchBody">${visible}${issues.length>12?`<div class="wizardMinimal">+ ${issues.length-12} more items. Resolve the first issues, then return here.</div>`:""}</div></div>`;
   }).join("");
@@ -11535,7 +11562,7 @@ function validateBackupPackage(pkg){
 }
 async function createCompleteTransferPackage(kind="FULL_TRANSFER"){
  const sourceFiles=await exportArchivedSourceFiles(),counts=backupCounts();
- return {format:BACKUP_FORMAT,schema:BACKUP_SCHEMA,appVersion:"0.10.116",backupKind:kind,createdAt:new Date().toISOString(),counts,sourceFilesCount:sourceFiles.length,data:JSON.parse(JSON.stringify(db)),sourceFiles};
+ return {format:BACKUP_FORMAT,schema:BACKUP_SCHEMA,appVersion:"0.10.117",backupKind:kind,createdAt:new Date().toISOString(),counts,sourceFilesCount:sourceFiles.length,data:JSON.parse(JSON.stringify(db)),sourceFiles};
 }
 async function savePackageFile(pkg,prefix="Magic-Pin-Data"){
  const blob=new Blob([JSON.stringify(pkg)],{type:"application/json"});

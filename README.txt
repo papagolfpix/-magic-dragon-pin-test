@@ -1,4 +1,5 @@
-WHAT CHANGED IN v0.10.116 TEST
-- Sunday Workflow reconciliation items scroll independently on iPhone, including focused conflict review.
-- The fixed Previous/Next controls remain visible while the list scrolls.
-- Retains v0.10.115 guided conflict resolution and delivered-date calendar.
+WHAT CHANGED IN v0.10.117 TEST
+- Reconciliation delivery differences show two direct choices: matching delivered dockets and the exact shop Sunday report.
+- Docket buttons show date and quantity and open the specific record.
+- Neither choice modifies saved business data. Existing correction and invoice safeguards remain in place.
+- Retains v0.10.116 iPhone reconciliation scrolling.
