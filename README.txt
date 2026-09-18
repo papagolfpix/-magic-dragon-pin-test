@@ -1,5 +1,5 @@
-WHAT CHANGED IN v0.10.118 TEST
-- Each delivery discrepancy now gives an automatic plain-English finding from stock arithmetic and matching dockets.
-- TEST-generated docket flags and date/status anomalies are called out explicitly.
-- Findings are read-only and do not alter business records.
-- Retains direct source links and iPhone workflow scrolling.
+WHAT CHANGED IN v0.10.119 TEST
+- TEST-only delivery copies are excluded from real Sunday and weekly stock arithmetic, without deleting any records.
+- Genuine dockets modified by an older conflict test use the preserved pre-test snapshot when available.
+- The forensic card explains excluded TEST units and the remaining real difference.
+- Every TEST docket remains visible and is labelled in the direct source choices.
