@@ -4713,7 +4713,7 @@ window.addEventListener("error",e=>{const b=document.getElementById("runtimeErro
       <button class="heroHomeHotspot noPrint" type="button" aria-label="Return to Dashboard" title="Dashboard" onclick="returnToDashboardFromHeader()"></button>
     </div>
     <div class="heroActions noPrint">
-      <span class="app-version">v0.10.122 TEST</span>
+      <span class="app-version">v0.10.123 TEST</span>
       <button class="heroMenuButton" id="heroMenuButton" type="button" aria-expanded="false">Menu</button>
     </div>
   </div>
@@ -7484,7 +7484,7 @@ function buildFullBackupPayload(kind="SUPPORT",note=""){
   return {
     magicDragonBackup:true,
     app:"Magic Dragon Pin",
-    appVersion:"0.10.122",
+    appVersion:"0.10.123",
     backupKind:String(kind||"SUPPORT").toUpperCase(),
     createdAt:new Date().toISOString(),
     note:String(note||""),
@@ -10246,6 +10246,10 @@ function acknowledgeInvoiceSourceEdits(id){
   const events=postInvoiceDocketEdits(inv);
   if(!db.alertAcknowledgements||typeof db.alertAcknowledgements!=="object")db.alertAcknowledgements={};
   db.alertAcknowledgements[invoiceSourceEditAckKey(inv,events)]=new Date().toISOString();
+  // v0.10.123 — acknowledgement is also the safe closing action when the
+  // edited week is reconciled and the verified invoice difference is exactly zero.
+  // This covers older correction records that pre-date pendingCorrections.
+  finalizeAcknowledgedZeroDifferenceSourceCorrections(inv.id);
   localStorage.setItem("mdpin-db",JSON.stringify(db));renderDashboardAlerts();renderInvoiceRecord(id);
 }
 window.acknowledgeInvoiceSourceEdits=acknowledgeInvoiceSourceEdits;
@@ -10267,6 +10271,35 @@ function makeAutomaticInvoiceRevision(inv,live,correction){
  if(inv.payment?.status==="paid")record.payment={...inv.payment,reviewRequired:true,note:[inv.payment.note,"Invoice corrected after payment; review revised amount."].filter(Boolean).join(" · ")};
  inv.supersededBy=id;inv.supersededAt=new Date().toISOString();db.invoices.push(record);return record;
 }
+function finalizeAcknowledgedZeroDifferenceSourceCorrections(onlyInvoiceId=null){
+  if(!Array.isArray(db.pendingCorrections))db.pendingCorrections=[];
+  let changed=false;
+  (db.invoices||[]).forEach(inv=>{
+    if(!inv||inv.supersededBy||(onlyInvoiceId&&inv.id!==onlyInvoiceId))return;
+    const events=postInvoiceDocketEdits(inv);
+    if(!events.length)return;
+    const ackKey=invoiceSourceEditAckKey(inv,events);
+    if(!db.alertAcknowledgements?.[ackKey])return;
+    const live=currentWizardStateSafeForInvoice(inv.reportDate);
+    if(!live?.financialGreen)return;
+    const oldBase=Number(inv.totals?.basePayPin ?? (Number(inv.totals?.payPin||0)-Number(inv.totals?.adjustmentTotal||0)));
+    const newBase=Number(live.summary?.combined?.payPin||0);
+    const delta=+(newBase-oldBase).toFixed(2);
+    if(Math.abs(delta)>=0.005)return;
+    const all=(db.pendingCorrections||[]).filter(c=>c.invoiceId===inv.id).sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||'')));
+    let c=all.find(c=>['pending','waiting_reconciliation'].includes(c.status))||all.find(c=>c.status==='resolved'&&Math.abs(Number(c.amount||0))<0.005)||null;
+    if(!c){
+      const latest=events.slice().sort((a,b)=>String(b.at||'').localeCompare(String(a.at||'')))[0]||null;
+      c={id:'COR'+Date.now()+Math.floor(Math.random()*1000),status:'resolved',docketId:latest?.docketId||null,invoiceId:inv.id,sourceDate:inv.reportDate,choice:'no_financial_change',createdAt:latest?.at||new Date().toISOString(),changes:(latest?.changes||[]).map(ch=>({before:ch.before?{...ch.before}:null,after:ch.after?{...ch.after}:null}))};
+      db.pendingCorrections.push(c);
+    }
+    if(c.status!=='resolved'||Number(c.amount||0)!==0||c.resolvedSignature!==live.signature||c.message!=='No financial change was required.'){
+      c.status='resolved';c.amount=0;c.resolvedSignature=live.signature;c.resolvedAt=c.resolvedAt||new Date().toISOString();c.message='No financial change was required.';changed=true;
+    }
+  });
+  return changed;
+}
+
 function processPendingDocketCorrections(){
  if(!Array.isArray(db.pendingCorrections)||!db.pendingCorrections.length)return false;
  let changed=false;
@@ -10277,16 +10310,17 @@ function processPendingDocketCorrections(){
   if(!live?.financialGreen){if(c.status!=="waiting_reconciliation"){c.status="waiting_reconciliation";changed=true;}c.message="Waiting for the edited week to reconcile.";return;}
   const oldBase=Number(inv.totals?.basePayPin ?? (Number(inv.totals?.payPin||0)-Number(inv.totals?.adjustmentTotal||0))),newBase=Number(live.summary?.combined?.payPin||0),delta=+(newBase-oldBase).toFixed(2);c.amount=delta;c.description=correctionChangeDescription(c);
   if(c.choice==="update_current"){
-    if(Math.abs(delta)<0.005&&inv.signature===live.signature){c.status="resolved";c.message="No financial change was required.";changed=true;return;}
+    if(Math.abs(delta)<0.005){c.status="resolved";c.amount=0;c.resolvedSignature=live.signature;c.resolvedAt=new Date().toISOString();c.message="No financial change was required.";changed=true;return;}
     const revision=makeAutomaticInvoiceRevision(inv,live,c);if(revision){c.status="resolved";c.revisedInvoiceId=revision.id;c.message=`Updated ${revision.number} v${revision.version}.`;changed=true;}
   }else if(c.choice==="next_sunday"){
-    if(Math.abs(delta)<0.005){c.status="resolved";c.message="No financial difference to carry forward.";changed=true;return;}
+    if(Math.abs(delta)<0.005){c.status="resolved";c.amount=0;c.resolvedSignature=live.signature;c.resolvedAt=new Date().toISOString();c.message="No financial difference to carry forward.";changed=true;return;}
     if(!Array.isArray(db.adjustments))db.adjustments=[];
     let a=db.adjustments.find(a=>a.correctionId===c.id);
     if(!a){a={id:"ADJ"+Date.now()+Math.floor(Math.random()*1000),status:"pending",amount:delta,sourceDate:inv.reportDate,oldInvoiceId:inv.id,newInvoiceId:null,oldNumber:inv.number,newNumber:"",createdAt:new Date().toISOString(),resolution:"next_sunday_auto",correctionId:c.id,description:c.description||"Delivery docket correction"};db.adjustments.push(a);}
     c.status="queued";c.adjustmentId=a.id;c.message="Will be added automatically to the next Sunday invoice.";changed=true;
   }
  });
+ if(finalizeAcknowledgedZeroDifferenceSourceCorrections())changed=true;
  if(changed)localStorage.setItem("mdpin-db",JSON.stringify(db));return changed;
 }
 function invoiceRecordState(inv){
@@ -10298,7 +10332,10 @@ function invoiceRecordState(inv){
   if(tracked?.status==="queued"&&tracked.choice==="next_sunday")return {label:"CURRENT",cls:"ok"};
   const state=currentWizardStateSafeForInvoice(inv.reportDate);
   if(state&&state.financialGreen===false)return {label:"UPDATE REQUIRED",cls:"warn"};
-  if(state&&state.signature&&inv.signature!==state.signature)return {label:"UPDATE REQUIRED",cls:"warn"};
+  if(state&&state.signature&&inv.signature!==state.signature){
+    const zeroResolved=(db.pendingCorrections||[]).find(c=>c.invoiceId===inv.id&&c.status==="resolved"&&Math.abs(Number(c.amount||0))<0.005&&c.resolvedSignature===state.signature);
+    if(!zeroResolved)return {label:"UPDATE REQUIRED",cls:"warn"};
+  }
   if(inv.payment?.status==="paid")return {label:"PAID",cls:"paid"};
   return {label:"CURRENT",cls:"ok"};
 }
@@ -11195,6 +11232,9 @@ function renderPaymentWizard(state){
 
 function renderDashboardAlerts(){
   const box=document.getElementById("dashboardAlerts");if(!box)return;
+  // Resolve any already-acknowledged zero-difference correction before building alerts,
+  // so an old UPDATE REQUIRED warning cannot survive one extra render.
+  processPendingDocketCorrections();
   const alerts=[];
   try{
     const latestByDate={};
@@ -11225,7 +11265,6 @@ function renderDashboardAlerts(){
       }
     });
   }catch(e){console.warn("Could not build invoice alerts",e)}
-  processPendingDocketCorrections();
   const corrections=(db.pendingCorrections||[]).filter(c=>["pending","waiting_reconciliation"].includes(c.status));
   corrections.forEach(c=>{
     const d=(db.deliveries||[]).find(x=>x.id===c.docketId),label=d?`${invoiceDateLabel(d.date)} — ${displayBranchName(d.branch)}`:"Edited delivery docket";
@@ -11635,7 +11674,7 @@ function validateBackupPackage(pkg){
 }
 async function createCompleteTransferPackage(kind="FULL_TRANSFER"){
  const sourceFiles=await exportArchivedSourceFiles(),counts=backupCounts();
- return {format:BACKUP_FORMAT,schema:BACKUP_SCHEMA,appVersion:"0.10.122",backupKind:kind,createdAt:new Date().toISOString(),counts,sourceFilesCount:sourceFiles.length,data:JSON.parse(JSON.stringify(db)),sourceFiles};
+ return {format:BACKUP_FORMAT,schema:BACKUP_SCHEMA,appVersion:"0.10.123",backupKind:kind,createdAt:new Date().toISOString(),counts,sourceFilesCount:sourceFiles.length,data:JSON.parse(JSON.stringify(db)),sourceFiles};
 }
 async function savePackageFile(pkg,prefix="Magic-Pin-Data"){
  const blob=new Blob([JSON.stringify(pkg)],{type:"application/json"});

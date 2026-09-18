@@ -1,3 +1,11 @@
+WHAT CHANGED IN v0.10.123 TEST
+- Fixes a real correction-lifecycle bug found during v0.10.122 regression testing.
+- If a linked delivered docket was edited, the week now reconciles, and the verified invoice difference is exactly ฿0, acknowledging the review now closes the correction automatically.
+- Existing acknowledged zero-difference legacy corrections self-heal on load/recheck; no second acknowledgement is required.
+- A zero-difference correction does not create a replacement invoice revision and does not create a next-Sunday adjustment.
+- The resolved live signature is recorded so the invoice no longer remains falsely marked UPDATE REQUIRED.
+- Paid invoices remain protected and all existing money values are left unchanged.
+
 WHAT CHANGED IN v0.10.122 TEST
 - A completed correction clears its old Resume conflict resolution shortcut when returning to the dashboard.
 - The shortcut also disappears on the dashboard while a correction remains in progress; the dashboard keeps its own action.
