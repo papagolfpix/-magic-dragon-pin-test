@@ -4713,7 +4713,7 @@ window.addEventListener("error",e=>{const b=document.getElementById("runtimeErro
       <button class="heroHomeHotspot noPrint" type="button" aria-label="Return to Dashboard" title="Dashboard" onclick="returnToDashboardFromHeader()"></button>
     </div>
     <div class="heroActions noPrint">
-      <span class="app-version">v0.10.120 TEST</span>
+      <span class="app-version">v0.10.121 TEST</span>
       <button class="heroMenuButton" id="heroMenuButton" type="button" aria-expanded="false">Menu</button>
     </div>
   </div>
@@ -7484,7 +7484,7 @@ function buildFullBackupPayload(kind="SUPPORT",note=""){
   return {
     magicDragonBackup:true,
     app:"Magic Dragon Pin",
-    appVersion:"0.10.120",
+    appVersion:"0.10.121",
     backupKind:String(kind||"SUPPORT").toUpperCase(),
     createdAt:new Date().toISOString(),
     note:String(note||""),
@@ -10293,7 +10293,9 @@ function invoiceRecordState(inv){
   if(!inv)return {label:"UNKNOWN",cls:""};
   if(inv.supersededBy)return {label:"SUPERSEDED",cls:"warn"};
   const tracked=(db.pendingCorrections||[]).find(c=>c.invoiceId===inv.id&&["pending","waiting_reconciliation","queued"].includes(c.status));
-  if(tracked?.choice==="next_sunday")return {label:"CURRENT",cls:"ok"};
+  // A saved next-Sunday choice does not make an unreconciled source week current.
+  // Only an already-queued adjustment can leave this invoice unchanged.
+  if(tracked?.status==="queued"&&tracked.choice==="next_sunday")return {label:"CURRENT",cls:"ok"};
   const state=currentWizardStateSafeForInvoice(inv.reportDate);
   if(state&&state.financialGreen===false)return {label:"UPDATE REQUIRED",cls:"warn"};
   if(state&&state.signature&&inv.signature!==state.signature)return {label:"UPDATE REQUIRED",cls:"warn"};
@@ -11221,7 +11223,12 @@ function renderDashboardAlerts(){
   const corrections=(db.pendingCorrections||[]).filter(c=>["pending","waiting_reconciliation"].includes(c.status));
   corrections.forEach(c=>{
     const d=(db.deliveries||[]).find(x=>x.id===c.docketId),label=d?`${invoiceDateLabel(d.date)} — ${displayBranchName(d.branch)}`:"Edited delivery docket";
-    if(c.choice==="next_sunday")alerts.push(`<div class="dashboardAlert info"><div class="dashboardAlertTitle">Correction queued for next Sunday</div><div class="dashboardAlertText">${escapeHtml(label)} has a saved correction. It will be carried into the next Sunday billing cycle automatically once the edited week reconciles. The existing invoice stays unchanged.</div></div>`);
+    if(c.choice==="next_sunday"){
+      const inv=(db.invoices||[]).find(x=>x.id===c.invoiceId);
+      const week=inv?.reportDate?invoiceDateLabel(inv.reportDate):"the affected week";
+      const open=inv?`<button class="btn" onclick="openConflictResolutionWizard('${inv.id}')">Review correction</button>`:"";
+      alerts.push(`<div class="dashboardAlert"><div class="dashboardAlertTitle">⚠ Correction waiting for reconciliation</div><div class="dashboardAlertText">${escapeHtml(label)} was edited for the week ending ${escapeHtml(week)}. No amount is queued for the next invoice yet. Review why that week does not reconcile before any financial adjustment is made.</div>${open}</div>`);
+    }
     else {
       const inv=(db.invoices||[]).find(x=>x.id===c.invoiceId);
       const resumeBtn=inv?`<button class="btn" onclick="openConflictResolutionWizard('${inv.id}')">Resume conflict resolution</button>`:`<button class="btn" onclick="continueInvoiceCorrection('${escapeHtml(c.invoiceId||'')}')">Open reconciliation</button>`;
@@ -11621,7 +11628,7 @@ function validateBackupPackage(pkg){
 }
 async function createCompleteTransferPackage(kind="FULL_TRANSFER"){
  const sourceFiles=await exportArchivedSourceFiles(),counts=backupCounts();
- return {format:BACKUP_FORMAT,schema:BACKUP_SCHEMA,appVersion:"0.10.120",backupKind:kind,createdAt:new Date().toISOString(),counts,sourceFilesCount:sourceFiles.length,data:JSON.parse(JSON.stringify(db)),sourceFiles};
+ return {format:BACKUP_FORMAT,schema:BACKUP_SCHEMA,appVersion:"0.10.121",backupKind:kind,createdAt:new Date().toISOString(),counts,sourceFilesCount:sourceFiles.length,data:JSON.parse(JSON.stringify(db)),sourceFiles};
 }
 async function savePackageFile(pkg,prefix="Magic-Pin-Data"){
  const blob=new Blob([JSON.stringify(pkg)],{type:"application/json"});
