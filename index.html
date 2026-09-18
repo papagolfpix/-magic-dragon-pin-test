@@ -71,6 +71,19 @@ tr.kanja td{background:var(--green)}tr.preroll td{background:var(--pink)}tr.edib
 .catalogueSelfCheck.bad{border-color:#fecaca;background:#fef2f2;color:#991b1b}
 .integrityList{margin-top:4px;color:#4b5563}
 @media(max-width:650px){.catalogueIntegrity{grid-template-columns:1fr}}
+.branchAssignControls{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;margin:10px 0}
+.branchAssignSummary{display:flex;gap:7px;flex-wrap:wrap;margin:8px 0}
+.branchAssignSummary span{padding:5px 9px;border-radius:999px;background:#eef2f7;color:#374151;font-size:11px;font-weight:800}
+.branchAssignSummary span.warn{background:#fff2d8;color:#8a4d00}
+.branchAssignList{border:1px solid #dbe3ec;border-radius:12px;overflow:hidden;background:#fff;margin-top:8px}
+.branchAssignRow{display:grid;grid-template-columns:30px minmax(0,1fr) auto;gap:8px;align-items:center;padding:9px 10px;border-bottom:1px solid #e5e7eb;cursor:pointer}
+.branchAssignRow:last-child{border-bottom:0}.branchAssignRow.latestOutside{background:#fffaf0}
+.branchAssignRow input{width:21px;height:21px;margin:0;accent-color:#16713b}
+.branchAssignName{font-size:12px;font-weight:800;min-width:0}.branchAssignMeta{font-size:10px;color:#6b7280;margin-top:2px}
+.branchAssignBadge{font-size:9px;font-weight:900;padding:3px 6px;border-radius:999px;background:#dcfce7;color:#166534;white-space:nowrap}
+.branchAssignBadge.out{background:#fef3c7;color:#92400e}
+.branchAssignNotice{margin-top:8px;padding:8px 10px;border-radius:10px;background:#f8fafc;color:#475569;font-size:11px;line-height:1.35}
+@media(max-width:650px){.branchAssignControls{grid-template-columns:1fr}.branchAssignRow{padding:9px 8px}}
 .docketArchiveItem{border:1px solid #d8dee8;border-radius:12px;margin:8px 0;background:#fff;overflow:hidden}
 .docketArchiveItem summary{list-style:none;cursor:pointer;padding:13px 14px;font-weight:800;display:flex;align-items:center;justify-content:space-between;gap:10px}
 .docketArchiveItem summary::-webkit-details-marker{display:none}
@@ -4479,7 +4492,7 @@ window.addEventListener("error",e=>{const b=document.getElementById("runtimeErro
       <button class="heroHomeHotspot noPrint" type="button" aria-label="Return to Dashboard" title="Dashboard" onclick="returnToDashboardFromHeader()"></button>
     </div>
     <div class="heroActions noPrint">
-      <span class="app-version">v0.10.93 TEST</span>
+      <span class="app-version">v0.10.94 TEST</span>
       <button class="heroMenuButton" id="heroMenuButton" type="button" aria-expanded="false">Menu</button>
     </div>
   </div>
@@ -4786,6 +4799,23 @@ window.addEventListener("error",e=>{const b=document.getElementById("runtimeErro
           <div class="small">Read-only branch comparison of each latest Sunday sheet with the immediately previous Sunday. Missing, new/returned and outside-current-list products are shown separately; nothing is changed automatically.</div>
           <div id="catalogueIntegritySelfCheck" class="catalogueSelfCheck"></div>
           <div id="catalogueIntegrity" class="catalogueIntegrity"></div>
+        </div>
+      </details>
+
+      <details class="settingGroup" id="branchProductDetails">
+        <summary>Branch product lists</summary>
+        <div class="settingGroupBody">
+          <div class="small">Choose which active products appear when creating deliveries for each shop. Existing dockets, Sunday reports, stock history and invoices are never changed.</div>
+          <div id="branchAssignmentSelfCheck" class="catalogueSelfCheck"></div>
+          <div class="branchAssignControls">
+            <div class="field"><label>Shop</label><select id="branchAssignmentBranch"><option value="BM Bangrak">The Grocery by BM</option><option value="Lamai">BM Lamai</option></select></div>
+            <div class="field"><label>Find product</label><input id="branchAssignmentSearch" type="search" placeholder="Search product name…" autocomplete="off"></div>
+          </div>
+          <div id="branchAssignmentSummary" class="branchAssignSummary"></div>
+          <button type="button" class="btn alt" onclick="tickLatestSundayProducts()">Tick all products on latest Sunday report</button>
+          <div class="branchAssignNotice">This helper only adds ticks on screen. It never removes existing ticks and nothing is saved until you tap <b>Save Branch Product List</b>.</div>
+          <div id="branchAssignmentList" class="branchAssignList"></div>
+          <div class="actionbar"><button type="button" class="btn gold" onclick="saveBranchProductAssignments()">Save Branch Product List</button></div>
         </div>
       </details>
 
@@ -5482,13 +5512,43 @@ function canonicalDeliveryProducts(){
   });
   return out;
 }
+function canonicalBranchKey(branch){
+  const b=String(branch||"");
+  if(/lamai/i.test(b))return "Lamai";
+  if(/bangrak|k\.\s*pual|k\.\s*paul|mini\s*mart|grocery\s*by\s*bm/i.test(b))return "BM Bangrak";
+  return b;
+}
+function canonicalProductId(productOrId){
+  ensureProductAliases();
+  let p=typeof productOrId==="object"?productOrId:(db.products||[]).find(x=>x.id===productOrId);
+  if(!p)return typeof productOrId==="string"?productOrId:"";
+  let id=p.id;
+  for(let i=0;i<4;i++){
+    const current=(db.products||[]).find(x=>x.id===id)||p;
+    const key=normalizeProductKey(correctedCanonicalProductName(current.name));
+    const next=db.productAliases?.[key];
+    if(!next||next===id)break;
+    id=next;
+  }
+  return id;
+}
+function defaultProductAssignedToBranch(product,branch){
+  const key=canonicalBranchKey(branch);
+  if(key==="BM Bangrak")return true;
+  if(key==="Lamai"){
+    const name=correctedCanonicalProductName(product.name);
+    return !/5g/i.test(name)&&name!=="Gummy 4 Leaf"&&name!=="Cali Mousse 1g";
+  }
+  return true;
+}
+function productAssignedToBranch(product,branch){
+  const key=canonicalBranchKey(branch),id=canonicalProductId(product);
+  const overrides=db.branchProductAssignments?.[key];
+  if(overrides&&Object.prototype.hasOwnProperty.call(overrides,id))return !!overrides[id];
+  return defaultProductAssignedToBranch(product,key);
+}
 function branchProducts(branch){
-  const products=canonicalDeliveryProducts();
-  if(branch==="BM Bangrak") return products;
-  return products.filter(p => {
-    const n=p.name.toLowerCase();
-    return !p.name.includes("5g") && p.name!=="Gummy 4 Leaf" && p.name!=="Cali Mousse 1g";
-  });
+  return canonicalDeliveryProducts().filter(p=>productAssignedToBranch(p,branch));
 }
 let currentDelivery=[];
 let editingDocketId=null;
@@ -7137,7 +7197,7 @@ function buildFullBackupPayload(kind="SUPPORT",note=""){
   return {
     magicDragonBackup:true,
     app:"Magic Dragon Pin",
-    appVersion:"0.10.93",
+    appVersion:"0.10.94",
     backupKind:String(kind||"SUPPORT").toUpperCase(),
     createdAt:new Date().toISOString(),
     note:String(note||""),
@@ -8345,6 +8405,11 @@ function reassignProductReferences(fromId,toId){
  Object.values(db.stock||{}).forEach(st=>{if(st&&Object.prototype.hasOwnProperty.call(st,fromId)){st[toId]=(Number(st[toId])||0)+(Number(st[fromId])||0);delete st[fromId]}});
  Object.keys(db.productAliases||{}).forEach(k=>{if(db.productAliases[k]===fromId)db.productAliases[k]=toId});
  db.sundayImports.forEach(r=>(r.rows||[]).forEach(rr=>{if(rr.productId===fromId)rr.productId=toId}));
+ Object.values(db.branchProductAssignments||{}).forEach(assignments=>{
+   if(!assignments||!Object.prototype.hasOwnProperty.call(assignments,fromId))return;
+   if(!Object.prototype.hasOwnProperty.call(assignments,toId))assignments[toId]=!!assignments[fromId];
+   delete assignments[fromId];
+ });
 }
 function createMasterProduct(name,sourceName){
  const srcMatch=db.products.find(p=>normalizeProductKey(p.name)===normalizeProductKey(sourceName));
@@ -8415,7 +8480,7 @@ function renderCatalogueIntegrity(){
  renderBranchCatalogueSelfCheck();
  const branches=["BM Bangrak","Lamai"];
  const html=branches.map(branch=>{
-   const reports=(db.sundayImports||[]).filter(r=>r.branch===branch).sort((a,b)=>String(a.date).localeCompare(String(b.date)));
+   const reports=(db.sundayImports||[]).filter(r=>canonicalBranchKey(r.branch)===branch).sort((a,b)=>String(a.date).localeCompare(String(b.date)));
    if(!reports.length)return `<div class="integrityCard"><b>${branch}</b><div class="small" style="margin-top:5px">No Sunday reports imported yet.</div></div>`;
    const latest=reports.at(-1);
    const c=branchReportComparison(latest);
@@ -8432,6 +8497,73 @@ function renderCatalogueIntegrity(){
  }).join("");
  box.innerHTML=html;
 }
+
+let branchAssignmentDirty=false;
+let branchAssignmentRenderedBranch="BM Bangrak";
+function latestSundayForBranch(branch){
+  const key=canonicalBranchKey(branch);
+  return (db.sundayImports||[]).filter(r=>canonicalBranchKey(r.branch)===key).sort((a,b)=>String(b.date||"").localeCompare(String(a.date||"")))[0]||null;
+}
+function renderBranchAssignmentSummary(){
+  const box=document.getElementById("branchAssignmentSummary");if(!box)return;
+  const checks=[...document.querySelectorAll("#branchAssignmentList input[type=checkbox]")];
+  const assigned=checks.filter(x=>x.checked).length;
+  const latest=checks.filter(x=>x.dataset.latest==="1").length;
+  const outside=checks.filter(x=>x.dataset.latest==="1"&&!x.checked).length;
+  box.innerHTML=`<span>${assigned} assigned</span><span>${latest} on latest Sunday</span><span class="${outside?"warn":""}">${outside} latest not assigned</span>${branchAssignmentDirty?`<span class="warn">Unsaved changes</span>`:""}`;
+}
+function filterBranchAssignmentList(){
+  const q=norm(document.getElementById("branchAssignmentSearch")?.value||"");
+  document.querySelectorAll(".branchAssignRow").forEach(row=>{row.hidden=!!q&&!norm(row.dataset.search||"").includes(q)});
+}
+function renderBranchProductAssignments(){
+  const list=document.getElementById("branchAssignmentList"),select=document.getElementById("branchAssignmentBranch");if(!list||!select)return;
+  const selfCheck=document.getElementById("branchAssignmentSelfCheck");
+  const checkOk=canonicalBranchKey("The Grocery by BM")==="BM Bangrak"&&canonicalBranchKey("BM Lamai")==="Lamai"&&defaultProductAssignedToBranch({name:"Colombiana 5g"},"Lamai")===false&&defaultProductAssignedToBranch({name:"Super Boof"},"Lamai")===true;
+  if(selfCheck){selfCheck.className=`catalogueSelfCheck${checkOk?"":" bad"}`;selfCheck.textContent=checkOk?"✓ Branch-list self-check passed — shop names and default product rules resolve correctly.":"Branch-list self-check failed — do not save branch assignments in this build.";}
+  const branch=canonicalBranchKey(select.value||branchAssignmentRenderedBranch||"BM Bangrak");
+  select.value=branch;branchAssignmentRenderedBranch=branch;branchAssignmentDirty=false;
+  const latest=latestSundayForBranch(branch),latestIdentity=latest?reportCatalogueIdentity(latest):{ids:[]};
+  const latestIds=new Set(latestIdentity.ids.map(canonicalProductId));
+  const products=canonicalDeliveryProducts().sort((a,b)=>{
+    const al=latestIds.has(canonicalProductId(a))?0:1,bl=latestIds.has(canonicalProductId(b))?0:1;
+    return al-bl||a.name.localeCompare(b.name,"en",{sensitivity:"base",numeric:true});
+  });
+  list.innerHTML=products.map(p=>{
+    const id=canonicalProductId(p),onLatest=latestIds.has(id),assigned=productAssignedToBranch(p,branch);
+    const badge=onLatest?`<span class="branchAssignBadge ${assigned?"":"out"}">${assigned?"Latest Sunday":"Needs review"}</span>`:"";
+    return `<label class="branchAssignRow ${onLatest&&!assigned?"latestOutside":""}" data-search="${escapeHtmlAttr(p.name)}"><input type="checkbox" data-product-id="${escapeHtmlAttr(id)}" data-latest="${onLatest?"1":"0"}" ${assigned?"checked":""}><span><span class="branchAssignName">${escapeHtml(p.name)}</span><span class="branchAssignMeta">${escapeHtml(productVariantLabel(p)||p.type||"Product")}</span></span>${badge}</label>`;
+  }).join("")||`<div class="small" style="padding:12px">No active products.</div>`;
+  list.querySelectorAll("input[type=checkbox]").forEach(input=>input.addEventListener("change",()=>{
+    branchAssignmentDirty=true;
+    input.closest(".branchAssignRow")?.classList.toggle("latestOutside",input.dataset.latest==="1"&&!input.checked);
+    const badge=input.closest(".branchAssignRow")?.querySelector(".branchAssignBadge");
+    if(badge){badge.textContent=input.checked?"Latest Sunday":"Needs review";badge.classList.toggle("out",!input.checked)}
+    renderBranchAssignmentSummary();
+  }));
+  renderBranchAssignmentSummary();filterBranchAssignmentList();
+}
+window.tickLatestSundayProducts=()=>{
+  let changed=0;
+  document.querySelectorAll('#branchAssignmentList input[data-latest="1"]').forEach(input=>{if(!input.checked){input.checked=true;input.dispatchEvent(new Event("change"));changed++}});
+  if(!changed)alert("Every product on the latest Sunday report is already ticked for this shop.");
+};
+window.saveBranchProductAssignments=()=>{
+  const branch=canonicalBranchKey(document.getElementById("branchAssignmentBranch")?.value||"BM Bangrak");
+  const checks=[...document.querySelectorAll("#branchAssignmentList input[type=checkbox]")];
+  const changes=checks.filter(input=>{
+    const p=(db.products||[]).find(x=>canonicalProductId(x)===input.dataset.productId);
+    return p&&productAssignedToBranch(p,branch)!==input.checked;
+  }).length;
+  if(!changes)return alert("No branch-list changes to save.");
+  const assigned=checks.filter(x=>x.checked).length;
+  if(!confirm(`Save ${displayBranchName(branch)} product list?\n\n${assigned} products will be available for new deliveries.\n${changes} assignment${changes===1?"":"s"} changed.\n\nExisting dockets, reports, stock history and invoices will not be altered.`))return;
+  if(!db.branchProductAssignments||typeof db.branchProductAssignments!=="object")db.branchProductAssignments={};
+  db.branchProductAssignments[branch]={};
+  checks.forEach(input=>db.branchProductAssignments[branch][input.dataset.productId]=!!input.checked);
+  branchAssignmentDirty=false;save();
+  alert(`${displayBranchName(branch)} product list saved. ${assigned} products are available for future deliveries.`);
+};
 
 let sundayImportAutoAdvance=false;
 function currentActiveSundayReconciliations(){
@@ -8774,7 +8906,7 @@ function reportCatalogueIdentity(rep){
   const ids=new Set(),unknownNames=[];
   (rep?.rows||[]).forEach(rr=>{
     const pm=canonicalProductMatchRow(rr);
-    if(pm.product)ids.add(pm.product.id);
+    if(pm.product)ids.add(canonicalProductId(pm.product));
     else if(rr?.product)unknownNames.push(String(rr.product));
   });
   return {ids:[...ids],unknownNames:[...new Set(unknownNames)]};
@@ -8783,13 +8915,13 @@ function branchReportComparison(rep){
   ensureSundayArchive();
   const current=reportCatalogueIdentity(rep);
   const prior=(db.sundayImports||[])
-    .filter(r=>r.branch===rep.branch&&String(r.date||"")<String(rep.date||""))
+    .filter(r=>canonicalBranchKey(r.branch)===canonicalBranchKey(rep.branch)&&String(r.date||"")<String(rep.date||""))
     .sort((a,b)=>String(b.date).localeCompare(String(a.date)))[0]||null;
   const latestMs=Date.parse(rep?.date),priorMs=Date.parse(prior?.date);
   const gapDays=Number.isFinite(latestMs)&&Number.isFinite(priorMs)?Math.round((latestMs-priorMs)/86400000):null;
   const contiguous=!!prior&&gapDays>=5&&gapDays<=9;
   const previous=contiguous?reportCatalogueIdentity(prior):{ids:[],unknownNames:[]};
-  const activeIds=branchProducts(rep.branch).map(p=>p.id);
+  const activeIds=branchProducts(rep.branch).map(canonicalProductId);
   const classified=classifyBranchCatalogueIds(contiguous?previous.ids:current.ids,current.ids,activeIds);
   const productNames=new Map((db.products||[]).map(p=>[p.id,p.name]));
   const names=ids=>ids.map(id=>productNames.get(id)||String(id));
@@ -9339,6 +9471,7 @@ function renderAll(){
  renderHistorical();
  renderMasterProductSetup();
  renderCatalogueIntegrity();
+ renderBranchProductAssignments();
  renderMappingManager();
  renderMappingReview();
  if(!document.body.classList.contains("deliveryMode"))renderDocketArchive();
@@ -10521,7 +10654,7 @@ function saveCloudTestMarker(){
  cloudStatus("Local TEST change saved — ready to upload when cloud is current.","info");
  const metaRev=cloudNumStorage(MD_CLOUD_SEEN_REV_KEY),base=cloudNumStorage(MD_CLOUD_BASE_REV_KEY);
  if(metaRev&&base===metaRev){
-   const meta={revision:metaRev,updated_by_device:"cloud",app_version:"0.10.93"};
+   const meta={revision:metaRev,updated_by_device:"cloud",app_version:"0.10.94"};
    const cloud=cloudEl("cloudOverviewCloud"),baseEl=cloudEl("cloudOverviewBase"),stateEl=cloudEl("cloudOverviewState"),wrap=cloudEl("cloudOverview");
    if(cloud)cloud.textContent=`Rev ${metaRev}`;if(baseEl)baseEl.textContent=`Base rev ${base}`;if(stateEl)stateEl.textContent="LOCAL CHANGE — UPLOAD";
    if(wrap){[...wrap.querySelectorAll(".cloudOverviewCard")].forEach(x=>{x.classList.remove("good","bad","warn");x.classList.add("warn")})}
@@ -10663,7 +10796,7 @@ async function cloudPush(){
   const hash=await sha256Text(stableJson(pkg)),fingerprint=await cloudStateFingerprint(pkg),revision=currentRevision+1;
   const c=pkg.counts;
   if(!confirm(`Upload this device to TEST Cloud?\n\nRevision ${revision}\n${c.products} products · ${c.aliases} aliases · ${c.sundayReports} Sunday reports · ${c.deliveries} deliveries · ${c.invoices} invoices\n\nTEST workspace only.`)){cloudStatus("Upload cancelled — nothing changed.","info");return}
-  const row={workspace_id:MD_TEST_WORKSPACE,revision,app_version:"0.10.93",payload:pkg,payload_hash:hash,updated_by:mdCloudSession.user?.id||null,updated_by_device:label,updated_at:new Date().toISOString()};
+  const row={workspace_id:MD_TEST_WORKSPACE,revision,app_version:"0.10.94",payload:pkg,payload_hash:hash,updated_by:mdCloudSession.user?.id||null,updated_by_device:label,updated_at:new Date().toISOString()};
   let saved;
   if(currentRevision===0){
    saved=await mdCloudFetch(`/rest/v1/${MD_TEST_STATE_TABLE}`,{method:"POST",body:row,headers:{Prefer:"return=representation"}});
@@ -10751,7 +10884,7 @@ function validateBackupPackage(pkg){
 }
 async function createCompleteTransferPackage(kind="FULL_TRANSFER"){
  const sourceFiles=await exportArchivedSourceFiles(),counts=backupCounts();
- return {format:BACKUP_FORMAT,schema:BACKUP_SCHEMA,appVersion:"0.10.93",backupKind:kind,createdAt:new Date().toISOString(),counts,sourceFilesCount:sourceFiles.length,data:JSON.parse(JSON.stringify(db)),sourceFiles};
+ return {format:BACKUP_FORMAT,schema:BACKUP_SCHEMA,appVersion:"0.10.94",backupKind:kind,createdAt:new Date().toISOString(),counts,sourceFilesCount:sourceFiles.length,data:JSON.parse(JSON.stringify(db)),sourceFiles};
 }
 async function savePackageFile(pkg,prefix="Magic-Pin-Data"){
  const blob=new Blob([JSON.stringify(pkg)],{type:"application/json"});
@@ -11027,7 +11160,7 @@ window.resolveDeliveryConflictKeepLocal=async id=>{
  try{
   const label=(cloudEl("cloudDeviceLabel")?.value||localStorage.getItem("mdpin-cloud-device")||detectCloudDeviceLabel()).trim()||"Test device";
   const fp=await deliveryPayloadFingerprint(local),next=Number(remote.revision)+1;
-  const row={revision:next,payload:JSON.parse(JSON.stringify(local)),payload_hash:fp,updated_by:mdCloudSession.user?.id||null,updated_by_device:label,updated_at:new Date().toISOString(),app_version:"0.10.93",deleted:false};
+  const row={revision:next,payload:JSON.parse(JSON.stringify(local)),payload_hash:fp,updated_by:mdCloudSession.user?.id||null,updated_by_device:label,updated_at:new Date().toISOString(),app_version:"0.10.94",deleted:false};
   const saved=await mdCloudFetch(`/rest/v1/${MD_TEST_DELIVERY_TABLE}?workspace_id=eq.${encodeURIComponent(MD_TEST_WORKSPACE)}&record_id=eq.${encodeURIComponent(id)}&revision=eq.${remote.revision}`,{method:"PATCH",body:row,headers:{Prefer:"return=representation"}});
   const written=Array.isArray(saved)&&saved.length?saved[0]:null;if(!written)throw new Error("Cloud changed again while you were reviewing. Check / Pull again.");
   const meta=deliverySyncMeta();meta[id]={revision:next,fingerprint:fp};saveDeliverySyncMeta(meta);deliveryConflictCache=deliveryConflictCache.filter(x=>x.id!==id);renderDeliveryConflictPanel();renderCloudDeliveryRecordUi();deliveryRecordStatus(`✓ Conflict resolved — this device is now cloud revision ${next}.`,"good");
@@ -11043,7 +11176,7 @@ async function cloudSyncDeliveryChanges(){
   for(const d of localRows){
    const id=d.id,localFp=await deliveryPayloadFingerprint(d),remote=remoteMap[id],base=meta[id]||null;
    if(!remote){
-    const row={workspace_id:MD_TEST_WORKSPACE,record_id:id,revision:1,payload:JSON.parse(JSON.stringify(d)),payload_hash:localFp,updated_by:mdCloudSession.user?.id||null,updated_by_device:label,updated_at:new Date().toISOString(),app_version:"0.10.93",deleted:false};
+    const row={workspace_id:MD_TEST_WORKSPACE,record_id:id,revision:1,payload:JSON.parse(JSON.stringify(d)),payload_hash:localFp,updated_by:mdCloudSession.user?.id||null,updated_by_device:label,updated_at:new Date().toISOString(),app_version:"0.10.94",deleted:false};
     const saved=await mdCloudFetch(`/rest/v1/${MD_TEST_DELIVERY_TABLE}`,{method:"POST",body:row,headers:{Prefer:"return=representation"}});const written=Array.isArray(saved)&&saved.length?saved[0]:null;
     if(!written){conflicts.push({id,reason:"cloud did not confirm new record",local:d,remote:null});continue;}meta[id]={revision:1,fingerprint:localFp};added++;continue;
    }
@@ -11052,7 +11185,7 @@ async function cloudSyncDeliveryChanges(){
    if(!base){conflicts.push({id,reason:"cloud copy already exists — pull first",local:d,remote});continue;}
    if(Number(base.revision)!==Number(remote.revision)){conflicts.push({id,reason:"cloud changed on another device — pull first",local:d,remote});continue;}
    if(localFp===base.fingerprint){conflicts.push({id,reason:"cloud has a newer change — pull first",local:d,remote});continue;}
-   const next=Number(remote.revision)+1,row={revision:next,payload:JSON.parse(JSON.stringify(d)),payload_hash:localFp,updated_by:mdCloudSession.user?.id||null,updated_by_device:label,updated_at:new Date().toISOString(),app_version:"0.10.93",deleted:false};
+   const next=Number(remote.revision)+1,row={revision:next,payload:JSON.parse(JSON.stringify(d)),payload_hash:localFp,updated_by:mdCloudSession.user?.id||null,updated_by_device:label,updated_at:new Date().toISOString(),app_version:"0.10.94",deleted:false};
    const saved=await mdCloudFetch(`/rest/v1/${MD_TEST_DELIVERY_TABLE}?workspace_id=eq.${encodeURIComponent(MD_TEST_WORKSPACE)}&record_id=eq.${encodeURIComponent(id)}&revision=eq.${remote.revision}`,{method:"PATCH",body:row,headers:{Prefer:"return=representation"}});const written=Array.isArray(saved)&&saved.length?saved[0]:null;
    if(!written){conflicts.push({id,reason:"revision conflict",local:d,remote});continue;}meta[id]={revision:next,fingerprint:localFp};updated++;
   }
@@ -11077,12 +11210,12 @@ async function cloudPushSelectedDeliveryRecord(){
      if(!base||Number(base.revision)!==Number(remote.revision)){
        return deliveryRecordStatus(`Upload blocked — ${id} is cloud revision ${remote.revision}${remote.updated_by_device?` from ${remote.updated_by_device}`:""}. Pull delivery records first.`,"warn");
      }
-     const next=Number(remote.revision)+1;const row={revision:next,payload:JSON.parse(JSON.stringify(d)),payload_hash:localFp,updated_by:mdCloudSession.user?.id||null,updated_by_device:label,updated_at:new Date().toISOString(),app_version:"0.10.93",deleted:false};
+     const next=Number(remote.revision)+1;const row={revision:next,payload:JSON.parse(JSON.stringify(d)),payload_hash:localFp,updated_by:mdCloudSession.user?.id||null,updated_by_device:label,updated_at:new Date().toISOString(),app_version:"0.10.94",deleted:false};
      const saved=await mdCloudFetch(`/rest/v1/${MD_TEST_DELIVERY_TABLE}?workspace_id=eq.${encodeURIComponent(MD_TEST_WORKSPACE)}&record_id=eq.${encodeURIComponent(id)}&revision=eq.${remote.revision}`,{method:"PATCH",body:row,headers:{Prefer:"return=representation"}});
      const written=Array.isArray(saved)&&saved.length?saved[0]:null;if(!written)throw new Error("Record revision conflict — another device changed this docket first.");
      meta[id]={revision:next,fingerprint:localFp};saveDeliverySyncMeta(meta);deliveryRecordStatus(`✓ Docket ${id} uploaded as record revision ${next} from ${label}.`,"good");
    }else{
-     const row={workspace_id:MD_TEST_WORKSPACE,record_id:id,revision:1,payload:JSON.parse(JSON.stringify(d)),payload_hash:localFp,updated_by:mdCloudSession.user?.id||null,updated_by_device:label,updated_at:new Date().toISOString(),app_version:"0.10.93",deleted:false};
+     const row={workspace_id:MD_TEST_WORKSPACE,record_id:id,revision:1,payload:JSON.parse(JSON.stringify(d)),payload_hash:localFp,updated_by:mdCloudSession.user?.id||null,updated_by_device:label,updated_at:new Date().toISOString(),app_version:"0.10.94",deleted:false};
      const saved=await mdCloudFetch(`/rest/v1/${MD_TEST_DELIVERY_TABLE}`,{method:"POST",body:row,headers:{Prefer:"return=representation"}});
      const written=Array.isArray(saved)&&saved.length?saved[0]:null;if(!written)throw new Error("The cloud did not confirm the new delivery record.");
      meta[id]={revision:1,fingerprint:localFp};saveDeliverySyncMeta(meta);deliveryRecordStatus(`✓ Docket ${id} uploaded as new record revision 1 from ${label}.`,"good");
@@ -11177,6 +11310,13 @@ initCloudFields();renderCloudOverview(null,"idle");renderCloudTestMarker();rende
 document.getElementById("masterProductSearch").oninput=filterMasterProductSetup;
 document.getElementById("fillMasterCurrent").onclick=()=>renderMasterProductSetup(true);
 document.getElementById("saveMasterProducts").onclick=applyMasterProductSetup;
+document.getElementById("branchAssignmentSearch").oninput=filterBranchAssignmentList;
+document.getElementById("branchAssignmentBranch").onchange=e=>{
+ const next=canonicalBranchKey(e.target.value);
+ if(branchAssignmentDirty&&!confirm("Discard the unsaved branch-list changes and switch shops?")){e.target.value=branchAssignmentRenderedBranch;return}
+ branchAssignmentRenderedBranch=next;renderBranchProductAssignments();
+};
+document.getElementById("branchProductDetails").addEventListener("toggle",e=>{if(e.target.open)renderBranchProductAssignments()});
 document.getElementById("resetData").onclick=()=>{if(confirm("Delete all local Magic Dragon Pin data on this browser?")){localStorage.removeItem("mdpin-db");location.reload()}}
 cleanupDataIntegrity();refreshStoredReconciliations();renderImport();renderArchive();migrateLegacyDeliverySuggestions();bootstrapLatestSavedInvoiceSuggestions();renderAll();renderDashboardAlerts();refreshBaselineSnapshotStatus();showLastTransferResult();
 // v0.9.25 contextual Sunday help and compact selection controls
@@ -11222,7 +11362,7 @@ if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
     window.addEventListener("load",syncGeometry,{once:true});
   })();
 
-  window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js?v=1089", {updateViaCache:"none"}).catch(()=>{}));
+  window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js?v=1090", {updateViaCache:"none"}).catch(()=>{}));
 }
 
 /* v0.10.44 deterministic regression check.

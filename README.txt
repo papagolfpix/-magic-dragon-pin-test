@@ -1,4 +1,13 @@
-MAGIC DRAGON PIN v0.10.93 — TEST
+MAGIC DRAGON PIN v0.10.94 — TEST
+
+
+WHAT CHANGED IN v0.10.94
+- Adds Settings > Branch product lists for deliberate shop-by-shop product assignment.
+- Each shop shows every active canonical product, with products from its latest Sunday report identified clearly.
+- “Tick all products on latest Sunday report” only adds unsaved ticks; it never removes assignments and still requires an explicit confirmed Save.
+- Saved branch lists control future delivery-product choices only. Existing dockets, Sunday reports, stock history and invoices are unchanged.
+- Canonical alias identities are now used when checking branch coverage, preventing an old duplicate product ID from creating a false outside-list warning.
+- Adds compact assigned/latest/not-assigned counters and protects unsaved work when switching shops.
 
 
 WHAT CHANGED IN v0.10.93
