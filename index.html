@@ -4262,7 +4262,7 @@ TEST runner deliberately excluded.
 .deliveryAuditTrail{margin-top:10px;padding:9px 10px;border:1px solid #d9dee7;border-radius:11px;background:#f8fafc}.deliveryAuditTrail>summary{font-weight:900;cursor:pointer}.deliveryAuditItem{padding:8px 0;border-top:1px solid #e5e9ef}.deliveryAuditItem:first-of-type{border-top:0}.deliveryAuditMeta{font-size:10px;color:#667085;margin-top:2px}.deliveryAuditReason{font-size:12px;font-weight:800;margin-top:3px}.deliveryAuditChanges{font-size:10px;color:#475467;margin-top:4px}
 .cloudConflictPanel{display:none;margin-top:10px;padding:10px;border:1px solid #f0b764;border-radius:13px;background:#fff8eb}.cloudConflictPanel.show{display:block}.cloudConflictHeader{display:flex;justify-content:space-between;gap:8px;align-items:flex-start;margin-bottom:8px}.cloudConflictHeader b{font-size:14px}.cloudConflictHeader span{font-size:11px;color:#9a3412;font-weight:800}.cloudConflictCard{border:1px solid #e7c98e;border-radius:10px;background:#fff;padding:9px;margin-top:8px}.cloudConflictTitle{font-weight:900;font-size:13px}.cloudConflictMeta{font-size:10px;color:#667085;margin-top:2px}.cloudConflictDiff{margin-top:7px;border-top:1px solid #ece2cf}.cloudConflictDiffRow{display:grid;grid-template-columns:minmax(86px,.8fr) 1fr 1fr;gap:5px;padding:6px 0;border-bottom:1px solid #f1eadf;font-size:10px;align-items:start}.cloudConflictDiffRow.head{font-weight:900;color:#667085}.cloudConflictDiffRow b{font-size:10px}.cloudConflictActions{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:9px}.cloudConflictActions .btn{min-height:38px;padding:7px;font-size:12px}.cloudConflictLater{font-size:10px;color:#667085;text-align:center;margin-top:6px}
 
-/* v0.10.113 TEST — saved-docket viewport correction.
+/* v0.10.115 TEST — saved-docket viewport correction.
    Header/navigation and bottom actions stay fixed; only docket body scrolls. */
 body.docketMode #docket.active{
   overflow:hidden!important;
@@ -4350,7 +4350,7 @@ body.docketMode .deliveryModuleHeadActions .btn{
 }
 
 
-/* v0.10.113 TEST — invoice review actions remain available inside saved invoice view. */
+/* v0.10.115 TEST — invoice review actions remain available inside saved invoice view. */
 #invoiceViewer .invoiceWarningActions{
   display:flex!important;
   gap:8px!important;
@@ -4367,7 +4367,7 @@ body.docketMode .deliveryModuleHeadActions .btn{
 }
 
 
-/* v0.10.113 TEST — acknowledgement is a notification state, not a reconciliation fix. */
+/* v0.10.115 TEST — acknowledgement is a notification state, not a reconciliation fix. */
 #invoiceViewer .invoiceAckState{
   display:flex;
   align-items:center;
@@ -4383,7 +4383,7 @@ body.docketMode .deliveryModuleHeadActions .btn{
 }
 
 
-/* v0.10.113 TEST — guided invoice correction review states. */
+/* v0.10.115 TEST — guided invoice correction review states. */
 #invoiceViewer .invoiceReviewCard{
   border:1px solid #d7dde7;
   border-radius:13px;
@@ -4441,7 +4441,7 @@ body.docketMode .deliveryModuleHeadActions .btn{
 }
 
 
-/* v0.10.113 TEST — guided conflict-resolution workflow + delivered-date calendar */
+/* v0.10.115 TEST — guided conflict-resolution workflow + delivered-date calendar */
 .conflictWizardOverlay{position:fixed;inset:0;z-index:12000;background:#f4f6f9;display:flex;flex-direction:column;overflow:hidden}
 .conflictWizardTop{flex:0 0 auto;background:#121a2b;color:#fff;padding:10px 12px;padding-top:max(10px,env(safe-area-inset-top));display:flex;align-items:center;justify-content:space-between;gap:10px}
 .conflictWizardTopTitle b{display:block;font-size:17px}.conflictWizardTopTitle span{display:block;font-size:11px;opacity:.76;margin-top:2px}
@@ -4696,7 +4696,7 @@ window.addEventListener("error",e=>{const b=document.getElementById("runtimeErro
       <button class="heroHomeHotspot noPrint" type="button" aria-label="Return to Dashboard" title="Dashboard" onclick="returnToDashboardFromHeader()"></button>
     </div>
     <div class="heroActions noPrint">
-      <span class="app-version">v0.10.113 TEST</span>
+      <span class="app-version">v0.10.115 TEST</span>
       <button class="heroMenuButton" id="heroMenuButton" type="button" aria-expanded="false">Menu</button>
     </div>
   </div>
@@ -5387,7 +5387,7 @@ if(!Array.isArray(db.docketAudit)) db.docketAudit=[];
 if(!Array.isArray(db.invoices)) db.invoices=[];
 if(!Array.isArray(db.adjustments)) db.adjustments=[];
 
-// v0.10.113 TEST handoff sanitation:
+// v0.10.115 TEST handoff sanitation:
 // remove development-only cross-device test markers from real app data.
 // This does not alter products, quantities, delivery status, notes, invoices,
 // Sunday reports, mappings, prices, dates or audit history.
@@ -7467,7 +7467,7 @@ function buildFullBackupPayload(kind="SUPPORT",note=""){
   return {
     magicDragonBackup:true,
     app:"Magic Dragon Pin",
-    appVersion:"0.10.113",
+    appVersion:"0.10.115",
     backupKind:String(kind||"SUPPORT").toUpperCase(),
     createdAt:new Date().toISOString(),
     note:String(note||""),
@@ -9871,6 +9871,7 @@ repairKnownProductPrices();
 ensureProductFamilyStructure();
 let sundayWizardStep=2;
 let sundayWizardTargetDate=null;
+let sundayConflictFocus=null; // v0.10.115: exact conflict reconciliation focus {branch,product}
 const SUNDAY_STEPS=["Import","Reconcile","Financial","Invoice","Payment"];
 function ensureCompletedSundayCycles(){if(!Array.isArray(db.completedSundayCycles))db.completedSundayCycles=[];}
 function isSundayCycleComplete(date){ensureCompletedSundayCycles();return db.completedSundayCycles.some(x=>x&&x.date===date&&x.status==="complete");}
@@ -9906,8 +9907,9 @@ function completeSundayCycle(state){
   return true;
  refreshBaselineSnapshotStatus();
 }
-function openSundayWizard(targetDate=null){
+function openSundayWizard(targetDate=null,focus=null){
   sundayWizardTargetDate=targetDate||null;
+  sundayConflictFocus=focus||null;
   const items=latestWizardReports();
   sundayWizardStep=items.length?2:1;
   switchTab("sundayWizard");
@@ -9918,6 +9920,7 @@ function openSundayWizard(targetDate=null){
 }
 function exitSundayWorkflow(){
   sundayWizardTargetDate=null;
+  sundayConflictFocus=null;
   document.body.classList.remove("workflowMode");
   switchTab("home");
   const resetHomeScroll=()=>{
@@ -10049,8 +10052,14 @@ function renderWizardChrome(state){
 }
 function renderStockWizard(items){
   let allGreen=true;
-  const html=items.map(({report:r,rec})=>{
-    const issues=(rec.details||[]).filter(d=>d.flags?.rowHasStockError||d.flags?.rowHasDeliveryIssue||d.flags?.rowHasMapping||d.flags?.rowHasHistoryPending);
+  const focus=sundayConflictFocus;
+  const sourceItems=focus?.branch?items.filter(x=>canonicalBranchName(x.report?.branch||"")===canonicalBranchName(focus.branch||"")):items;
+  const html=sourceItems.map(({report:r,rec})=>{
+    let issues=(rec.details||[]).filter(d=>d.flags?.rowHasStockError||d.flags?.rowHasDeliveryIssue||d.flags?.rowHasMapping||d.flags?.rowHasHistoryPending);
+    if(focus?.product){
+      const exact=issues.filter(d=>String(d.product||"").trim().toLowerCase()===String(focus.product||"").trim().toLowerCase());
+      if(exact.length)issues=exact;
+    }
     if(rec.status!=="ok")allGreen=false;
     if(rec.status==="ok")return `<div class="wizardBranch"><div class="wizardBranchHead"><b>${escapeHtml(r.branch)}</b><span class="reconStatus ok">RECONCILED</span></div><div class="wizardBranchBody"><div class="wizardGood">✓ All ${rec.totalRows} products reconcile with the prior week.</div></div></div>`;
     const visible=issues.slice(0,12).map(d=>{
@@ -10067,7 +10076,8 @@ function renderStockWizard(items){
     }).join("");
     return `<div class="wizardBranch"><div class="wizardBranchHead"><b>${escapeHtml(r.branch)}</b><span class="reconStatus bad">ACTION REQUIRED</span></div><div class="wizardBranchBody">${visible}${issues.length>12?`<div class="wizardMinimal">+ ${issues.length-12} more items. Resolve the first issues, then return here.</div>`:""}</div></div>`;
   }).join("");
-  return html+(allGreen?'<div class="wizardGood" style="margin-top:12px">✓ Stock reconciliation complete. Tap Next for the financial check.</div>':'<div class="wizardLocked" style="margin-top:12px">Next stays locked until the stock exceptions above are resolved.</div>');
+  const focusNote=focus?`<div class="wizardGood" style="margin-bottom:10px;background:#eff6ff;color:#1e3a8a">Conflict focus: ${escapeHtml(displayBranchName(focus.branch||""))}${focus.product?` · ${escapeHtml(focus.product)}`:""}. Only the affected reconciliation item is shown here. Exit or reopen Sunday Workflow normally to see the full week.</div>`:"";
+  return focusNote+html+(allGreen?'<div class="wizardGood" style="margin-top:12px">✓ Stock reconciliation complete. Tap Next for the financial check.</div>':'<div class="wizardLocked" style="margin-top:12px">Next stays locked until the stock exception above is resolved.</div>');
 }
 function renderFinancialWizard(state){
   const financial=state.financial;
@@ -10652,7 +10662,7 @@ window.saveInvoiceViewerPayment=saveInvoiceViewerPayment;
 
 
 
-/* v0.10.113 TEST — deterministic unpaid conflict seed for guided-wizard regression testing.
+/* v0.10.115 TEST — deterministic unpaid conflict seed for guided-wizard regression testing.
    This helper is intentionally TEST-only. It creates an unpaid test invoice, ensures there
    is a delivered docket inside that accounting cycle, applies one synthetic quantity edit,
    records the same audit/correction structures used by normal editing, then opens the wizard. */
@@ -10661,11 +10671,19 @@ window.createUnpaidConflictTest=()=>{
     ensureSundayArchive();
     const reports=[...(db.sundayImports||[])].filter(r=>r&&r.date).sort((a,b)=>String(b.date).localeCompare(String(a.date)));
     if(!reports.length)return alert("No Sunday report is available for the conflict test.");
-    const reportDate=reports[0].date;
+
+    // v0.10.115 TEST: seed only from a week that is already fully reconciled BEFORE
+    // we introduce the synthetic edit. Otherwise restoring the test quantity can never
+    // make Step 2 turn green, which makes the regression test misleading.
+    const candidateDates=[...new Set(reports.map(r=>String(r.date)))].sort((a,b)=>String(b).localeCompare(String(a)));
+    let reportDate="", base=null;
+    for(const d of candidateDates){
+      const state=currentWizardStateSafeForInvoice(d);
+      const invs=[...(db.invoices||[])].filter(i=>i&&i.reportDate===d&&!i.testOnlyConflictSeed).sort((a,b)=>Number(b.version||1)-Number(a.version||1));
+      if(state?.financialGreen&&invs.length){reportDate=d;base=invs[0];break;}
+    }
+    if(!reportDate||!base)return alert("No fully reconciled invoiced week is currently available for a clean conflict test. Resolve the existing Sunday discrepancies first, or restore a clean TEST backup.");
     const weekReports=reports.filter(r=>String(r.date)===String(reportDate));
-    const existing=[...(db.invoices||[])].filter(i=>i&&i.reportDate===reportDate&&!i.testOnlyConflictSeed).sort((a,b)=>Number(b.version||1)-Number(a.version||1));
-    const base=existing[0]||null;
-    if(!base)return alert(`No saved invoice exists for week ending ${recordDateLabel(reportDate)}.`);
 
     // TEST guard: never manufacture a second unresolved synthetic conflict.
     // If one is already active, resume that exact workflow instead.
@@ -10763,7 +10781,7 @@ function renderConflictResolutionWizard(){
  const step=resolved?4:(!live?.financialGreen?2:3);const names=['Understand','Fix source','Decision','Result'];p.innerHTML=names.map((n,i)=>`<div class="conflictWizardStep ${i+1<step?'done':i+1===step?'active':''}">${i+1}<br>${n}</div>`).join('');document.getElementById('conflictWizardSubtitle').textContent=`${inv.number||'Invoice'} · week ending ${invoiceDateLabel(inv.reportDate)}`;
  let html=`<div class="conflictWizardCard ${resolved?'good':'caution'}"><div class="conflictWizardStatus">${resolved?'✓ RESOLVED':'GUIDED REVIEW'}</div><div class="conflictWizardTitle">${resolved?'Correction completed':'What happened'}</div><div class="conflictWizardText">${resolved?escapeHtml(conflictWizardFinalText(inv,c)):escapeHtml(ctx.changeText||'A linked delivery docket was edited after this invoice was saved.')}</div><div class="conflictWizardFacts"><div class="conflictWizardFact"><div class="k">Invoice</div><div class="v">${escapeHtml(inv.number||'—')}</div></div><div class="conflictWizardFact"><div class="k">Week ending</div><div class="v">${escapeHtml(invoiceDateLabel(inv.reportDate))}</div></div><div class="conflictWizardFact"><div class="k">Affected docket</div><div class="v">${escapeHtml(sourceDocket?`${invoiceDateLabel(sourceDocket.date)} · ${displayBranchName(sourceDocket.branch)}`:(ctx.date?`${invoiceDateLabel(ctx.date)} · ${ctx.branch}`:'—'))}</div></div><div class="conflictWizardFact"><div class="k">Status</div><div class="v">${resolved?'Resolved':live?.financialGreen?'Ready for final handling':'Needs reconciliation'}</div></div></div>${sourceDocket&&!resolved?`<div class="conflictWizardActions"><button class="btn alt" onclick="conflictWizardOpenDocket('${sourceDocket.id}')">Open affected docket</button></div>`:''}</div>`;
  if(resolved){html+=`<div class="conflictWizardCard good"><div class="conflictWizardTitle">Final result</div><div class="conflictWizardResult">${escapeHtml(conflictWizardFinalText(inv,c))}</div><div class="conflictWizardActions"><button class="btn gold" onclick="closeConflictResolutionWizard();renderInvoiceRecord('${inv.id}')">Return to invoice</button><button class="btn alt" onclick="closeConflictResolutionWizard();switchTab('home');renderDashboardAlerts()">Dashboard</button></div></div>`;b.innerHTML=html;return;}
- if(!live?.financialGreen){html+=`<div class="conflictWizardCard danger"><div class="conflictWizardStatus">ACTION REQUIRED</div><div class="conflictWizardTitle">Fix the reconciliation first</div><div class="conflictWizardText">The edited week is out of balance. Open the affected source, correct it, then return here and recheck. The app will not calculate a money difference until the week reconciles.</div><div class="conflictWizardActions">${sourceDocket?`<button class="btn gold" onclick="conflictWizardOpenDocket('${sourceDocket.id}')">Open affected docket</button>`:''}<button class="btn gold" onclick="conflictWizardOpenSunday('${inv.id}')">Open Sunday reconciliation</button><button class="btn" onclick="renderConflictResolutionWizard()">Recheck now</button><button class="btn alt" onclick="closeConflictResolutionWizard()">Leave unresolved</button></div></div>`;b.innerHTML=html;return;}
+ if(!live?.financialGreen){html+=`<div class="conflictWizardCard danger"><div class="conflictWizardStatus">ACTION REQUIRED</div><div class="conflictWizardTitle">Fix the reconciliation first</div><div class="conflictWizardText">The edited week is out of balance. Open the affected source, correct it, then return here and recheck. The app will not calculate a money difference until the week reconciles.</div><div class="conflictWizardActions">${sourceDocket?`<button class="btn gold" onclick="conflictWizardOpenDocket('${sourceDocket.id}')">Open affected docket</button>`:''}<button class="btn gold" onclick="conflictWizardOpenSunday('${inv.id}')">Open Sunday reconciliation</button><button class="btn" onclick="conflictWizardRecheck()">Recheck now</button><button class="btn alt" onclick="closeConflictResolutionWizard()">Leave unresolved</button></div></div>`;b.innerHTML=html;return;}
  if(c&&['pending','waiting_reconciliation'].includes(c.status)){if(invoiceIsPaid(inv))c.choice='next_sunday';html+=`<div class="conflictWizardCard caution"><div class="conflictWizardStatus">READY TO RESOLVE</div><div class="conflictWizardTitle">Choose the final handling</div><div class="conflictWizardText">The week reconciles again. ${invoiceIsPaid(inv)?'This invoice is already paid, so it must stay unchanged and any verified difference will carry forward.':'Choose whether the verified correction belongs in this invoice or the next Sunday cycle.'}</div>${invoiceIsPaid(inv)?'<div class="conflictWizardResult">Paid invoice protected — carry forward to next Sunday.</div>':`<div class="conflictWizardActions"><button class="btn ${c.choice==='update_current'?'gold':'alt'}" onclick="conflictWizardChoose('${c.id}','update_current')">Update this invoice</button><button class="btn ${c.choice==='next_sunday'?'gold':'alt'}" onclick="conflictWizardChoose('${c.id}','next_sunday')">Add to next Sunday</button></div>`}<div class="conflictWizardActions"><button class="btn gold" ${c.choice?'':'disabled'} onclick="conflictWizardApply('${c.id}')">Apply resolution</button><button class="btn alt" onclick="closeConflictResolutionWizard()">Decide later</button></div></div>`;}else{html+=`<div class="conflictWizardCard caution"><div class="conflictWizardTitle">Recheck the correction</div><div class="conflictWizardText">The week is balanced but there is no active correction decision. Open the affected docket and save the required correction choice.</div>${sourceDocket?`<div class="conflictWizardActions"><button class="btn gold" onclick="conflictWizardOpenDocket('${sourceDocket.id}')">Open affected docket</button></div>`:''}</div>`;}b.innerHTML=html;
 }
 function openConflictResolutionWizard(id){conflictWizardInvoiceId=id;sessionStorage.setItem(CONFLICT_WIZARD_RESUME_KEY,id);conflictWizardEnsure().style.display='flex';renderConflictResolutionWizard();}
@@ -10772,16 +10790,47 @@ function renderConflictResumeChip(){
  let c=document.getElementById('conflictResumeChip'),id=sessionStorage.getItem(CONFLICT_WIZARD_RESUME_KEY);
  const editing=!!editingDocketId||document.body.classList.contains('deliveryMode');
  const onDashboard=!!document.getElementById('home')?.classList.contains('active');
- // Never cover delivery-editor controls. On the Dashboard the correction card already has its own Resume button.
- if(!id||editing||onDashboard){if(c)c.remove();return;}
+ const inSundayWorkflow=document.body.classList.contains('workflowMode')||!!document.getElementById('sundayWizard')?.classList.contains('active');
+ // Never cover delivery-editor or Sunday-workflow controls. Dashboard already has its own Resume button.
+ if(!id||editing||onDashboard||inSundayWorkflow){if(c)c.remove();return;}
  if(!c){c=document.createElement('button');c.id='conflictResumeChip';c.className='conflictResumeChip';c.type='button';document.body.appendChild(c);}
  c.textContent='Resume conflict resolution';c.onclick=()=>openConflictResolutionWizard(id);
 }
 function conflictWizardOpenDocket(id){closeConflictResolutionWizard();editDocket(id);}
-function conflictWizardOpenSunday(id){const inv=(db.invoices||[]).find(x=>x.id===id);if(!inv)return;closeConflictResolutionWizard();openSundayWizard(inv.reportDate);sundayWizardStep=2;renderSundayWizard();}
+function conflictWizardOpenSunday(id){
+ const inv=(db.invoices||[]).find(x=>x.id===id);if(!inv)return;
+ const c=conflictWizardCorrection(inv),ctx=invoiceReviewContext(inv);
+ const docketId=c?.docketId||ctx.latestEdit?.docketId||null;
+ const d=docketId?(db.deliveries||[]).find(x=>x.id===docketId):null;
+ const ch=(c?.changes||ctx.latestEdit?.changes||[])[0]||null;
+ const line=ch?.after||ch?.before||null;
+ const prod=line?.productId?(resolvedProductById(line.productId)||db.products.find(x=>x.id===line.productId)):null;
+ const focus={branch:d?.branch||ctx.branch||"",product:prod?deliveryProductDisplayName(prod):(line?.productName||"")};
+ closeConflictResolutionWizard();
+ openSundayWizard(inv.reportDate,focus);sundayWizardStep=2;renderSundayWizard();
+ setTimeout(()=>{const wc=document.getElementById('wizardContent');if(wc)wc.scrollTop=0;},60);
+}
 function conflictWizardChoose(id,choice){const c=(db.pendingCorrections||[]).find(x=>x.id===id);if(!c)return;c.choice=choice;localStorage.setItem('mdpin-db',JSON.stringify(db));renderConflictResolutionWizard();}
 function conflictWizardApply(id){const c=(db.pendingCorrections||[]).find(x=>x.id===id);if(!c)return;const inv=(db.invoices||[]).find(x=>x.id===c.invoiceId);if(invoiceIsPaid(inv))c.choice='next_sunday';if(!c.choice)return alert('Choose how the correction should be handled first.');localStorage.setItem('mdpin-db',JSON.stringify(db));processPendingDocketCorrections();renderDashboardAlerts();renderConflictResolutionWizard();}
-window.openConflictResolutionWizard=openConflictResolutionWizard;window.closeConflictResolutionWizard=closeConflictResolutionWizard;window.renderConflictResolutionWizard=renderConflictResolutionWizard;window.conflictWizardOpenDocket=conflictWizardOpenDocket;window.conflictWizardOpenSunday=conflictWizardOpenSunday;window.conflictWizardChoose=conflictWizardChoose;window.conflictWizardApply=conflictWizardApply;
+function conflictWizardRecheck(){
+  const inv=conflictWizardInvoice();if(!inv)return;
+  try{refreshReconciliationViews();}catch(e){console.warn('Conflict recheck refresh',e)}
+  processPendingDocketCorrections();
+  const live=currentWizardStateSafeForInvoice(inv.reportDate);
+  if(live?.financialGreen){
+    renderConflictResolutionWizard();
+    const body=document.getElementById('conflictWizardBody');
+    if(body)body.insertAdjacentHTML('afterbegin','<div class="conflictWizardCard good"><div class="conflictWizardStatus">✓ RECHECK PASSED</div><div class="conflictWizardTitle">The week reconciles again</div><div class="conflictWizardText">Step 2 is complete. Continue to the Decision step below.</div></div>');
+    return;
+  }
+  const badStock=(live?.items||[]).filter(x=>x?.rec?.status!=="ok");
+  const badFin=(live?.financial||[]).filter(x=>x?.result?.status!=="ok");
+  const labels=[...new Set([...badStock.map(x=>displayBranchName(x.report?.branch||'')),...badFin.map(x=>displayBranchName(x.report?.branch||''))].filter(Boolean))];
+  renderConflictResolutionWizard();
+  const body=document.getElementById('conflictWizardBody');
+  if(body)body.insertAdjacentHTML('afterbegin',`<div class="conflictWizardCard danger"><div class="conflictWizardStatus">RECHECKED — STILL UNRESOLVED</div><div class="conflictWizardTitle">There are still reconciliation issues</div><div class="conflictWizardText">${labels.length?`Still affected: ${escapeHtml(labels.join(', '))}. `:''}${badStock.length} stock-flow report${badStock.length===1?'':'s'} and ${badFin.length} financial check${badFin.length===1?'':'s'} are not green yet. Open Sunday reconciliation to see the remaining discrepancies.</div></div>`);
+}
+window.openConflictResolutionWizard=openConflictResolutionWizard;window.closeConflictResolutionWizard=closeConflictResolutionWizard;window.renderConflictResolutionWizard=renderConflictResolutionWizard;window.conflictWizardOpenDocket=conflictWizardOpenDocket;window.conflictWizardOpenSunday=conflictWizardOpenSunday;window.conflictWizardChoose=conflictWizardChoose;window.conflictWizardApply=conflictWizardApply;window.conflictWizardRecheck=conflictWizardRecheck;
 
 function invoiceReviewContext(inv){
   const sourceEdits=postInvoiceDocketEdits(inv);
@@ -11478,7 +11527,7 @@ function validateBackupPackage(pkg){
 }
 async function createCompleteTransferPackage(kind="FULL_TRANSFER"){
  const sourceFiles=await exportArchivedSourceFiles(),counts=backupCounts();
- return {format:BACKUP_FORMAT,schema:BACKUP_SCHEMA,appVersion:"0.10.113",backupKind:kind,createdAt:new Date().toISOString(),counts,sourceFilesCount:sourceFiles.length,data:JSON.parse(JSON.stringify(db)),sourceFiles};
+ return {format:BACKUP_FORMAT,schema:BACKUP_SCHEMA,appVersion:"0.10.115",backupKind:kind,createdAt:new Date().toISOString(),counts,sourceFilesCount:sourceFiles.length,data:JSON.parse(JSON.stringify(db)),sourceFiles};
 }
 async function savePackageFile(pkg,prefix="Magic-Pin-Data"){
  const blob=new Blob([JSON.stringify(pkg)],{type:"application/json"});
