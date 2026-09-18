@@ -1,4 +1,4 @@
-WHAT CHANGED IN v0.10.106 TEST
+WHAT CHANGED IN v0.10.107 TEST
 - Added guided Conflict Resolution Workflow with Understand / Fix source / Decision / Result stages.
 - Dashboard invoice-review alerts launch Resolve step by step.
 - Wizard can open the affected docket or Sunday reconciliation and returns to the wizard after docket save/cancel.
@@ -44,7 +44,7 @@ WHAT CHANGED IN v0.10.99 TEST
 - Opening/collapsing a docket no longer scrolls the whole Delivery module header out of view.
 - No Sunday, pricing, invoice, mapping, cloud, PDF or business-rule logic changed.
 
-MAGIC DRAGON PIN v0.10.106 — TEST
+MAGIC DRAGON PIN v0.10.107 — TEST
 
 PURPOSE
 - Frozen Sunday-handoff candidate based directly on validated v0.10.97 TEST.
@@ -229,3 +229,9 @@ v0.10.73
 - Tablet-only shell patch; proven iPhone header/keyboard behaviour is left unchanged.
 
 - New Delivery now shows a clear “Docket history” escape button beside + New Delivery so accidental entry can return directly to the delivery history list without losing orientation.
+
+
+v0.10.107 TEST
+- Sunday Report Archive adds a TEST-only “Create TEST suggested docket” action.
+- It recreates consumed suggested-delivery quantities from the selected Sunday report / prior linked suggestion for repeatable conflict-workflow regression testing.
+- Test copy is marked as manually edited/test-only so normal calculated-suggestion refresh cannot silently replace it.
