@@ -1,4 +1,14 @@
-MAGIC DRAGON PIN v0.10.91 — TEST
+MAGIC DRAGON PIN v0.10.92 — TEST
+
+
+WHAT CHANGED IN v0.10.92
+- Adds a compact mapping-integrity dashboard under Settings > Product mappings.
+- Shows unique spreadsheet source names, resolved names, genuinely new/changed names and names saved for later.
+- Confirms how many historical Sunday and weekly rows currently link to catalogue products.
+- Saving an alias now updates past Sunday imports and their linked Excel weekly records in one operation, then reports the exact number of historical rows changed.
+- Unresolved historical weekly rows are explicitly cleared instead of retaining a stale previous product link.
+- Confirmed aliases continue to apply automatically to future imports, and resolved names disappear immediately from active review.
+- The proven delivery sync and multi-week worksheet detector are unchanged.
 
 
 WHAT CHANGED IN v0.10.91
