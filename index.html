@@ -4201,6 +4201,12 @@ TEST runner deliberately excluded.
     justify-content:flex-start!important;
   }
 }
+
+/* v0.10.79 — delivered-edit audit trail + conflict review */
+.deliveryEditReasonBox{display:none;margin-top:7px;padding:8px 10px;border:1px solid #e7c86f;border-radius:10px;background:#fffaf0}
+.deliveryEditReasonBox.good{border-color:#86d6a1;background:#effcf3}.deliveryEditReasonBox label{display:block;font-weight:900;font-size:12px;margin-bottom:4px}.deliveryEditReasonBox textarea{width:100%;min-height:52px;resize:vertical;font:inherit;padding:8px;border:1px solid #cfd5df;border-radius:9px;background:#fff}.deliveryEditReasonHelp{font-size:10px;line-height:1.25;color:#667085;margin-top:4px}.deliveryEditReasonNeed{font-size:10px;color:#9b2c24;font-weight:800;margin-top:4px}
+.deliveryAuditTrail{margin-top:10px;padding:9px 10px;border:1px solid #d9dee7;border-radius:11px;background:#f8fafc}.deliveryAuditTrail>summary{font-weight:900;cursor:pointer}.deliveryAuditItem{padding:8px 0;border-top:1px solid #e5e9ef}.deliveryAuditItem:first-of-type{border-top:0}.deliveryAuditMeta{font-size:10px;color:#667085;margin-top:2px}.deliveryAuditReason{font-size:12px;font-weight:800;margin-top:3px}.deliveryAuditChanges{font-size:10px;color:#475467;margin-top:4px}
+.cloudConflictPanel{display:none;margin-top:10px;padding:10px;border:1px solid #f0b764;border-radius:13px;background:#fff8eb}.cloudConflictPanel.show{display:block}.cloudConflictHeader{display:flex;justify-content:space-between;gap:8px;align-items:flex-start;margin-bottom:8px}.cloudConflictHeader b{font-size:14px}.cloudConflictHeader span{font-size:11px;color:#9a3412;font-weight:800}.cloudConflictCard{border:1px solid #e7c98e;border-radius:10px;background:#fff;padding:9px;margin-top:8px}.cloudConflictTitle{font-weight:900;font-size:13px}.cloudConflictMeta{font-size:10px;color:#667085;margin-top:2px}.cloudConflictDiff{margin-top:7px;border-top:1px solid #ece2cf}.cloudConflictDiffRow{display:grid;grid-template-columns:minmax(86px,.8fr) 1fr 1fr;gap:5px;padding:6px 0;border-bottom:1px solid #f1eadf;font-size:10px;align-items:start}.cloudConflictDiffRow.head{font-weight:900;color:#667085}.cloudConflictDiffRow b{font-size:10px}.cloudConflictActions{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:9px}.cloudConflictActions .btn{min-height:38px;padding:7px;font-size:12px}.cloudConflictLater{font-size:10px;color:#667085;text-align:center;margin-top:6px}
 </style>
 
 <style id="v01046-fixed-delivery-controls">
@@ -4283,7 +4289,7 @@ body.deliveryMode .deliveryEditLineCard{
 
 
 <style id="v01047-line-pane-below-controls">
-/* v0.10.78 TEST — hard-separate New Delivery controls from added lines.
+/* v0.10.79 TEST — hard-separate New Delivery controls from added lines.
    iPhone Safari was allowing the first reusable line card/select to paint back
    underneath the stationary control deck.  Use a simple column flex layout
    for New Delivery: controls = fixed natural height, line list = the only
@@ -4433,7 +4439,7 @@ window.addEventListener("error",e=>{const b=document.getElementById("runtimeErro
       <button class="heroHomeHotspot noPrint" type="button" aria-label="Return to Dashboard" title="Dashboard" onclick="returnToDashboardFromHeader()"></button>
     </div>
     <div class="heroActions noPrint">
-      <span class="app-version">v0.10.78 TEST</span>
+      <span class="app-version">v0.10.79 TEST</span>
       <button class="heroMenuButton" id="heroMenuButton" type="button" aria-expanded="false">Menu</button>
     </div>
   </div>
@@ -4655,6 +4661,7 @@ window.addEventListener("error",e=>{const b=document.getElementById("runtimeErro
       <div class="deliveryBottomPane">
         <div class="totalbar"><span>Total cost: <span id="deliveryTotal">฿0</span></span></div>
         <div id="deliveryCorrectionChoice" class="deliveryCorrectionChoice" style="display:none"></div>
+        <div id="deliveryEditReasonBox" class="deliveryEditReasonBox"></div>
         <div class="deliverySaveActions">
           <button class="btn alt" id="cancelEditDelivery" style="display:none">Cancel</button>
           <button class="btn alt" id="clearDelivery">Clear</button>
@@ -4816,6 +4823,7 @@ window.addEventListener("error",e=>{const b=document.getElementById("runtimeErro
               <div><b>This sync</b><span id="cloudDeliveryThisPull">No sync yet</span></div>
               <div><b>Last transfer</b><span id="cloudDeliveryLastChange">No delivery records transferred yet</span></div>
             </div>
+            <div class="cloudConflictPanel" id="cloudDeliveryConflictPanel"></div>
             <details class="deliverySyncAdvanced">
               <summary>Advanced · single docket</summary>
               <div class="field" style="margin-top:8px">
@@ -5434,6 +5442,7 @@ let editingSuggestionId=null;
 let deliveryEditOriginalSnapshot=null;
 let deliveryEditAffectedInvoiceId=null;
 let deliveryEditResolutionChoice="";
+let deliveryEditReason="";
 let activeDeliveryLetter="";
 let deliveryShowAllProducts=false;
 let addProductReturnToDelivery=false;
@@ -5514,21 +5523,43 @@ function affectedInvoiceForDocket(d){
 function setDeliveryCorrectionChoice(choice){deliveryEditResolutionChoice=choice;updateDocketEditResolutionUI();}
 window.setDeliveryCorrectionChoice=setDeliveryCorrectionChoice;
 function invoiceIsPaid(inv){return !!inv&&(inv.payment?.status==="paid"||inv.status==="paid");}
+function deliveryEditReasonDevice(){
+ const fallback=(typeof detectCloudDeviceLabel==="function"?detectCloudDeviceLabel():"This device");
+ return (localStorage.getItem("mdpin-cloud-device")||document.getElementById("cloudDeviceLabel")?.value||fallback||"This device").trim()||"This device";
+}
+function updateDeliveryEditReasonUI(changed,wasDelivered){
+ const box=document.getElementById("deliveryEditReasonBox");if(!box)return true;
+ const needed=!!(editingDocketId&&changed&&wasDelivered);
+ if(!needed){box.style.display="none";box.innerHTML="";if(!changed)deliveryEditReason="";return true;}
+ box.style.display="block";
+ const value=deliveryEditReason||"";
+ box.classList.toggle("good",!!value.trim());
+ box.innerHTML=`<label>Reason for editing delivered docket</label><textarea id="deliveryEditReasonInput" maxlength="180" placeholder="e.g. Shop called — quantity was entered incorrectly.">${escapeHtml(value)}</textarea><div class="deliveryEditReasonHelp">Saved with the docket and visible on other synced devices. Device: <b>${escapeHtml(deliveryEditReasonDevice())}</b></div>${value.trim()?"":'<div class="deliveryEditReasonNeed">Enter a short reason before saving.</div>'}`;
+ const input=document.getElementById("deliveryEditReasonInput");if(input)input.oninput=()=>{
+   deliveryEditReason=input.value;box.classList.toggle("good",!!deliveryEditReason.trim());
+   const need=box.querySelector(".deliveryEditReasonNeed");if(need)need.style.display=deliveryEditReason.trim()?"none":"block";
+   const changedNow=docketDraftChanged(),invNow=deliveryEditAffectedInvoiceId?(db.invoices||[]).find(x=>x.id===deliveryEditAffectedInvoiceId):null;
+   const decisionOk=!(changedNow&&wasDelivered&&invNow&&!invoiceIsPaid(invNow))||!!deliveryEditResolutionChoice;
+   const saveBtn=document.getElementById("saveDelivery");if(saveBtn)saveBtn.disabled=!(deliveryEditReason.trim()&&decisionOk);
+ };
+ return !!value.trim();
+}
 function updateDocketEditResolutionUI(){
  const box=document.getElementById("deliveryCorrectionChoice"),saveBtn=document.getElementById("saveDelivery");if(!box||!saveBtn)return;
- if(!editingDocketId||!deliveryEditOriginalSnapshot){box.style.display="none";saveBtn.disabled=false;return;}
+ if(!editingDocketId||!deliveryEditOriginalSnapshot){box.style.display="none";updateDeliveryEditReasonUI(false,false);saveBtn.disabled=false;return;}
  const changed=docketDraftChanged(),wasDelivered=!!deliveryEditOriginalSnapshot.deliveredAt,inv=deliveryEditAffectedInvoiceId?(db.invoices||[]).find(x=>x.id===deliveryEditAffectedInvoiceId):null;
+ const reasonOk=updateDeliveryEditReasonUI(changed,wasDelivered);
  const needsDecision=changed&&wasDelivered&&!!inv;
- if(!needsDecision){box.style.display="none";saveBtn.disabled=false;if(!changed)deliveryEditResolutionChoice="";return;}
+ if(!needsDecision){box.style.display="none";if(!changed)deliveryEditResolutionChoice="";saveBtn.disabled=!reasonOk;return;}
  box.style.display="block";
  if(invoiceIsPaid(inv)){
    deliveryEditResolutionChoice="next_sunday";
    box.innerHTML=`<div class="choiceTitle">Next Sunday’s invoice will be adjusted automatically</div><div class="choiceSub">${escapeHtml(inv.number||"This invoice")} has already been paid, so it will stay unchanged. Any financial difference from this docket correction will be added to or deducted from the next Sunday billing cycle.</div>`;
-   saveBtn.disabled=false;
+   saveBtn.disabled=!reasonOk;
    return;
  }
  box.innerHTML=`<div class="choiceTitle">How should this correction be handled?</div><div class="choiceSub">This delivered docket belongs to ${escapeHtml(inv.number||"the saved invoice")}. Choose one option, then save.</div><div class="deliveryCorrectionOptions"><label class="deliveryCorrectionOption ${deliveryEditResolutionChoice==='update_current'?'selected':''}"><input type="radio" name="deliveryCorrectionResolution" value="update_current" ${deliveryEditResolutionChoice==='update_current'?'checked':''} onchange="setDeliveryCorrectionChoice('update_current')"><div><b>Update this invoice</b><span>Apply the correction to this billing cycle.</span></div></label><label class="deliveryCorrectionOption ${deliveryEditResolutionChoice==='next_sunday'?'selected':''}"><input type="radio" name="deliveryCorrectionResolution" value="next_sunday" ${deliveryEditResolutionChoice==='next_sunday'?'checked':''} onchange="setDeliveryCorrectionChoice('next_sunday')"><div><b>Add to next Sunday’s invoice</b><span>Keep this invoice unchanged and carry the difference automatically.</span></div></label></div>${deliveryEditResolutionChoice?'':`<div class="deliveryCorrectionNeed">Choose one option to enable Save Docket Changes.</div>`}`;
- saveBtn.disabled=!deliveryEditResolutionChoice;
+ saveBtn.disabled=!(deliveryEditResolutionChoice&&reasonOk);
 }
 function setDeliveryEditAddTools(open){
   const entry=document.getElementById("deliveryEntryTools");
@@ -5928,7 +5959,7 @@ document.getElementById("addDeliveryLine").onclick=()=>{
 }
 document.getElementById("clearDelivery").onclick=()=>{clearStaleNewDeliveryQtyFocusState();currentDelivery=[];renderDelivery()}
 function resetDeliveryEditor(){
- editingDocketId=null; editingSuggestionId=null; currentDelivery=[]; deliveryEditOriginalSnapshot=null; deliveryEditAffectedInvoiceId=null; deliveryEditResolutionChoice="";
+ editingDocketId=null; editingSuggestionId=null; currentDelivery=[]; deliveryEditOriginalSnapshot=null; deliveryEditAffectedInvoiceId=null; deliveryEditResolutionChoice=""; deliveryEditReason="";
  document.getElementById("delNote").value="";
  document.getElementById("delQty").value="";
  document.getElementById("saveDelivery").textContent="Save Delivery + Create Docket";
@@ -5969,11 +6000,23 @@ document.getElementById("saveDelivery").onclick=()=>{
    const changed=docketDraftChanged();
    const affectedInv=deliveryEditAffectedInvoiceId?(db.invoices||[]).find(x=>x.id===deliveryEditAffectedInvoiceId):null;
    if(changed&&before.deliveredAt&&affectedInv&&invoiceIsPaid(affectedInv))deliveryEditResolutionChoice="next_sunday";
+   if(changed&&before.deliveredAt&&!deliveryEditReason.trim()){updateDocketEditResolutionUI();return alert("Enter a short reason for editing this delivered docket.");}
    if(changed&&before.deliveredAt&&affectedInv&&!deliveryEditResolutionChoice){updateDocketEditResolutionUI();return alert("Choose whether to update this invoice or add the correction to next Sunday’s invoice.");}
    const editAt=new Date().toISOString();
    const changes=computeDocketLineChanges(before.lines||[],lines,editAt);
    db.docketAudit.push({id:"DA"+Date.now(),action:"edited",at:editAt,docketId:d.id,date:d.date||"",branch:d.branch||"",note:d.note||"",lines:(d.lines||[]).map(l=>({...l})),beforeSnapshot:before,resolutionChoice:deliveryEditResolutionChoice||null,affectedInvoiceId:affectedInv?.id||null});
    if(before.deliveredAt&&changes.length)d.lineChanges=[...(Array.isArray(d.lineChanges)?d.lineChanges:[]),...changes];
+   if(changed&&before.deliveredAt){
+     if(!Array.isArray(d.editAudit))d.editAudit=[];
+     const beforeMap=Object.fromEntries((before.lines||[]).map(l=>[String(l.productId||l.productName||""),Number(l.qty||0)]));
+     const afterMap=Object.fromEntries((lines||[]).map(l=>[String(l.productId||l.productName||""),Number(l.qty||0)]));
+     const lineSummary=[];
+     [...new Set([...Object.keys(beforeMap),...Object.keys(afterMap)])].forEach(k=>{if(beforeMap[k]!==afterMap[k]){const prod=resolvedProductById(k)||db.products.find(x=>x.id===k);lineSummary.push(`${prod?deliveryProductDisplayName(prod):k}: ${beforeMap[k]??0} → ${afterMap[k]??0}`);}});
+     if((before.branch||"")!==branch)lineSummary.push(`Shop: ${displayBranchName(before.branch)} → ${displayBranchName(branch)}`);
+     if((before.date||"")!==date)lineSummary.push(`Date: ${before.date||"—"} → ${date||"—"}`);
+     if((before.note||"")!==note)lineSummary.push(`Note changed`);
+     d.editAudit.push({at:editAt,reason:deliveryEditReason.trim(),device:deliveryEditReasonDevice(),user:mdCloudSession?.user?.email||"",summary:lineSummary});
+   }
    d.branch=branch; d.date=date; d.note=note; d.lines=lines; d.editedAt=editAt;
    if(d.generatedFromSundaySuggestion){
      d.userEditedSuggestedDraft=true;
@@ -6005,8 +6048,11 @@ document.getElementById("saveDelivery").onclick=()=>{
 function lineKey(l){return String(l.productId||"")+"|"+String(Number(l.qty||0));}
 function productLineLabel(l){const p=resolvedProductById(l.productId)||db.products.find(x=>x.id===l.productId);return `${p?deliveryProductDisplayName(p):(l.productName||"Unknown product")} × ${Number(l.qty||0)}`;}
 function docketChangeHistoryMarkup(d){
- const changes=Array.isArray(d.lineChanges)?d.lineChanges:[]; if(!changes.length)return "";
- return `<div class="lineHistory"><b>Changes after delivery</b>${changes.map(c=>`<div style="margin-top:7px">${c.before?`<div><del>${escapeHtml(productLineLabel(c.before))}</del></div>`:""}${c.after?`<div class="newValue">${escapeHtml(productLineLabel(c.after))}</div>`:`<div class="newValue">Deleted</div>`}<div class="changeMeta">${escapeHtml(c.at?new Date(c.at).toLocaleString():"")}</div></div>`).join("")}</div>`;
+ const changes=Array.isArray(d.lineChanges)?d.lineChanges:[];
+ const audit=Array.isArray(d.editAudit)?d.editAudit:[];
+ const lineHtml=changes.length?`<div class="lineHistory"><b>Changes after delivery</b>${changes.map(c=>`<div style="margin-top:7px">${c.before?`<div><del>${escapeHtml(productLineLabel(c.before))}</del></div>`:""}${c.after?`<div class="newValue">${escapeHtml(productLineLabel(c.after))}</div>`:`<div class="newValue">Deleted</div>`}<div class="changeMeta">${escapeHtml(c.at?new Date(c.at).toLocaleString():"")}</div></div>`).join("")}</div>`:"";
+ const auditHtml=audit.length?`<details class="deliveryAuditTrail"><summary>Edit history · ${audit.length}</summary>${[...audit].reverse().map(a=>`<div class="deliveryAuditItem"><div class="deliveryAuditReason">${escapeHtml(a.reason||"Edited delivered docket")}</div><div class="deliveryAuditMeta">${escapeHtml(a.device||"Unknown device")}${a.user?` · ${escapeHtml(a.user)}`:""} · ${escapeHtml(a.at?new Date(a.at).toLocaleString():"")}</div>${Array.isArray(a.summary)&&a.summary.length?`<div class="deliveryAuditChanges">${a.summary.map(x=>escapeHtml(x)).join("<br>")}</div>`:""}</div>`).join("")}</details>`:"";
+ return lineHtml+auditHtml;
 }
 function computeDocketLineChanges(beforeLines,afterLines,at){
  const b=new Map((beforeLines||[]).map(l=>[String(l.productId||""),l])),a=new Map((afterLines||[]).map(l=>[String(l.productId||""),l])),out=[],removed=[],added=[];
@@ -6231,7 +6277,7 @@ window.editDocket=id=>{
  const d=db.deliveries.find(x=>x.id===id); if(!d)return alert("Delivery docket not found.");
  editingDocketId=id;
  deliveryEditOriginalSnapshot=JSON.parse(JSON.stringify(d));
- const affectedInvoice=affectedInvoiceForDocket(d); deliveryEditAffectedInvoiceId=affectedInvoice?.id||null; deliveryEditResolutionChoice="";
+ const affectedInvoice=affectedInvoiceForDocket(d); deliveryEditAffectedInvoiceId=affectedInvoice?.id||null; deliveryEditResolutionChoice=""; deliveryEditReason="";
  currentDelivery=(d.lines||[]).map(l=>({productId:l.productId,qty:Number(l.qty||0)})).filter(l=>l.productId&&l.qty>0);
  openDeliveryCreate(true);
  document.getElementById("delBranch").value=d.branch||"BM Bangrak";
@@ -6979,7 +7025,7 @@ function buildFullBackupPayload(kind="SUPPORT",note=""){
   return {
     magicDragonBackup:true,
     app:"Magic Dragon Pin",
-    appVersion:"0.10.78",
+    appVersion:"0.10.79",
     backupKind:String(kind||"SUPPORT").toUpperCase(),
     createdAt:new Date().toISOString(),
     note:String(note||""),
@@ -10237,7 +10283,7 @@ function saveCloudTestMarker(){
  cloudStatus("Local TEST change saved — ready to upload when cloud is current.","info");
  const metaRev=cloudNumStorage(MD_CLOUD_SEEN_REV_KEY),base=cloudNumStorage(MD_CLOUD_BASE_REV_KEY);
  if(metaRev&&base===metaRev){
-   const meta={revision:metaRev,updated_by_device:"cloud",app_version:"0.10.74"};
+   const meta={revision:metaRev,updated_by_device:"cloud",app_version:"0.10.79"};
    const cloud=cloudEl("cloudOverviewCloud"),baseEl=cloudEl("cloudOverviewBase"),stateEl=cloudEl("cloudOverviewState"),wrap=cloudEl("cloudOverview");
    if(cloud)cloud.textContent=`Rev ${metaRev}`;if(baseEl)baseEl.textContent=`Base rev ${base}`;if(stateEl)stateEl.textContent="LOCAL CHANGE — UPLOAD";
    if(wrap){[...wrap.querySelectorAll(".cloudOverviewCard")].forEach(x=>{x.classList.remove("good","bad","warn");x.classList.add("warn")})}
@@ -10377,7 +10423,7 @@ async function cloudPush(){
   const hash=await sha256Text(stableJson(pkg)),fingerprint=await cloudStateFingerprint(pkg),revision=currentRevision+1;
   const c=pkg.counts;
   if(!confirm(`Upload this device to TEST Cloud?\n\nRevision ${revision}\n${c.products} products · ${c.aliases} aliases · ${c.sundayReports} Sunday reports · ${c.deliveries} deliveries · ${c.invoices} invoices\n\nTEST workspace only.`)){cloudStatus("Upload cancelled — nothing changed.","info");return}
-  const row={workspace_id:MD_TEST_WORKSPACE,revision,app_version:"0.10.74",payload:pkg,payload_hash:hash,updated_by:mdCloudSession.user?.id||null,updated_by_device:label,updated_at:new Date().toISOString()};
+  const row={workspace_id:MD_TEST_WORKSPACE,revision,app_version:"0.10.79",payload:pkg,payload_hash:hash,updated_by:mdCloudSession.user?.id||null,updated_by_device:label,updated_at:new Date().toISOString()};
   let saved;
   if(currentRevision===0){
    saved=await mdCloudFetch(`/rest/v1/${MD_TEST_STATE_TABLE}`,{method:"POST",body:row,headers:{Prefer:"return=representation"}});
@@ -10465,7 +10511,7 @@ function validateBackupPackage(pkg){
 }
 async function createCompleteTransferPackage(kind="FULL_TRANSFER"){
  const sourceFiles=await exportArchivedSourceFiles(),counts=backupCounts();
- return {format:BACKUP_FORMAT,schema:BACKUP_SCHEMA,appVersion:"0.10.78",backupKind:kind,createdAt:new Date().toISOString(),counts,sourceFilesCount:sourceFiles.length,data:JSON.parse(JSON.stringify(db)),sourceFiles};
+ return {format:BACKUP_FORMAT,schema:BACKUP_SCHEMA,appVersion:"0.10.79",backupKind:kind,createdAt:new Date().toISOString(),counts,sourceFilesCount:sourceFiles.length,data:JSON.parse(JSON.stringify(db)),sourceFiles};
 }
 async function savePackageFile(pkg,prefix="Magic-Pin-Data"){
  const blob=new Blob([JSON.stringify(pkg)],{type:"application/json"});
@@ -10636,6 +10682,49 @@ async function cloudGetDeliveryRecords(){
  const rows=await mdCloudFetch(`/rest/v1/${MD_TEST_DELIVERY_TABLE}?workspace_id=eq.${encodeURIComponent(MD_TEST_WORKSPACE)}&deleted=eq.false&select=workspace_id,record_id,revision,payload,payload_hash,updated_by_device,updated_at,app_version&order=updated_at.asc`);
  return Array.isArray(rows)?rows:[];
 }
+let deliveryConflictCache=[];
+function deliveryConflictFieldRows(local,remote){
+ const rows=[];
+ const push=(label,a,b)=>{if(String(a??"")!==String(b??""))rows.push([label,String(a??"—"),String(b??"—")]);};
+ push("Shop",displayBranchName(local?.branch||""),displayBranchName(remote?.branch||""));
+ push("Date",local?.date||"",remote?.date||"");
+ push("Note",local?.note||"",remote?.note||"");
+ push("Delivered",local?.deliveredAt?"Yes":"No",remote?.deliveredAt?"Yes":"No");
+ const lm=Object.fromEntries((local?.lines||[]).map(l=>[String(l.productId||l.productName||""),l]));
+ const rm=Object.fromEntries((remote?.lines||[]).map(l=>[String(l.productId||l.productName||""),l]));
+ [...new Set([...Object.keys(lm),...Object.keys(rm)])].forEach(k=>{const a=lm[k],b=rm[k];if(Number(a?.qty||0)!==Number(b?.qty||0)){const p=resolvedProductById(k)||db.products.find(x=>x.id===k);push(p?deliveryProductDisplayName(p):k,Number(a?.qty||0),Number(b?.qty||0));}});
+ return rows;
+}
+function renderDeliveryConflictPanel(conflicts=deliveryConflictCache){
+ deliveryConflictCache=Array.isArray(conflicts)?conflicts:[];
+ const box=cloudEl("cloudDeliveryConflictPanel");if(!box)return;
+ if(!deliveryConflictCache.length){box.classList.remove("show");box.innerHTML="";return;}
+ box.classList.add("show");
+ box.innerHTML=`<div class="cloudConflictHeader"><div><b>${deliveryConflictCache.length} delivery conflict${deliveryConflictCache.length===1?"":"s"} need review</b><div class="cloudConflictMeta">Nothing has been overwritten.</div></div><span>REVIEW</span></div>`+deliveryConflictCache.map(c=>{const local=c.local,remote=c.remote?.payload||{};const diffs=deliveryConflictFieldRows(local,remote);return `<div class="cloudConflictCard"><div class="cloudConflictTitle">${escapeHtml(c.id)} · ${escapeHtml(displayBranchName(local?.branch||remote?.branch||""))}</div><div class="cloudConflictMeta">Cloud rev ${Number(c.remote?.revision||0)}${c.remote?.updated_by_device?` · changed on ${escapeHtml(c.remote.updated_by_device)}`:""}</div><div class="cloudConflictDiff"><div class="cloudConflictDiffRow head"><span>Difference</span><b>This device</b><b>Cloud</b></div>${(diffs.length?diffs:[["Record","Different","Different"]]).slice(0,10).map(r=>`<div class="cloudConflictDiffRow"><span>${escapeHtml(r[0])}</span><b>${escapeHtml(r[1])}</b><b>${escapeHtml(r[2])}</b></div>`).join("")}</div><div class="cloudConflictActions"><button class="btn alt" type="button" onclick="resolveDeliveryConflictUseCloud('${escapeHtmlAttr(c.id)}')">Use cloud version</button><button class="btn primary" type="button" onclick="resolveDeliveryConflictKeepLocal('${escapeHtmlAttr(c.id)}')">Keep this device</button></div><div class="cloudConflictLater">Or leave it unresolved and decide later.</div></div>`;}).join("");
+}
+window.resolveDeliveryConflictUseCloud=async id=>{
+ const c=deliveryConflictCache.find(x=>x.id===id);if(!c)return;
+ const remote=c.remote;if(!remote?.payload)return deliveryRecordStatus("Cloud copy is no longer available. Check / Pull again.","warn");
+ if(!confirm(`Use the cloud version of ${id} on this device?\n\nYour unsynced local edit will be replaced.`))return;
+ const i=(db.deliveries||[]).findIndex(d=>d.id===id);if(i<0)return;
+ db.deliveries[i]=JSON.parse(JSON.stringify(remote.payload));
+ const fp=remote.payload_hash||await deliveryPayloadFingerprint(remote.payload),meta=deliverySyncMeta();meta[id]={revision:Number(remote.revision),fingerprint:fp};saveDeliverySyncMeta(meta);save();
+ deliveryConflictCache=deliveryConflictCache.filter(x=>x.id!==id);renderDeliveryConflictPanel();renderCloudDeliveryRecordUi();renderDocketArchive();renderHistory();deliveryRecordStatus(`✓ Conflict resolved — ${id} now uses cloud revision ${remote.revision}.`,"good");
+};
+window.resolveDeliveryConflictKeepLocal=async id=>{
+ const c=deliveryConflictCache.find(x=>x.id===id);if(!c)return;
+ if(!mdCloudSession?.access_token)return deliveryRecordStatus("Sign in to TEST Cloud first.","bad");
+ const local=(db.deliveries||[]).find(d=>d.id===id),remote=c.remote;if(!local||!remote)return;
+ if(!confirm(`Keep this device's version of ${id}?\n\nIt will replace cloud revision ${remote.revision} as a new revision.`))return;
+ try{
+  const label=(cloudEl("cloudDeviceLabel")?.value||localStorage.getItem("mdpin-cloud-device")||detectCloudDeviceLabel()).trim()||"Test device";
+  const fp=await deliveryPayloadFingerprint(local),next=Number(remote.revision)+1;
+  const row={revision:next,payload:JSON.parse(JSON.stringify(local)),payload_hash:fp,updated_by:mdCloudSession.user?.id||null,updated_by_device:label,updated_at:new Date().toISOString(),app_version:"0.10.79",deleted:false};
+  const saved=await mdCloudFetch(`/rest/v1/${MD_TEST_DELIVERY_TABLE}?workspace_id=eq.${encodeURIComponent(MD_TEST_WORKSPACE)}&record_id=eq.${encodeURIComponent(id)}&revision=eq.${remote.revision}`,{method:"PATCH",body:row,headers:{Prefer:"return=representation"}});
+  const written=Array.isArray(saved)&&saved.length?saved[0]:null;if(!written)throw new Error("Cloud changed again while you were reviewing. Check / Pull again.");
+  const meta=deliverySyncMeta();meta[id]={revision:next,fingerprint:fp};saveDeliverySyncMeta(meta);deliveryConflictCache=deliveryConflictCache.filter(x=>x.id!==id);renderDeliveryConflictPanel();renderCloudDeliveryRecordUi();deliveryRecordStatus(`✓ Conflict resolved — this device is now cloud revision ${next}.`,"good");
+ }catch(e){deliveryRecordStatus(`Could not resolve conflict — ${e.message||e}`,"bad")}
+};
 async function cloudSyncDeliveryChanges(){
  if(!mdCloudSession?.access_token)return deliveryRecordStatus("Sign in to TEST Cloud first.","bad");
  const label=(cloudEl("cloudDeviceLabel")?.value||localStorage.getItem("mdpin-cloud-device")||detectCloudDeviceLabel()).trim()||"Test device";
@@ -10646,22 +10735,23 @@ async function cloudSyncDeliveryChanges(){
   for(const d of localRows){
    const id=d.id,localFp=await deliveryPayloadFingerprint(d),remote=remoteMap[id],base=meta[id]||null;
    if(!remote){
-    const row={workspace_id:MD_TEST_WORKSPACE,record_id:id,revision:1,payload:JSON.parse(JSON.stringify(d)),payload_hash:localFp,updated_by:mdCloudSession.user?.id||null,updated_by_device:label,updated_at:new Date().toISOString(),app_version:"0.10.74",deleted:false};
+    const row={workspace_id:MD_TEST_WORKSPACE,record_id:id,revision:1,payload:JSON.parse(JSON.stringify(d)),payload_hash:localFp,updated_by:mdCloudSession.user?.id||null,updated_by_device:label,updated_at:new Date().toISOString(),app_version:"0.10.79",deleted:false};
     const saved=await mdCloudFetch(`/rest/v1/${MD_TEST_DELIVERY_TABLE}`,{method:"POST",body:row,headers:{Prefer:"return=representation"}});const written=Array.isArray(saved)&&saved.length?saved[0]:null;
-    if(!written){conflicts.push(`${id}: cloud did not confirm new record`);continue;}meta[id]={revision:1,fingerprint:localFp};added++;continue;
+    if(!written){conflicts.push({id,reason:"cloud did not confirm new record",local:d,remote:null});continue;}meta[id]={revision:1,fingerprint:localFp};added++;continue;
    }
    const remoteFp=remote.payload_hash||await deliveryPayloadFingerprint(remote.payload);
    if(localFp===remoteFp){meta[id]={revision:Number(remote.revision),fingerprint:remoteFp};current++;continue;}
-   if(!base){conflicts.push(`${id}: cloud copy already exists — pull first`);continue;}
-   if(Number(base.revision)!==Number(remote.revision)){conflicts.push(`${id}: cloud changed on another device — pull first`);continue;}
-   if(localFp===base.fingerprint){conflicts.push(`${id}: cloud has a newer change — pull first`);continue;}
-   const next=Number(remote.revision)+1,row={revision:next,payload:JSON.parse(JSON.stringify(d)),payload_hash:localFp,updated_by:mdCloudSession.user?.id||null,updated_by_device:label,updated_at:new Date().toISOString(),app_version:"0.10.74",deleted:false};
+   if(!base){conflicts.push({id,reason:"cloud copy already exists — pull first",local:d,remote});continue;}
+   if(Number(base.revision)!==Number(remote.revision)){conflicts.push({id,reason:"cloud changed on another device — pull first",local:d,remote});continue;}
+   if(localFp===base.fingerprint){conflicts.push({id,reason:"cloud has a newer change — pull first",local:d,remote});continue;}
+   const next=Number(remote.revision)+1,row={revision:next,payload:JSON.parse(JSON.stringify(d)),payload_hash:localFp,updated_by:mdCloudSession.user?.id||null,updated_by_device:label,updated_at:new Date().toISOString(),app_version:"0.10.79",deleted:false};
    const saved=await mdCloudFetch(`/rest/v1/${MD_TEST_DELIVERY_TABLE}?workspace_id=eq.${encodeURIComponent(MD_TEST_WORKSPACE)}&record_id=eq.${encodeURIComponent(id)}&revision=eq.${remote.revision}`,{method:"PATCH",body:row,headers:{Prefer:"return=representation"}});const written=Array.isArray(saved)&&saved.length?saved[0]:null;
-   if(!written){conflicts.push(`${id}: revision conflict`);continue;}meta[id]={revision:next,fingerprint:localFp};updated++;
+   if(!written){conflicts.push({id,reason:"revision conflict",local:d,remote});continue;}meta[id]={revision:next,fingerprint:localFp};updated++;
   }
   saveDeliverySyncMeta(meta);renderCloudDeliveryRecordUi();
-  const result={at:new Date().toISOString(),added,updated,same:current,conflicts};if(added||updated)saveDeliveryLastChange({...result,addedIds:[],updatedIds:[]});renderDeliveryTransferSummary(result);
-  if(conflicts.length)deliveryRecordStatus(`Sync finished — ${added} new sent, ${updated} updated, ${current} already current, ${conflicts.length} need review. Nothing conflicted was overwritten.`,"warn");
+  const result={at:new Date().toISOString(),added,updated,same:current,conflicts:conflicts.map(c=>`${c.id}: ${c.reason}`)};if(added||updated)saveDeliveryLastChange({...result,addedIds:[],updatedIds:[]});renderDeliveryTransferSummary(result);
+  renderDeliveryConflictPanel(conflicts);
+  if(conflicts.length)deliveryRecordStatus(`Sync finished — ${added} new sent, ${updated} updated, ${current} already current, ${conflicts.length} need review. Open the conflict review below.`,"warn");
   else if(added||updated)deliveryRecordStatus(`✓ Sync complete — ${added} new sent, ${updated} updated, ${current} already current.`,"good");
   else deliveryRecordStatus(`✓ Everything current — all ${current} local cloud-linked dockets already match.`,"good");
  }catch(e){console.error(e);const msg=String(e?.message||e||"");deliveryRecordStatus(msg.includes("Session expired")?"Session expired — please sign in again.":`Delivery sync failed — ${msg}`,"bad")}
@@ -10679,12 +10769,12 @@ async function cloudPushSelectedDeliveryRecord(){
      if(!base||Number(base.revision)!==Number(remote.revision)){
        return deliveryRecordStatus(`Upload blocked — ${id} is cloud revision ${remote.revision}${remote.updated_by_device?` from ${remote.updated_by_device}`:""}. Pull delivery records first.`,"warn");
      }
-     const next=Number(remote.revision)+1;const row={revision:next,payload:JSON.parse(JSON.stringify(d)),payload_hash:localFp,updated_by:mdCloudSession.user?.id||null,updated_by_device:label,updated_at:new Date().toISOString(),app_version:"0.10.74",deleted:false};
+     const next=Number(remote.revision)+1;const row={revision:next,payload:JSON.parse(JSON.stringify(d)),payload_hash:localFp,updated_by:mdCloudSession.user?.id||null,updated_by_device:label,updated_at:new Date().toISOString(),app_version:"0.10.79",deleted:false};
      const saved=await mdCloudFetch(`/rest/v1/${MD_TEST_DELIVERY_TABLE}?workspace_id=eq.${encodeURIComponent(MD_TEST_WORKSPACE)}&record_id=eq.${encodeURIComponent(id)}&revision=eq.${remote.revision}`,{method:"PATCH",body:row,headers:{Prefer:"return=representation"}});
      const written=Array.isArray(saved)&&saved.length?saved[0]:null;if(!written)throw new Error("Record revision conflict — another device changed this docket first.");
      meta[id]={revision:next,fingerprint:localFp};saveDeliverySyncMeta(meta);deliveryRecordStatus(`✓ Docket ${id} uploaded as record revision ${next} from ${label}.`,"good");
    }else{
-     const row={workspace_id:MD_TEST_WORKSPACE,record_id:id,revision:1,payload:JSON.parse(JSON.stringify(d)),payload_hash:localFp,updated_by:mdCloudSession.user?.id||null,updated_by_device:label,updated_at:new Date().toISOString(),app_version:"0.10.74",deleted:false};
+     const row={workspace_id:MD_TEST_WORKSPACE,record_id:id,revision:1,payload:JSON.parse(JSON.stringify(d)),payload_hash:localFp,updated_by:mdCloudSession.user?.id||null,updated_by_device:label,updated_at:new Date().toISOString(),app_version:"0.10.79",deleted:false};
      const saved=await mdCloudFetch(`/rest/v1/${MD_TEST_DELIVERY_TABLE}`,{method:"POST",body:row,headers:{Prefer:"return=representation"}});
      const written=Array.isArray(saved)&&saved.length?saved[0]:null;if(!written)throw new Error("The cloud did not confirm the new delivery record.");
      meta[id]={revision:1,fingerprint:localFp};saveDeliverySyncMeta(meta);deliveryRecordStatus(`✓ Docket ${id} uploaded as new record revision 1 from ${label}.`,"good");
@@ -10697,7 +10787,7 @@ async function cloudPullDeliveryRecordUpdates(){
  try{
    const rows=await cloudGetDeliveryRecords();const meta=deliverySyncMeta();let added=0,updated=0,same=0,conflicts=[],addedIds=[],updatedIds=[];
    for(const row of rows){
-     const incoming=row.payload;if(!incoming||String(incoming.id||"")!==String(row.record_id||"")){conflicts.push(`${row.record_id}: invalid payload`);continue}
+     const incoming=row.payload;if(!incoming||String(incoming.id||"")!==String(row.record_id||"")){conflicts.push({id:row.record_id,reason:"invalid payload",local:null,remote:row});continue}
      const remoteFp=row.payload_hash||await deliveryPayloadFingerprint(incoming);const i=(db.deliveries||[]).findIndex(d=>d.id===row.record_id);const base=meta[row.record_id]||null;
      if(i<0){db.deliveries.push(JSON.parse(JSON.stringify(incoming)));meta[row.record_id]={revision:Number(row.revision),fingerprint:remoteFp};added++;addedIds.push(row.record_id);continue}
      const local=db.deliveries[i],localFp=await deliveryPayloadFingerprint(local);
@@ -10705,12 +10795,13 @@ async function cloudPullDeliveryRecordUpdates(){
      if(base&&localFp===base.fingerprint&&Number(row.revision)>=Number(base.revision)){
        db.deliveries[i]=JSON.parse(JSON.stringify(incoming));meta[row.record_id]={revision:Number(row.revision),fingerprint:remoteFp};updated++;updatedIds.push(row.record_id);continue
      }
-     if(base&&Number(row.revision)===Number(base.revision)&&localFp!==base.fingerprint){conflicts.push(`${row.record_id}: local unsynced edit`);continue}
-     conflicts.push(`${row.record_id}: both cloud and local differ`);
+     if(base&&Number(row.revision)===Number(base.revision)&&localFp!==base.fingerprint){conflicts.push({id:row.record_id,reason:"local unsynced edit",local,remote:row});continue}
+     conflicts.push({id:row.record_id,reason:"both cloud and local differ",local,remote:row});
    }
    if(added||updated){save();refreshReconciliationViews();renderDocketArchive();renderMetrics();renderHistory();renderAudit();renderDashboardAlerts()}
    saveDeliverySyncMeta(meta);
-   const pullResult={at:new Date().toISOString(),addedIds,updatedIds,added,updated,same,conflicts:[...conflicts]};
+   const pullResult={at:new Date().toISOString(),addedIds,updatedIds,added,updated,same,conflicts:conflicts.map(c=>`${c.id}: ${c.reason}`)};
+   renderDeliveryConflictPanel(conflicts);
    saveDeliveryLastPull(pullResult);
    if(added||updated)saveDeliveryLastChange(pullResult);
    renderCloudDeliveryRecordUi();renderHistory();renderDeliveryTransferSummary(pullResult);
@@ -10725,6 +10816,7 @@ if(cloudEl("cloudPushDeliveryRecord"))cloudEl("cloudPushDeliveryRecord").onclick
 if(cloudEl("cloudSyncDeliveryChanges"))cloudEl("cloudSyncDeliveryChanges").onclick=cloudSyncDeliveryChanges;
 if(cloudEl("cloudPullDeliveryRecords"))cloudEl("cloudPullDeliveryRecords").onclick=cloudPullDeliveryRecordUpdates;
 renderDeliveryTransferSummary();
+renderDeliveryConflictPanel();
 
 /* v0.10.67 Settings focus accordion. Opening one settings group temporarily hides the other chevrons. Collapsing it restores the full menu. */
 (()=>{
@@ -10742,7 +10834,7 @@ renderDeliveryTransferSummary();
  sync();
 })();
 
-/* v0.10.78 TEST Cloud freshness: whenever the cloud panel opens, refresh live metadata so stale revision labels cannot survive a device switch or restore. */
+/* v0.10.79 TEST Cloud freshness: whenever the cloud panel opens, refresh live metadata so stale revision labels cannot survive a device switch or restore. */
 (()=>{
  const tc=document.getElementById("testCloudDetails");if(!tc)return;
  tc.addEventListener("toggle",()=>{

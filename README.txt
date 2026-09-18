@@ -1,6 +1,10 @@
-MAGIC DRAGON PIN v0.10.78 — TEST
+MAGIC DRAGON PIN v0.10.79 — TEST
 
-WHAT CHANGED IN v0.10.78
+WHAT CHANGED IN v0.10.79
+- Adds explicit Delivery Conflict Review with side-by-side local/cloud differences and deliberate resolution buttons.
+- Delivered docket edits now require a short reason and save an audit trail with device, account, time and concise change details.
+- Edit history travels with the docket through record-level cloud sync.
+- No conflict is silently overwritten.
 - iPad Sunday Workflow now keeps the branded Magic Dragon header visible instead of switching to a headerless fullscreen shell.
 - Sunday Workflow content is isolated in its own scrollable viewport below the fixed tablet header while the bottom workflow navigation remains available.
 - Opening Sunday Workflow now re-measures the shell after workflow mode starts, preventing stale header geometry.
