@@ -1,4 +1,10 @@
-MAGIC DRAGON PIN v0.10.87 — TEST
+MAGIC DRAGON PIN v0.10.88 — TEST
+
+
+WHAT CHANGED IN v0.10.88
+- Records > Delivery dockets now reuses the exact same compact docket-row component as the dedicated Delivery Dockets menu.
+- Date/branch text, one-line layout, font size, border, spacing, status badges and chevron are now identical in both places.
+- Other Records groups and all docket actions/business logic are unchanged.
 
 
 WHAT CHANGED IN v0.10.87
