@@ -1,3 +1,9 @@
+WHAT CHANGED IN v0.10.111 TEST
+- Dashboard “Docket correction waiting” alerts now include Resume conflict resolution.
+- Resume opens the exact unresolved invoice/conflict already stored in the app; it does not create another TEST conflict.
+- Multiple unresolved conflicts can each be resumed from their own Dashboard warning card.
+- No accounting rules, invoice calculations, split rules, Sunday import logic, or paid-invoice protection changed.
+
 WHAT CHANGED IN v0.10.107 TEST
 - Added guided Conflict Resolution Workflow with Understand / Fix source / Decision / Result stages.
 - Dashboard invoice-review alerts launch Resolve step by step.
