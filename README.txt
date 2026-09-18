@@ -1,6 +1,6 @@
-MAGIC DRAGON PIN v0.10.81 — TEST
+MAGIC DRAGON PIN v0.10.82 — TEST
 
-WHAT CHANGED IN v0.10.81
+WHAT CHANGED IN v0.10.82
 - Delivery docket archive now uses focused chevron behaviour.
 - Initial view shows the full compact list of saved dockets.
 - Opening one docket temporarily hides all other docket selectors.
@@ -46,3 +46,5 @@ TEST TARGET
 v0.10.73
 - Fixes iPad/tablet Settings shell so the Magic Dragon header remains visible while Settings content scrolls.
 - Tablet-only shell patch; proven iPhone header/keyboard behaviour is left unchanged.
+
+- New Delivery now shows a clear “Docket history” escape button beside + New Delivery so accidental entry can return directly to the delivery history list without losing orientation.

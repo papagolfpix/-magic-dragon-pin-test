@@ -1496,7 +1496,9 @@ body.workflowMode #paymentPaidFields select{padding-right:34px!important;text-ov
 /* v0.9.69 unified Delivery Docket module + Sunday archive polish */
 .deliveryModuleCard{padding:12px!important}
 .deliveryModuleHead{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
-.deliveryModuleNew{flex:0 0 auto;padding:9px 12px!important;min-height:42px}
+.deliveryModuleHeadActions{display:flex;align-items:center;gap:8px;flex:0 0 auto}
+.deliveryModuleNew,.deliveryModuleBack{flex:0 0 auto;padding:9px 12px!important;min-height:42px}
+.deliveryModuleBack{display:none}
 #deliveryCreatePane>.card{box-shadow:none!important;border:0!important;padding:0!important;margin:0!important;background:transparent!important}
 #deliveryCreatePane .deliveryWorkspace{min-height:0!important}
 #deliveryArchivePane .docketEmptyState{min-height:58px!important;padding:16px!important}
@@ -4289,7 +4291,7 @@ body.deliveryMode .deliveryEditLineCard{
 
 
 <style id="v01047-line-pane-below-controls">
-/* v0.10.81 TEST — hard-separate New Delivery controls from added lines.
+/* v0.10.82 TEST — hard-separate New Delivery controls from added lines.
    iPhone Safari was allowing the first reusable line card/select to paint back
    underneath the stationary control deck.  Use a simple column flex layout
    for New Delivery: controls = fixed natural height, line list = the only
@@ -4439,7 +4441,7 @@ window.addEventListener("error",e=>{const b=document.getElementById("runtimeErro
       <button class="heroHomeHotspot noPrint" type="button" aria-label="Return to Dashboard" title="Dashboard" onclick="returnToDashboardFromHeader()"></button>
     </div>
     <div class="heroActions noPrint">
-      <span class="app-version">v0.10.81 TEST</span>
+      <span class="app-version">v0.10.82 TEST</span>
       <button class="heroMenuButton" id="heroMenuButton" type="button" aria-expanded="false">Menu</button>
     </div>
   </div>
@@ -4620,7 +4622,7 @@ window.addEventListener("error",e=>{const b=document.getElementById("runtimeErro
     <div class="card deliveryModuleCard">
       <div class="deliveryModuleHead">
         <div><h2 style="margin:0">Delivery dockets</h2><div class="small">Create a new delivery or open a saved docket.</div></div>
-        <button class="btn gold deliveryModuleNew" type="button" onclick="openDeliveryCreate()">+ New Delivery</button>
+        <div class="deliveryModuleHeadActions"><button class="btn alt deliveryModuleBack" id="deliveryModuleBack" type="button" onclick="openDeliveryArchive()">← Docket history</button><button class="btn gold deliveryModuleNew" type="button" onclick="openDeliveryCreate()">+ New Delivery</button></div>
       </div>
       <div id="deliveryArchivePane">
         <div id="docketArchive"></div>
@@ -7029,7 +7031,7 @@ function buildFullBackupPayload(kind="SUPPORT",note=""){
   return {
     magicDragonBackup:true,
     app:"Magic Dragon Pin",
-    appVersion:"0.10.81",
+    appVersion:"0.10.82",
     backupKind:String(kind||"SUPPORT").toUpperCase(),
     createdAt:new Date().toISOString(),
     note:String(note||""),
@@ -10173,6 +10175,8 @@ function setDeliveryView(mode){
 
   if(archive)archive.style.display=isCreate?"none":"block";
   if(create)create.style.display=isCreate?"block":"none";
+  const backButton=document.getElementById("deliveryModuleBack");
+  if(backButton)backButton.style.display=isCreate?"inline-flex":"none";
 
   // Create and Archive are deliberately mutually exclusive.
   document.body.classList.toggle("deliveryMode",isCreate);
@@ -10515,7 +10519,7 @@ function validateBackupPackage(pkg){
 }
 async function createCompleteTransferPackage(kind="FULL_TRANSFER"){
  const sourceFiles=await exportArchivedSourceFiles(),counts=backupCounts();
- return {format:BACKUP_FORMAT,schema:BACKUP_SCHEMA,appVersion:"0.10.81",backupKind:kind,createdAt:new Date().toISOString(),counts,sourceFilesCount:sourceFiles.length,data:JSON.parse(JSON.stringify(db)),sourceFiles};
+ return {format:BACKUP_FORMAT,schema:BACKUP_SCHEMA,appVersion:"0.10.82",backupKind:kind,createdAt:new Date().toISOString(),counts,sourceFilesCount:sourceFiles.length,data:JSON.parse(JSON.stringify(db)),sourceFiles};
 }
 async function savePackageFile(pkg,prefix="Magic-Pin-Data"){
  const blob=new Blob([JSON.stringify(pkg)],{type:"application/json"});
@@ -10838,7 +10842,7 @@ renderDeliveryConflictPanel();
  sync();
 })();
 
-/* v0.10.81 TEST Cloud freshness: whenever the cloud panel opens, refresh live metadata so stale revision labels cannot survive a device switch or restore. */
+/* v0.10.82 TEST Cloud freshness: whenever the cloud panel opens, refresh live metadata so stale revision labels cannot survive a device switch or restore. */
 (()=>{
  const tc=document.getElementById("testCloudDetails");if(!tc)return;
  tc.addEventListener("toggle",()=>{
