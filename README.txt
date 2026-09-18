@@ -1,4 +1,11 @@
-MAGIC DRAGON PIN v0.10.79 — TEST
+MAGIC DRAGON PIN v0.10.80 — TEST
+
+WHAT CHANGED IN v0.10.80
+- Delivery docket archive now uses focused chevron behaviour.
+- Initial view shows the full compact list of saved dockets.
+- Opening one docket temporarily hides all other docket selectors.
+- Collapsing the open docket restores the full selector list.
+- This matches the proven focused Settings-chevron interaction pattern.
 
 WHAT CHANGED IN v0.10.79
 - Adds explicit Delivery Conflict Review with side-by-side local/cloud differences and deliberate resolution buttons.
