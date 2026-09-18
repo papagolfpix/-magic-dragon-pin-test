@@ -1,10 +1,16 @@
+WHAT CHANGED IN v0.10.100 TEST
+- Invoice review screen now shows a visible Acknowledge button when a linked delivery docket was edited after the invoice was saved.
+- Added Back to Dashboard beside Acknowledge, so reviewing an alert no longer forces a return to the dashboard just to clear it.
+- Existing Back to Records control remains unchanged.
+- No invoice amounts, reconciliation logic, delivery logic, Sunday logic or payment logic changed.
+
 WHAT CHANGED IN v0.10.99 TEST
 - Fixed saved delivery docket scrolling: long docket content now scrolls independently while the 2x2 action bar remains fixed at the viewport bottom.
 - Restored explicit top navigation in Delivery Dockets with a compact Home button.
 - Opening/collapsing a docket no longer scrolls the whole Delivery module header out of view.
 - No Sunday, pricing, invoice, mapping, cloud, PDF or business-rule logic changed.
 
-MAGIC DRAGON PIN v0.10.99 — TEST
+MAGIC DRAGON PIN v0.10.100 — TEST
 
 PURPOSE
 - Frozen Sunday-handoff candidate based directly on validated v0.10.97 TEST.
