@@ -1,4 +1,12 @@
-MAGIC DRAGON PIN v0.10.89 — TEST
+MAGIC DRAGON PIN v0.10.90 — TEST
+
+
+WHAT CHANGED IN v0.10.90
+- Adds a harmless cross-device sync test inside Delivery Sync — TEST.
+- The test adds only a visible TEST marker to one normal cloud-linked docket.
+- It does not change stock, quantities, prices, delivery status, invoices or docket notes.
+- The marker travels through the real record-level upload and pull path, so the receiving device can visibly confirm the transfer.
+- A Clear button removes the marker locally; syncing again removes it from the cloud copy.
 
 
 WHAT CHANGED IN v0.10.89
