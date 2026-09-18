@@ -1,4 +1,4 @@
-const CACHE_NAME = "magic-pin-v0.10.92-test";
+const CACHE_NAME = "magic-pin-v0.10.93-test";
 const APP_ASSETS = [
   "./",
   "./index.html",

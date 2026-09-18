@@ -67,6 +67,9 @@ tr.kanja td{background:var(--green)}tr.preroll td{background:var(--pink)}tr.edib
 .integrityNums{display:flex;gap:10px;flex-wrap:wrap;margin-top:7px;font-size:12px}
 .integrityNums b{font-size:16px}
 .integrityMissing{margin-top:8px;padding-top:7px;border-top:1px solid #e5e7eb;font-size:11px;color:#6b7280;line-height:1.35}
+.catalogueSelfCheck{margin:10px 0;padding:9px 11px;border:1px solid #86efac;border-radius:11px;background:#f0fdf4;color:#166534;font-size:11px;font-weight:800;line-height:1.35}
+.catalogueSelfCheck.bad{border-color:#fecaca;background:#fef2f2;color:#991b1b}
+.integrityList{margin-top:4px;color:#4b5563}
 @media(max-width:650px){.catalogueIntegrity{grid-template-columns:1fr}}
 .docketArchiveItem{border:1px solid #d8dee8;border-radius:12px;margin:8px 0;background:#fff;overflow:hidden}
 .docketArchiveItem summary{list-style:none;cursor:pointer;padding:13px 14px;font-weight:800;display:flex;align-items:center;justify-content:space-between;gap:10px}
@@ -4476,7 +4479,7 @@ window.addEventListener("error",e=>{const b=document.getElementById("runtimeErro
       <button class="heroHomeHotspot noPrint" type="button" aria-label="Return to Dashboard" title="Dashboard" onclick="returnToDashboardFromHeader()"></button>
     </div>
     <div class="heroActions noPrint">
-      <span class="app-version">v0.10.92 TEST</span>
+      <span class="app-version">v0.10.93 TEST</span>
       <button class="heroMenuButton" id="heroMenuButton" type="button" aria-expanded="false">Menu</button>
     </div>
   </div>
@@ -4780,7 +4783,8 @@ window.addEventListener("error",e=>{const b=document.getElementById("runtimeErro
       <details class="settingGroup">
         <summary>Catalogue integrity</summary>
         <div class="settingGroupBody">
-          <div class="small">Automatic branch-by-branch comparison of the latest Sunday sheet against products previously seen at that branch. Missing products are flagged for review rather than deleted.</div>
+          <div class="small">Read-only branch comparison of each latest Sunday sheet with the immediately previous Sunday. Missing, new/returned and outside-current-list products are shown separately; nothing is changed automatically.</div>
+          <div id="catalogueIntegritySelfCheck" class="catalogueSelfCheck"></div>
           <div id="catalogueIntegrity" class="catalogueIntegrity"></div>
         </div>
       </details>
@@ -7133,7 +7137,7 @@ function buildFullBackupPayload(kind="SUPPORT",note=""){
   return {
     magicDragonBackup:true,
     app:"Magic Dragon Pin",
-    appVersion:"0.10.92",
+    appVersion:"0.10.93",
     backupKind:String(kind||"SUPPORT").toUpperCase(),
     createdAt:new Date().toISOString(),
     note:String(note||""),
@@ -8408,22 +8412,23 @@ function applyMasterProductSetup(){
 function renderCatalogueIntegrity(){
  const box=document.getElementById("catalogueIntegrity");if(!box)return;
  ensureSundayArchive();
+ renderBranchCatalogueSelfCheck();
  const branches=["BM Bangrak","Lamai"];
  const html=branches.map(branch=>{
    const reports=(db.sundayImports||[]).filter(r=>r.branch===branch).sort((a,b)=>String(a.date).localeCompare(String(b.date)));
    if(!reports.length)return `<div class="integrityCard"><b>${branch}</b><div class="small" style="margin-top:5px">No Sunday reports imported yet.</div></div>`;
    const latest=reports.at(-1);
-   const historicalIds=new Map();
-   reports.forEach(r=>(r.rows||[]).forEach(rr=>{const pm=canonicalProductMatchRow(rr);if(pm.product)historicalIds.set(pm.product.id,pm.product.name)}));
-   const latestIds=new Set();let unknown=0;
-   (latest.rows||[]).forEach(rr=>{const pm=canonicalProductMatchRow(rr);if(pm.product)latestIds.add(pm.product.id);else unknown++});
-   const missing=[...historicalIds.entries()].filter(([id])=>!latestIds.has(id)).map(([,name])=>name);
-   const cls=(missing.length||unknown)?"integrityCard warn":"integrityCard";
-   const status=(missing.length||unknown)?`<span class="status warn">Review ${missing.length+unknown}</span>`:`<span class="status ok">Aligned</span>`;
+   const c=branchReportComparison(latest);
+   const issueCount=c.missing.length+c.newOrReturned.length+c.outsideCurrentList.length+c.unknownNames.length;
+   const cls=issueCount?"integrityCard warn":"integrityCard";
+   const status=!c.contiguous?`<span class="status">Baseline</span>`:issueCount?`<span class="status warn">Review ${issueCount}</span>`:`<span class="status ok">Aligned</span>`;
    const detail=[];
-   if(missing.length)detail.push(`<b>Missing from latest sheet:</b> ${missing.slice(0,8).map(escapeHtmlAttr).join(" • ")}${missing.length>8?` • +${missing.length-8} more`:""}`);
-   if(unknown)detail.push(`<b>${unknown} unmapped/new name${unknown===1?"":"s"}</b> in latest sheet.`);
-   return `<div class="${cls}"><div class="integrityTop"><div><b>${branch}</b><div class="small">Latest Sunday: ${escapeHtmlAttr(latest.date||"—")}</div></div>${status}</div><div class="integrityNums"><span><b>${historicalIds.size}</b><br><span class="small">known at branch</span></span><span><b>${latestIds.size+unknown}</b><br><span class="small">on latest sheet</span></span><span><b>${missing.length}</b><br><span class="small">missing</span></span></div>${detail.length?`<div class="integrityMissing">${detail.join("<br>")}</div>`:""}</div>`;
+   if(!c.contiguous)detail.push(`<b>Continuity baseline:</b> no immediately prior Sunday report is available, so no missing/new judgment was made.`);
+   if(c.missing.length)detail.push(`<b>Missing since previous Sunday:</b> ${catalogueNamesHtml(c.missing)}`);
+   if(c.newOrReturned.length)detail.push(`<b>New or returned this week:</b> ${catalogueNamesHtml(c.newOrReturned)}`);
+   if(c.outsideCurrentList.length)detail.push(`<b>On sheet but outside current branch delivery list:</b> ${catalogueNamesHtml(c.outsideCurrentList)}`);
+   if(c.unknownNames.length)detail.push(`<b>Unmapped/new spreadsheet names:</b> ${catalogueNamesHtml(c.unknownNames)}`);
+   return `<div class="${cls}"><div class="integrityTop"><div><b>${escapeHtml(displayBranchName(branch))}</b><div class="small">Latest: ${escapeHtml(latest.date||"—")}${c.contiguous?` • Previous: ${escapeHtml(c.previousDate)}`:""}</div></div>${status}</div><div class="integrityNums"><span><b>${c.currentCount}</b><br><span class="small">on latest</span></span><span><b>${c.missing.length}</b><br><span class="small">missing</span></span><span><b>${c.newOrReturned.length}</b><br><span class="small">new / returned</span></span><span><b>${c.outsideCurrentList.length}</b><br><span class="small">outside list</span></span></div>${detail.length?`<div class="integrityMissing">${detail.join("<br>")}</div>`:""}</div>`;
  }).join("");
  box.innerHTML=html;
 }
@@ -8757,28 +8762,73 @@ function existingSundayMatches(rep){
   ensureSundayArchive();
   return db.sundayImports.filter(x=>x.branch===rep.branch&&x.date===rep.date);
 }
-function sundayCatalogueCoverage(rep){
-  const expected=branchProducts(rep.branch);
-  const expectedById=new Map(expected.map(p=>[p.id,p]));
-  const seenIds=new Set(),unknownNames=[];
-  (rep.rows||[]).forEach(rr=>{
+function classifyBranchCatalogueIds(previousIds,currentIds,activeIds){
+  const previous=new Set(previousIds||[]),current=new Set(currentIds||[]),active=new Set(activeIds||[]);
+  return {
+    missing:[...previous].filter(id=>!current.has(id)),
+    newOrReturned:[...current].filter(id=>!previous.has(id)),
+    outsideCurrentList:[...current].filter(id=>!active.has(id))
+  };
+}
+function reportCatalogueIdentity(rep){
+  const ids=new Set(),unknownNames=[];
+  (rep?.rows||[]).forEach(rr=>{
     const pm=canonicalProductMatchRow(rr);
-    if(pm.product)seenIds.add(pm.product.id);
+    if(pm.product)ids.add(pm.product.id);
     else if(rr?.product)unknownNames.push(String(rr.product));
   });
-  const missing=expected.filter(p=>!seenIds.has(p.id));
-  const unexpected=[...seenIds].filter(id=>!expectedById.has(id)).map(id=>(db.products||[]).find(p=>p.id===id)?.name||id);
-  return {expectedCount:expected.length,sheetRows:(rep.rows||[]).length,matchedCount:[...seenIds].filter(id=>expectedById.has(id)).length,missing,unknownNames:[...new Set(unknownNames)],unexpected};
+  return {ids:[...ids],unknownNames:[...new Set(unknownNames)]};
+}
+function branchReportComparison(rep){
+  ensureSundayArchive();
+  const current=reportCatalogueIdentity(rep);
+  const prior=(db.sundayImports||[])
+    .filter(r=>r.branch===rep.branch&&String(r.date||"")<String(rep.date||""))
+    .sort((a,b)=>String(b.date).localeCompare(String(a.date)))[0]||null;
+  const latestMs=Date.parse(rep?.date),priorMs=Date.parse(prior?.date);
+  const gapDays=Number.isFinite(latestMs)&&Number.isFinite(priorMs)?Math.round((latestMs-priorMs)/86400000):null;
+  const contiguous=!!prior&&gapDays>=5&&gapDays<=9;
+  const previous=contiguous?reportCatalogueIdentity(prior):{ids:[],unknownNames:[]};
+  const activeIds=branchProducts(rep.branch).map(p=>p.id);
+  const classified=classifyBranchCatalogueIds(contiguous?previous.ids:current.ids,current.ids,activeIds);
+  const productNames=new Map((db.products||[]).map(p=>[p.id,p.name]));
+  const names=ids=>ids.map(id=>productNames.get(id)||String(id));
+  return {
+    previousDate:contiguous?prior.date:null,gapDays,contiguous,
+    currentCount:current.ids.length+current.unknownNames.length,
+    missing:contiguous?names(classified.missing):[],
+    newOrReturned:contiguous?names(classified.newOrReturned):[],
+    outsideCurrentList:names(classified.outsideCurrentList),
+    unknownNames:current.unknownNames
+  };
+}
+function runBranchCatalogueSelfCheck(){
+  const r=classifyBranchCatalogueIds(["A","B"],["B","C"],["A","B"]);
+  return r.missing.join()==="A"&&r.newOrReturned.join()==="C"&&r.outsideCurrentList.join()==="C";
+}
+function renderBranchCatalogueSelfCheck(){
+  const box=document.getElementById("catalogueIntegritySelfCheck");if(!box)return;
+  const ok=runBranchCatalogueSelfCheck();
+  box.className=`catalogueSelfCheck${ok?"":" bad"}`;
+  box.textContent=ok?"✓ Classification self-check passed — missing, new/returned and outside-list groups separated correctly.":"Classification self-check failed — do not rely on catalogue comparisons in this build.";
+}
+function catalogueNamesHtml(names,limit=7){
+  return names.slice(0,limit).map(escapeHtml).join(" • ")+(names.length>limit?` • +${names.length-limit} more`:"");
+}
+function sundayCatalogueCoverage(rep){
+  return branchReportComparison(rep);
 }
 function sundayCatalogueCoverageHtml(rep){
   const c=sundayCatalogueCoverage(rep);
-  const issueCount=c.missing.length+c.unknownNames.length+c.unexpected.length;
-  if(!issueCount)return `<div class="catalogueCoverageOk">✓ Catalogue check aligned — ${c.expectedCount} active branch product${c.expectedCount===1?'':'s'} represented.</div>`;
-  const parts=[`<b>Catalogue check — review before import.</b> Sheet has ${c.sheetRows} row${c.sheetRows===1?'':'s'}; branch catalogue expects ${c.expectedCount} active product${c.expectedCount===1?'':'s'}.`];
-  if(c.missing.length)parts.push(`<b>${c.missing.length} missing from this sheet:</b> ${c.missing.slice(0,6).map(p=>escapeHtml(p.name)).join(' • ')}${c.missing.length>6?` • +${c.missing.length-6} more`:''}`);
-  if(c.unknownNames.length)parts.push(`<b>${c.unknownNames.length} unmapped/new name${c.unknownNames.length===1?'':'s'}:</b> ${c.unknownNames.slice(0,5).map(escapeHtml).join(' • ')}${c.unknownNames.length>5?` • +${c.unknownNames.length-5} more`:''}`);
-  if(c.unexpected.length)parts.push(`<b>${c.unexpected.length} product${c.unexpected.length===1?'':'s'} not expected for ${escapeHtml(displayBranchName(rep.branch))}:</b> ${c.unexpected.slice(0,5).map(escapeHtml).join(' • ')}${c.unexpected.length>5?` • +${c.unexpected.length-5} more`:''}`);
-  parts.push('This is a review warning only — it does not block the import.');
+  const issueCount=c.missing.length+c.newOrReturned.length+c.unknownNames.length+c.outsideCurrentList.length;
+  if(c.contiguous&&!issueCount)return `<div class="catalogueCoverageOk">✓ Aligned with previous Sunday ${escapeHtml(c.previousDate)} — no product-list changes detected.</div>`;
+  if(!c.contiguous&&!c.unknownNames.length&&!c.outsideCurrentList.length)return `<div class="catalogueCoverageOk">✓ Branch continuity baseline — no immediately prior Sunday report is available. Names are mapped; no missing-product judgment was made.</div>`;
+  const parts=[c.contiguous?`<b>Catalogue continuity check — review before import.</b> Compared with previous Sunday ${escapeHtml(c.previousDate)}.`:`<b>Branch continuity baseline.</b> No immediately prior Sunday report is available, so no missing/new judgment was made.`];
+  if(c.missing.length)parts.push(`<b>${c.missing.length} missing since previous Sunday:</b> ${catalogueNamesHtml(c.missing,6)}`);
+  if(c.newOrReturned.length)parts.push(`<b>${c.newOrReturned.length} new or returned this week:</b> ${catalogueNamesHtml(c.newOrReturned,6)}`);
+  if(c.outsideCurrentList.length)parts.push(`<b>${c.outsideCurrentList.length} present on sheet but outside the current ${escapeHtml(displayBranchName(rep.branch))} delivery list:</b> ${catalogueNamesHtml(c.outsideCurrentList,6)}`);
+  if(c.unknownNames.length)parts.push(`<b>${c.unknownNames.length} unmapped/new spreadsheet name${c.unknownNames.length===1?'':'s'}:</b> ${catalogueNamesHtml(c.unknownNames,5)}`);
+  parts.push('Review only — no products, branch assignments, stock or imports are changed automatically.');
   return `<div class="catalogueCoverageWarn">${parts.join('<br>')}</div>`;
 }
 
@@ -10471,7 +10521,7 @@ function saveCloudTestMarker(){
  cloudStatus("Local TEST change saved — ready to upload when cloud is current.","info");
  const metaRev=cloudNumStorage(MD_CLOUD_SEEN_REV_KEY),base=cloudNumStorage(MD_CLOUD_BASE_REV_KEY);
  if(metaRev&&base===metaRev){
-   const meta={revision:metaRev,updated_by_device:"cloud",app_version:"0.10.92"};
+   const meta={revision:metaRev,updated_by_device:"cloud",app_version:"0.10.93"};
    const cloud=cloudEl("cloudOverviewCloud"),baseEl=cloudEl("cloudOverviewBase"),stateEl=cloudEl("cloudOverviewState"),wrap=cloudEl("cloudOverview");
    if(cloud)cloud.textContent=`Rev ${metaRev}`;if(baseEl)baseEl.textContent=`Base rev ${base}`;if(stateEl)stateEl.textContent="LOCAL CHANGE — UPLOAD";
    if(wrap){[...wrap.querySelectorAll(".cloudOverviewCard")].forEach(x=>{x.classList.remove("good","bad","warn");x.classList.add("warn")})}
@@ -10613,7 +10663,7 @@ async function cloudPush(){
   const hash=await sha256Text(stableJson(pkg)),fingerprint=await cloudStateFingerprint(pkg),revision=currentRevision+1;
   const c=pkg.counts;
   if(!confirm(`Upload this device to TEST Cloud?\n\nRevision ${revision}\n${c.products} products · ${c.aliases} aliases · ${c.sundayReports} Sunday reports · ${c.deliveries} deliveries · ${c.invoices} invoices\n\nTEST workspace only.`)){cloudStatus("Upload cancelled — nothing changed.","info");return}
-  const row={workspace_id:MD_TEST_WORKSPACE,revision,app_version:"0.10.92",payload:pkg,payload_hash:hash,updated_by:mdCloudSession.user?.id||null,updated_by_device:label,updated_at:new Date().toISOString()};
+  const row={workspace_id:MD_TEST_WORKSPACE,revision,app_version:"0.10.93",payload:pkg,payload_hash:hash,updated_by:mdCloudSession.user?.id||null,updated_by_device:label,updated_at:new Date().toISOString()};
   let saved;
   if(currentRevision===0){
    saved=await mdCloudFetch(`/rest/v1/${MD_TEST_STATE_TABLE}`,{method:"POST",body:row,headers:{Prefer:"return=representation"}});
@@ -10701,7 +10751,7 @@ function validateBackupPackage(pkg){
 }
 async function createCompleteTransferPackage(kind="FULL_TRANSFER"){
  const sourceFiles=await exportArchivedSourceFiles(),counts=backupCounts();
- return {format:BACKUP_FORMAT,schema:BACKUP_SCHEMA,appVersion:"0.10.92",backupKind:kind,createdAt:new Date().toISOString(),counts,sourceFilesCount:sourceFiles.length,data:JSON.parse(JSON.stringify(db)),sourceFiles};
+ return {format:BACKUP_FORMAT,schema:BACKUP_SCHEMA,appVersion:"0.10.93",backupKind:kind,createdAt:new Date().toISOString(),counts,sourceFilesCount:sourceFiles.length,data:JSON.parse(JSON.stringify(db)),sourceFiles};
 }
 async function savePackageFile(pkg,prefix="Magic-Pin-Data"){
  const blob=new Blob([JSON.stringify(pkg)],{type:"application/json"});
@@ -10977,7 +11027,7 @@ window.resolveDeliveryConflictKeepLocal=async id=>{
  try{
   const label=(cloudEl("cloudDeviceLabel")?.value||localStorage.getItem("mdpin-cloud-device")||detectCloudDeviceLabel()).trim()||"Test device";
   const fp=await deliveryPayloadFingerprint(local),next=Number(remote.revision)+1;
-  const row={revision:next,payload:JSON.parse(JSON.stringify(local)),payload_hash:fp,updated_by:mdCloudSession.user?.id||null,updated_by_device:label,updated_at:new Date().toISOString(),app_version:"0.10.92",deleted:false};
+  const row={revision:next,payload:JSON.parse(JSON.stringify(local)),payload_hash:fp,updated_by:mdCloudSession.user?.id||null,updated_by_device:label,updated_at:new Date().toISOString(),app_version:"0.10.93",deleted:false};
   const saved=await mdCloudFetch(`/rest/v1/${MD_TEST_DELIVERY_TABLE}?workspace_id=eq.${encodeURIComponent(MD_TEST_WORKSPACE)}&record_id=eq.${encodeURIComponent(id)}&revision=eq.${remote.revision}`,{method:"PATCH",body:row,headers:{Prefer:"return=representation"}});
   const written=Array.isArray(saved)&&saved.length?saved[0]:null;if(!written)throw new Error("Cloud changed again while you were reviewing. Check / Pull again.");
   const meta=deliverySyncMeta();meta[id]={revision:next,fingerprint:fp};saveDeliverySyncMeta(meta);deliveryConflictCache=deliveryConflictCache.filter(x=>x.id!==id);renderDeliveryConflictPanel();renderCloudDeliveryRecordUi();deliveryRecordStatus(`✓ Conflict resolved — this device is now cloud revision ${next}.`,"good");
@@ -10993,7 +11043,7 @@ async function cloudSyncDeliveryChanges(){
   for(const d of localRows){
    const id=d.id,localFp=await deliveryPayloadFingerprint(d),remote=remoteMap[id],base=meta[id]||null;
    if(!remote){
-    const row={workspace_id:MD_TEST_WORKSPACE,record_id:id,revision:1,payload:JSON.parse(JSON.stringify(d)),payload_hash:localFp,updated_by:mdCloudSession.user?.id||null,updated_by_device:label,updated_at:new Date().toISOString(),app_version:"0.10.92",deleted:false};
+    const row={workspace_id:MD_TEST_WORKSPACE,record_id:id,revision:1,payload:JSON.parse(JSON.stringify(d)),payload_hash:localFp,updated_by:mdCloudSession.user?.id||null,updated_by_device:label,updated_at:new Date().toISOString(),app_version:"0.10.93",deleted:false};
     const saved=await mdCloudFetch(`/rest/v1/${MD_TEST_DELIVERY_TABLE}`,{method:"POST",body:row,headers:{Prefer:"return=representation"}});const written=Array.isArray(saved)&&saved.length?saved[0]:null;
     if(!written){conflicts.push({id,reason:"cloud did not confirm new record",local:d,remote:null});continue;}meta[id]={revision:1,fingerprint:localFp};added++;continue;
    }
@@ -11002,7 +11052,7 @@ async function cloudSyncDeliveryChanges(){
    if(!base){conflicts.push({id,reason:"cloud copy already exists — pull first",local:d,remote});continue;}
    if(Number(base.revision)!==Number(remote.revision)){conflicts.push({id,reason:"cloud changed on another device — pull first",local:d,remote});continue;}
    if(localFp===base.fingerprint){conflicts.push({id,reason:"cloud has a newer change — pull first",local:d,remote});continue;}
-   const next=Number(remote.revision)+1,row={revision:next,payload:JSON.parse(JSON.stringify(d)),payload_hash:localFp,updated_by:mdCloudSession.user?.id||null,updated_by_device:label,updated_at:new Date().toISOString(),app_version:"0.10.92",deleted:false};
+   const next=Number(remote.revision)+1,row={revision:next,payload:JSON.parse(JSON.stringify(d)),payload_hash:localFp,updated_by:mdCloudSession.user?.id||null,updated_by_device:label,updated_at:new Date().toISOString(),app_version:"0.10.93",deleted:false};
    const saved=await mdCloudFetch(`/rest/v1/${MD_TEST_DELIVERY_TABLE}?workspace_id=eq.${encodeURIComponent(MD_TEST_WORKSPACE)}&record_id=eq.${encodeURIComponent(id)}&revision=eq.${remote.revision}`,{method:"PATCH",body:row,headers:{Prefer:"return=representation"}});const written=Array.isArray(saved)&&saved.length?saved[0]:null;
    if(!written){conflicts.push({id,reason:"revision conflict",local:d,remote});continue;}meta[id]={revision:next,fingerprint:localFp};updated++;
   }
@@ -11027,12 +11077,12 @@ async function cloudPushSelectedDeliveryRecord(){
      if(!base||Number(base.revision)!==Number(remote.revision)){
        return deliveryRecordStatus(`Upload blocked — ${id} is cloud revision ${remote.revision}${remote.updated_by_device?` from ${remote.updated_by_device}`:""}. Pull delivery records first.`,"warn");
      }
-     const next=Number(remote.revision)+1;const row={revision:next,payload:JSON.parse(JSON.stringify(d)),payload_hash:localFp,updated_by:mdCloudSession.user?.id||null,updated_by_device:label,updated_at:new Date().toISOString(),app_version:"0.10.92",deleted:false};
+     const next=Number(remote.revision)+1;const row={revision:next,payload:JSON.parse(JSON.stringify(d)),payload_hash:localFp,updated_by:mdCloudSession.user?.id||null,updated_by_device:label,updated_at:new Date().toISOString(),app_version:"0.10.93",deleted:false};
      const saved=await mdCloudFetch(`/rest/v1/${MD_TEST_DELIVERY_TABLE}?workspace_id=eq.${encodeURIComponent(MD_TEST_WORKSPACE)}&record_id=eq.${encodeURIComponent(id)}&revision=eq.${remote.revision}`,{method:"PATCH",body:row,headers:{Prefer:"return=representation"}});
      const written=Array.isArray(saved)&&saved.length?saved[0]:null;if(!written)throw new Error("Record revision conflict — another device changed this docket first.");
      meta[id]={revision:next,fingerprint:localFp};saveDeliverySyncMeta(meta);deliveryRecordStatus(`✓ Docket ${id} uploaded as record revision ${next} from ${label}.`,"good");
    }else{
-     const row={workspace_id:MD_TEST_WORKSPACE,record_id:id,revision:1,payload:JSON.parse(JSON.stringify(d)),payload_hash:localFp,updated_by:mdCloudSession.user?.id||null,updated_by_device:label,updated_at:new Date().toISOString(),app_version:"0.10.92",deleted:false};
+     const row={workspace_id:MD_TEST_WORKSPACE,record_id:id,revision:1,payload:JSON.parse(JSON.stringify(d)),payload_hash:localFp,updated_by:mdCloudSession.user?.id||null,updated_by_device:label,updated_at:new Date().toISOString(),app_version:"0.10.93",deleted:false};
      const saved=await mdCloudFetch(`/rest/v1/${MD_TEST_DELIVERY_TABLE}`,{method:"POST",body:row,headers:{Prefer:"return=representation"}});
      const written=Array.isArray(saved)&&saved.length?saved[0]:null;if(!written)throw new Error("The cloud did not confirm the new delivery record.");
      meta[id]={revision:1,fingerprint:localFp};saveDeliverySyncMeta(meta);deliveryRecordStatus(`✓ Docket ${id} uploaded as new record revision 1 from ${label}.`,"good");
@@ -11172,7 +11222,7 @@ if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
     window.addEventListener("load",syncGeometry,{once:true});
   })();
 
-  window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js?v=1088", {updateViaCache:"none"}).catch(()=>{}));
+  window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js?v=1089", {updateViaCache:"none"}).catch(()=>{}));
 }
 
 /* v0.10.44 deterministic regression check.

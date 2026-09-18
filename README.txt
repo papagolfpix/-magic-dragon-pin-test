@@ -1,4 +1,13 @@
-MAGIC DRAGON PIN v0.10.92 — TEST
+MAGIC DRAGON PIN v0.10.93 — TEST
+
+
+WHAT CHANGED IN v0.10.93
+- Replaces the confusing all-history catalogue warning with a read-only comparison against the immediately previous Sunday for the same branch.
+- “Missing since previous Sunday”, “New or returned this week”, and “On sheet but outside the current branch delivery list” are classified separately.
+- A prior report counts only when it is 5–9 days earlier; otherwise the latest report is clearly marked as a continuity baseline.
+- Adds a visible deterministic classification self-check under Settings > Catalogue integrity.
+- This feature never deletes products, changes branch assignments, adjusts stock or alters an import automatically.
+- Mapping, multi-week detection, delivery dockets and cloud sync are unchanged.
 
 
 WHAT CHANGED IN v0.10.92
