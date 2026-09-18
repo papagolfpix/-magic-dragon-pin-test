@@ -1,5 +1,5 @@
-WHAT CHANGED IN v0.10.117 TEST
-- Reconciliation delivery differences show two direct choices: matching delivered dockets and the exact shop Sunday report.
-- Docket buttons show date and quantity and open the specific record.
-- Neither choice modifies saved business data. Existing correction and invoice safeguards remain in place.
-- Retains v0.10.116 iPhone reconciliation scrolling.
+WHAT CHANGED IN v0.10.118 TEST
+- Each delivery discrepancy now gives an automatic plain-English finding from stock arithmetic and matching dockets.
+- TEST-generated docket flags and date/status anomalies are called out explicitly.
+- Findings are read-only and do not alter business records.
+- Retains direct source links and iPhone workflow scrolling.

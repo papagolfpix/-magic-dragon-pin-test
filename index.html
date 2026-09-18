@@ -4695,6 +4695,9 @@ body.deliveryMode:not(.deliveryEditMode).deliveryKeyboardOpen #deliveryCreatePan
 .wizardSourceChoice>b{font-size:12px;color:#172033}
 .wizardSourceChoice .wizardActions{margin-top:5px}
 .wizardSourceChoice .btn{white-space:normal;text-align:left}
+.wizardForensic{margin-top:10px;padding:10px;border:1px solid #a7c2e9;border-radius:10px;background:#eff6ff;color:#173661;line-height:1.35;font-size:13px}
+.wizardForensic>b{display:block;margin-bottom:5px;font-size:13px}.wizardForensic small{display:block;margin-top:6px;font-size:11px;color:#375274}
+/* v0.10.118 TEST — forensic finding keeps evidence separate from business mutations. */
 </style>
 
 </head>
@@ -4710,7 +4713,7 @@ window.addEventListener("error",e=>{const b=document.getElementById("runtimeErro
       <button class="heroHomeHotspot noPrint" type="button" aria-label="Return to Dashboard" title="Dashboard" onclick="returnToDashboardFromHeader()"></button>
     </div>
     <div class="heroActions noPrint">
-      <span class="app-version">v0.10.117 TEST</span>
+      <span class="app-version">v0.10.118 TEST</span>
       <button class="heroMenuButton" id="heroMenuButton" type="button" aria-expanded="false">Menu</button>
     </div>
   </div>
@@ -7481,7 +7484,7 @@ function buildFullBackupPayload(kind="SUPPORT",note=""){
   return {
     magicDragonBackup:true,
     app:"Magic Dragon Pin",
-    appVersion:"0.10.117",
+    appVersion:"0.10.118",
     backupKind:String(kind||"SUPPORT").toUpperCase(),
     createdAt:new Date().toISOString(),
     note:String(note||""),
@@ -9969,6 +9972,34 @@ function wizardOpenSundayReport(id){
   switchTab("import");
   renderArchive(id);
 }
+function wizardForensicFinding(report,rec,detail,candidates){
+  const f=detail.flow||{},shop=Number(f.shopDeliveries),saved=Number(f.ledgerDeliveries);
+  const test=candidates.filter(x=>x.d.testConflictSeed||x.d.testOnlySuggestedCopy||/TEST ONLY|TEST COPY/i.test(String(x.d.note||"")));
+  const inferred=candidates.filter(x=>x.d.deliveryStatusInferred);
+  const dateMismatch=candidates.filter(x=>x.d.deliveredAt&&String(x.d.deliveredAt).slice(0,10)!==String(x.d.date||""));
+  const open=Number(f.sheetOpening),sold=Number(f.sheetSold),take=Number(f.takeOut||0),close=Number(f.sheetClosing);
+  const shopMath=[f.sheetOpening,f.shopDeliveries,f.sheetSold,f.sheetClosing].every(x=>x!=null)&&Math.abs(open+shop-take-sold-close)<.001;
+  const actualMath=[f.sheetOpening,f.ledgerDeliveries,f.sheetSold,f.sheetClosing].every(x=>x!=null)&&Math.abs(open+saved-take-sold-close)<.001;
+  const fmt=n=>String(Number(n));
+  let conclusion='The two records disagree. The app cannot establish which quantity was physically delivered from saved figures alone.';
+  let evidence=`The shop says ${fmt(shop)} delivered; delivered dockets dated this week total ${fmt(saved)}.`;
+  if(test.length){
+    const units=test.reduce((n,x)=>n+x.qty,0);
+    conclusion=`TEST data found: ${test.length} matching TEST docket${test.length===1?'':'s'} contribute ${fmt(units)} units to the saved-delivery total. The app is counting test data in this week’s business reconciliation.`;
+    evidence=`This is an app/test-data problem. Do not change the shop workbook merely to match a TEST docket. Review the linked docket before any correction.`;
+  }else if(shopMath&&!actualMath){
+    conclusion=`The shop’s stock figures support ${fmt(shop)} deliveries: ${fmt(open)} opening + ${fmt(shop)} delivered − ${fmt(take)} taken out − ${fmt(sold)} sold = ${fmt(close)} closing. Counting the saved dockets would give ${fmt(open+saved-take-sold)} closing instead.`;
+    evidence='The saved dockets need a date, status, branch and source check. This arithmetic does not prove whether stock was physically received.';
+  }else if(actualMath&&!shopMath){
+    conclusion=`The closing stock agrees with ${fmt(saved)} units from saved dockets, while the shop’s reported delivery ${fmt(shop)} does not balance.`;
+    evidence='Check the original shop workbook’s delivery entry before changing the saved dockets.';
+  }else if(shopMath&&actualMath){
+    conclusion='Both totals balance within the saved figures; check for a duplicate or offsetting stock adjustment.';
+  }
+  if(dateMismatch.length)evidence+=` ${dateMismatch.length} docket${dateMismatch.length===1?' has':'s have'} a delivered timestamp on a different date from the docket date used for this week.`;
+  if(inferred.length)evidence+=` ${inferred.length} delivered status${inferred.length===1?' was':'es were'} inferred from an invoice, not marked directly on the docket.`;
+  return `<div class="wizardForensic" role="status"><b>What the app found</b><div>${escapeHtml(conclusion)}</div><small>${escapeHtml(evidence)}</small></div>`;
+}
 function wizardMatchingDockets(branch,startDate,endDate,productId){
   if(!productId)return [];
   return (db.deliveries||[]).map(d=>({d,qty:(d.lines||[]).filter(l=>l.productId===productId).reduce((n,l)=>n+(Number(l.qty)||0),0)}))
@@ -10102,12 +10133,14 @@ function renderStockWizard(items){
       else if(d.flags?.rowHasMapping)hint='This shop product name is not linked confidently to Pin’s master product. Fix the mapping once, then return here.';
       else if(d.flags?.rowHasHistoryPending)hint='The app cannot prove the prior-week stock chain for this product. Open the Sunday report to check its prior-week row.';
       let actionButtons=`<button class="btn" onclick="event.preventDefault();event.stopPropagation();wizardAction('${action[0]}')">${action[1]}</button>`;
+      let finding='';
       if(d.flags?.rowHasDeliveryIssue){
         const candidates=wizardMatchingDockets(r.branch,rec.previousDate,r.date,d.productId||d.flow?.productId||canonicalProductMatchRow((r.rows||[]).find(x=>x.product===d.product)||{}).product?.id);
+        finding=wizardForensicFinding(r,rec,d,candidates);
         const docketButtons=candidates.map(({d:source,qty})=>`<button class="btn" type="button" onclick='wizardOpenDeliveryDocket(${JSON.stringify(String(source.id))})'>Docket ${escapeHtml(source.date)} · ${escapeHtml(String(qty))}</button>`).join('');
         actionButtons=`<div class="wizardSourceChoice"><b>1. Check saved delivery${candidates.length===1?'':' dockets'}</b><div class="wizardMinimal">${candidates.length?`${candidates.length} matching delivered docket${candidates.length===1?'':'s'} for this week.`:'No matching delivered docket found; review the archive.'}</div><div class="wizardActions">${docketButtons||`<button class="btn" type="button" onclick="wizardAction('delivery')">Open Delivery Dockets</button>`}</div></div><div class="wizardSourceChoice"><b>2. Check the shop Sunday report</b><div class="wizardMinimal">Verify the delivery column against the shop’s original workbook.</div><div class="wizardActions"><button class="btn" type="button" onclick='wizardOpenSundayReport(${JSON.stringify(String(r.id))})'>Open ${escapeHtml(displayBranchName(r.branch))} · ${escapeHtml(r.date)}</button></div></div>`;
       }
-      return `<details class="wizardIssue"><summary><div><div class="wizardIssueTitle">${escapeHtml(d.product)}</div><div class="wizardIssueReason">${escapeHtml(reason)}</div></div><span class="wizardIssueChevron">⌄</span></summary><div class="wizardEvidence">${evidence}</div><div class="wizardEvidenceNote">${escapeHtml(hint)}</div><div class="wizardActions wizardSourceActions">${actionButtons}</div></details>`;
+      return `<details class="wizardIssue"><summary><div><div class="wizardIssueTitle">${escapeHtml(d.product)}</div><div class="wizardIssueReason">${escapeHtml(reason)}</div></div><span class="wizardIssueChevron">⌄</span></summary>${finding}<div class="wizardEvidence">${evidence}</div><div class="wizardEvidenceNote">${escapeHtml(hint)}</div><div class="wizardActions wizardSourceActions">${actionButtons}</div></details>`;
     }).join("");
     return `<div class="wizardBranch"><div class="wizardBranchHead"><b>${escapeHtml(r.branch)}</b><span class="reconStatus bad">ACTION REQUIRED</span></div><div class="wizardBranchBody">${visible}${issues.length>12?`<div class="wizardMinimal">+ ${issues.length-12} more items. Resolve the first issues, then return here.</div>`:""}</div></div>`;
   }).join("");
@@ -11562,7 +11595,7 @@ function validateBackupPackage(pkg){
 }
 async function createCompleteTransferPackage(kind="FULL_TRANSFER"){
  const sourceFiles=await exportArchivedSourceFiles(),counts=backupCounts();
- return {format:BACKUP_FORMAT,schema:BACKUP_SCHEMA,appVersion:"0.10.117",backupKind:kind,createdAt:new Date().toISOString(),counts,sourceFilesCount:sourceFiles.length,data:JSON.parse(JSON.stringify(db)),sourceFiles};
+ return {format:BACKUP_FORMAT,schema:BACKUP_SCHEMA,appVersion:"0.10.118",backupKind:kind,createdAt:new Date().toISOString(),counts,sourceFilesCount:sourceFiles.length,data:JSON.parse(JSON.stringify(db)),sourceFiles};
 }
 async function savePackageFile(pkg,prefix="Magic-Pin-Data"){
  const blob=new Blob([JSON.stringify(pkg)],{type:"application/json"});
