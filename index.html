@@ -4262,7 +4262,7 @@ TEST runner deliberately excluded.
 .deliveryAuditTrail{margin-top:10px;padding:9px 10px;border:1px solid #d9dee7;border-radius:11px;background:#f8fafc}.deliveryAuditTrail>summary{font-weight:900;cursor:pointer}.deliveryAuditItem{padding:8px 0;border-top:1px solid #e5e9ef}.deliveryAuditItem:first-of-type{border-top:0}.deliveryAuditMeta{font-size:10px;color:#667085;margin-top:2px}.deliveryAuditReason{font-size:12px;font-weight:800;margin-top:3px}.deliveryAuditChanges{font-size:10px;color:#475467;margin-top:4px}
 .cloudConflictPanel{display:none;margin-top:10px;padding:10px;border:1px solid #f0b764;border-radius:13px;background:#fff8eb}.cloudConflictPanel.show{display:block}.cloudConflictHeader{display:flex;justify-content:space-between;gap:8px;align-items:flex-start;margin-bottom:8px}.cloudConflictHeader b{font-size:14px}.cloudConflictHeader span{font-size:11px;color:#9a3412;font-weight:800}.cloudConflictCard{border:1px solid #e7c98e;border-radius:10px;background:#fff;padding:9px;margin-top:8px}.cloudConflictTitle{font-weight:900;font-size:13px}.cloudConflictMeta{font-size:10px;color:#667085;margin-top:2px}.cloudConflictDiff{margin-top:7px;border-top:1px solid #ece2cf}.cloudConflictDiffRow{display:grid;grid-template-columns:minmax(86px,.8fr) 1fr 1fr;gap:5px;padding:6px 0;border-bottom:1px solid #f1eadf;font-size:10px;align-items:start}.cloudConflictDiffRow.head{font-weight:900;color:#667085}.cloudConflictDiffRow b{font-size:10px}.cloudConflictActions{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:9px}.cloudConflictActions .btn{min-height:38px;padding:7px;font-size:12px}.cloudConflictLater{font-size:10px;color:#667085;text-align:center;margin-top:6px}
 
-/* v0.10.108 TEST — saved-docket viewport correction.
+/* v0.10.109 TEST — saved-docket viewport correction.
    Header/navigation and bottom actions stay fixed; only docket body scrolls. */
 body.docketMode #docket.active{
   overflow:hidden!important;
@@ -4350,7 +4350,7 @@ body.docketMode .deliveryModuleHeadActions .btn{
 }
 
 
-/* v0.10.108 TEST — invoice review actions remain available inside saved invoice view. */
+/* v0.10.109 TEST — invoice review actions remain available inside saved invoice view. */
 #invoiceViewer .invoiceWarningActions{
   display:flex!important;
   gap:8px!important;
@@ -4367,7 +4367,7 @@ body.docketMode .deliveryModuleHeadActions .btn{
 }
 
 
-/* v0.10.108 TEST — acknowledgement is a notification state, not a reconciliation fix. */
+/* v0.10.109 TEST — acknowledgement is a notification state, not a reconciliation fix. */
 #invoiceViewer .invoiceAckState{
   display:flex;
   align-items:center;
@@ -4383,7 +4383,7 @@ body.docketMode .deliveryModuleHeadActions .btn{
 }
 
 
-/* v0.10.108 TEST — guided invoice correction review states. */
+/* v0.10.109 TEST — guided invoice correction review states. */
 #invoiceViewer .invoiceReviewCard{
   border:1px solid #d7dde7;
   border-radius:13px;
@@ -4441,7 +4441,7 @@ body.docketMode .deliveryModuleHeadActions .btn{
 }
 
 
-/* v0.10.108 TEST — guided conflict-resolution workflow + delivered-date calendar */
+/* v0.10.109 TEST — guided conflict-resolution workflow + delivered-date calendar */
 .conflictWizardOverlay{position:fixed;inset:0;z-index:12000;background:#f4f6f9;display:flex;flex-direction:column;overflow:hidden}
 .conflictWizardTop{flex:0 0 auto;background:#121a2b;color:#fff;padding:10px 12px;padding-top:max(10px,env(safe-area-inset-top));display:flex;align-items:center;justify-content:space-between;gap:10px}
 .conflictWizardTopTitle b{display:block;font-size:17px}.conflictWizardTopTitle span{display:block;font-size:11px;opacity:.76;margin-top:2px}
@@ -4688,7 +4688,7 @@ window.addEventListener("error",e=>{const b=document.getElementById("runtimeErro
       <button class="heroHomeHotspot noPrint" type="button" aria-label="Return to Dashboard" title="Dashboard" onclick="returnToDashboardFromHeader()"></button>
     </div>
     <div class="heroActions noPrint">
-      <span class="app-version">v0.10.108 TEST</span>
+      <span class="app-version">v0.10.109 TEST</span>
       <button class="heroMenuButton" id="heroMenuButton" type="button" aria-expanded="false">Menu</button>
     </div>
   </div>
@@ -4737,6 +4737,7 @@ window.addEventListener("error",e=>{const b=document.getElementById("runtimeErro
         </button>
       </div>
       <button class="pinAddProductQuick" type="button" onclick="openAddProductForm()">＋ Add Product</button>
+      <button class="btn alt noPrint" id="testConflictSeedButton" type="button" onclick="createUnpaidConflictTest()" style="width:100%;margin-top:6px;border-style:dashed">TEST ONLY · Create unpaid conflict test</button>
       <div id="dashboardBarcodeTask"></div>
       <div id="pinSuggestedDrafts" class="pinSuggestedDrafts" style="display:none"></div>
     </div>
@@ -5378,7 +5379,7 @@ if(!Array.isArray(db.docketAudit)) db.docketAudit=[];
 if(!Array.isArray(db.invoices)) db.invoices=[];
 if(!Array.isArray(db.adjustments)) db.adjustments=[];
 
-// v0.10.108 TEST handoff sanitation:
+// v0.10.109 TEST handoff sanitation:
 // remove development-only cross-device test markers from real app data.
 // This does not alter products, quantities, delivery status, notes, invoices,
 // Sunday reports, mappings, prices, dates or audit history.
@@ -6658,7 +6659,7 @@ window.selectDocketArchive=id=>{
  const box=document.getElementById("docketArchive");
  activeDocketArchiveId=(activeDocketArchiveId===id)?null:id;
  renderDocketArchive(activeDocketArchiveId===null?null:activeDocketArchiveId);
- // v0.10.108: never scroll the whole Delivery module when a docket opens.
+ // v0.10.109: never scroll the whole Delivery module when a docket opens.
  // The docket body owns its own scroll viewport; the module header/navigation stays visible.
  if(box){
    box.scrollTop=0;
@@ -7444,7 +7445,7 @@ function buildFullBackupPayload(kind="SUPPORT",note=""){
   return {
     magicDragonBackup:true,
     app:"Magic Dragon Pin",
-    appVersion:"0.10.108",
+    appVersion:"0.10.109",
     backupKind:String(kind||"SUPPORT").toUpperCase(),
     createdAt:new Date().toISOString(),
     note:String(note||""),
@@ -10628,6 +10629,93 @@ window.invoiceViewerPaymentMethodChanged=invoiceViewerPaymentMethodChanged;
 window.saveInvoiceViewerPayment=saveInvoiceViewerPayment;
 
 
+
+/* v0.10.109 TEST — deterministic unpaid conflict seed for guided-wizard regression testing.
+   This helper is intentionally TEST-only. It creates an unpaid test invoice, ensures there
+   is a delivered docket inside that accounting cycle, applies one synthetic quantity edit,
+   records the same audit/correction structures used by normal editing, then opens the wizard. */
+window.createUnpaidConflictTest=()=>{
+  try{
+    ensureSundayArchive();
+    const reports=[...(db.sundayImports||[])].filter(r=>r&&r.date).sort((a,b)=>String(b.date).localeCompare(String(a.date)));
+    if(!reports.length)return alert("No Sunday report is available for the conflict test.");
+    const reportDate=reports[0].date;
+    const weekReports=reports.filter(r=>String(r.date)===String(reportDate));
+    const existing=[...(db.invoices||[])].filter(i=>i&&i.reportDate===reportDate&&!i.testOnlyConflictSeed).sort((a,b)=>Number(b.version||1)-Number(a.version||1));
+    const base=existing[0]||null;
+    if(!base)return alert(`No saved invoice exists for week ending ${recordDateLabel(reportDate)}.`);
+
+    // Remove only earlier synthetic conflict-test invoice/correction records so the button is repeatable.
+    const oldTestIds=new Set((db.invoices||[]).filter(i=>i?.testOnlyConflictSeed).map(i=>i.id));
+    db.invoices=(db.invoices||[]).filter(i=>!i?.testOnlyConflictSeed);
+    db.pendingCorrections=(db.pendingCorrections||[]).filter(c=>!oldTestIds.has(c.invoiceId));
+    db.adjustments=(db.adjustments||[]).filter(a=>!oldTestIds.has(a.oldInvoiceId)&&!oldTestIds.has(a.newInvoiceId));
+
+    const wizardItems=wizardReportsForDate(reportDate);
+    const prevDates=wizardItems.map(x=>x?.rec?.previousDate).filter(Boolean).sort();
+    const prev=prevDates[0]||"";
+    const branches=new Set((base.branches||[]).map(b=>canonicalBranchName(b.branch)));
+
+    let docket=[...(db.deliveries||[])].filter(d=>d&&d.deliveredAt&&String(d.date||"")<=String(reportDate)&&(!prev||String(d.date||"")>prev)&&(!branches.size||branches.has(canonicalBranchName(d.branch||"")))&&(d.lines||[]).length)
+      .sort((a,b)=>Number(!!b.testOnlySuggestedCopy)-Number(!!a.testOnlySuggestedCopy)||String(b.updatedAt||b.editedAt||b.deliveredAt||"").localeCompare(String(a.updatedAt||a.editedAt||a.deliveredAt||"")))[0]||null;
+
+    if(!docket){
+      const report=weekReports[0];
+      if(!report)return alert("No Sunday report could be used to create a TEST docket.");
+      const bundle=sundaySuggestedBundle(report);
+      const lines=(bundle.lines||[]).map(l=>({...l}));
+      if(!lines.length)return alert("The Sunday report does not contain enough data to create the TEST conflict docket.");
+      const now=new Date().toISOString();
+      docket={id:"DTESTCONFLICT"+Date.now(),branch:canonicalBranchName(report.branch),date:reportDate,note:`TEST ONLY — conflict workflow seed for ${reportDate}`,lines,stockReviewLines:(bundle.reviews||[]).map(l=>({...l})),deliveredAt:now,lineChanges:[],generatedFromSundaySuggestion:true,sourceSundayDate:reportDate,suggestedRef:`TEST-CONFLICT-${String(reportDate).replace(/-/g,"")}`,suggestionMethod:"test-conflict-seed-v1",testOnlySuggestedCopy:true,testConflictSeed:true,userEditedSuggestedDraft:true,createdAt:now,updatedAt:now};
+      db.deliveries.push(docket);
+    }
+
+    const nowMs=Date.now();
+    const testId="INVTEST"+nowMs;
+    const maxVersion=(db.invoices||[]).filter(i=>i&&i.reportDate===reportDate).reduce((m,i)=>Math.max(m,Number(i.version||1)),0);
+    const testInvoice=JSON.parse(JSON.stringify(base));
+    testInvoice.id=testId;
+    testInvoice.number=`${base.number||sundayInvoiceNumber(reportDate)}-TEST`;
+    testInvoice.version=maxVersion+1;
+    testInvoice.createdDate=today();
+    testInvoice.createdAt=new Date(nowMs).toISOString();
+    testInvoice.updatedAt=testInvoice.createdAt;
+    testInvoice.status="unpaid";
+    testInvoice.payment={status:"unpaid",date:null,method:null,methodOther:"",note:"TEST ONLY — unpaid conflict workflow",savedAt:testInvoice.createdAt};
+    testInvoice.sent={status:"not_sent",date:null,note:"TEST ONLY"};
+    testInvoice.supersededBy=null;
+    testInvoice.supersededAt=null;
+    testInvoice.testOnlyConflictSeed=true;
+    testInvoice.testConflictSourceInvoiceId=base.id;
+    db.invoices.push(testInvoice);
+
+    const before=JSON.parse(JSON.stringify(docket));
+    const first=(docket.lines||[]).find(l=>Number(l.qty||0)>0)||(docket.lines||[])[0];
+    if(!first)return alert("The TEST docket has no editable line.");
+    const oldQty=Number(first.qty||0);
+    first.qty=oldQty+1;
+    const editAt=new Date(nowMs+25).toISOString();
+    docket.editedAt=editAt;
+    docket.updatedAt=editAt;
+    docket.testConflictSeed=true;
+    const change={before:{...first,qty:oldQty},after:{...first,qty:oldQty+1},at:editAt};
+    docket.lineChanges=[...(Array.isArray(docket.lineChanges)?docket.lineChanges:[]),change];
+    if(!Array.isArray(docket.editAudit))docket.editAudit=[];
+    docket.editAudit.push({at:editAt,reason:"TEST ONLY — create guided conflict",device:"TEST helper",user:"",summary:[`Quantity: ${deliveryLineName(first)} ${oldQty} → ${oldQty+1}`]});
+    db.docketAudit=db.docketAudit||[];
+    db.docketAudit.push({id:"DATEST"+(nowMs+25),action:"edited",at:editAt,docketId:docket.id,date:docket.date||reportDate,branch:docket.branch||"",note:docket.note||"",lines:(before.lines||[]).map(l=>({...l})),beforeSnapshot:before,resolutionChoice:null,affectedInvoiceId:testId,testOnlyConflictSeed:true,changes:[{before:{...change.before},after:{...change.after}}]});
+
+    db.pendingCorrections=db.pendingCorrections||[];
+    db.pendingCorrections.push({id:"CORTEST"+(nowMs+30),status:"pending",docketId:docket.id,invoiceId:testId,sourceDate:reportDate,choice:"",createdAt:new Date(nowMs+30).toISOString(),changes:[{before:{...change.before},after:{...change.after}}],message:"TEST ONLY — guided conflict waiting for review.",testOnlyConflictSeed:true});
+
+    localStorage.setItem("mdpin-db",JSON.stringify(db));
+    try{refreshReconciliationViews();}catch(e){console.warn("TEST conflict reconciliation refresh",e)}
+    renderAll();renderDashboardAlerts();renderHistory();
+    switchTab("home");
+    setTimeout(()=>openConflictResolutionWizard(testId),120);
+  }catch(e){console.error("TEST conflict seed failed",e);alert("Could not create the TEST conflict: "+(e?.message||e));}
+};
+
 let conflictWizardInvoiceId=null;
 const CONFLICT_WIZARD_RESUME_KEY="mdpin-conflict-wizard-resume";
 function conflictWizardInvoice(){return (db.invoices||[]).find(x=>x.id===conflictWizardInvoiceId)||null;}
@@ -11114,7 +11202,7 @@ function saveCloudTestMarker(){
  cloudStatus("Local TEST change saved — ready to upload when cloud is current.","info");
  const metaRev=cloudNumStorage(MD_CLOUD_SEEN_REV_KEY),base=cloudNumStorage(MD_CLOUD_BASE_REV_KEY);
  if(metaRev&&base===metaRev){
-   const meta={revision:metaRev,updated_by_device:"cloud",app_version:"0.10.108"};
+   const meta={revision:metaRev,updated_by_device:"cloud",app_version:"0.10.109"};
    const cloud=cloudEl("cloudOverviewCloud"),baseEl=cloudEl("cloudOverviewBase"),stateEl=cloudEl("cloudOverviewState"),wrap=cloudEl("cloudOverview");
    if(cloud)cloud.textContent=`Rev ${metaRev}`;if(baseEl)baseEl.textContent=`Base rev ${base}`;if(stateEl)stateEl.textContent="LOCAL CHANGE — UPLOAD";
    if(wrap){[...wrap.querySelectorAll(".cloudOverviewCard")].forEach(x=>{x.classList.remove("good","bad","warn");x.classList.add("warn")})}
@@ -11256,7 +11344,7 @@ async function cloudPush(){
   const hash=await sha256Text(stableJson(pkg)),fingerprint=await cloudStateFingerprint(pkg),revision=currentRevision+1;
   const c=pkg.counts;
   if(!confirm(`Upload this device to TEST Cloud?\n\nRevision ${revision}\n${c.products} products · ${c.aliases} aliases · ${c.sundayReports} Sunday reports · ${c.deliveries} deliveries · ${c.invoices} invoices\n\nTEST workspace only.`)){cloudStatus("Upload cancelled — nothing changed.","info");return}
-  const row={workspace_id:MD_TEST_WORKSPACE,revision,app_version:"0.10.108",payload:pkg,payload_hash:hash,updated_by:mdCloudSession.user?.id||null,updated_by_device:label,updated_at:new Date().toISOString()};
+  const row={workspace_id:MD_TEST_WORKSPACE,revision,app_version:"0.10.109",payload:pkg,payload_hash:hash,updated_by:mdCloudSession.user?.id||null,updated_by_device:label,updated_at:new Date().toISOString()};
   let saved;
   if(currentRevision===0){
    saved=await mdCloudFetch(`/rest/v1/${MD_TEST_STATE_TABLE}`,{method:"POST",body:row,headers:{Prefer:"return=representation"}});
@@ -11344,7 +11432,7 @@ function validateBackupPackage(pkg){
 }
 async function createCompleteTransferPackage(kind="FULL_TRANSFER"){
  const sourceFiles=await exportArchivedSourceFiles(),counts=backupCounts();
- return {format:BACKUP_FORMAT,schema:BACKUP_SCHEMA,appVersion:"0.10.108",backupKind:kind,createdAt:new Date().toISOString(),counts,sourceFilesCount:sourceFiles.length,data:JSON.parse(JSON.stringify(db)),sourceFiles};
+ return {format:BACKUP_FORMAT,schema:BACKUP_SCHEMA,appVersion:"0.10.109",backupKind:kind,createdAt:new Date().toISOString(),counts,sourceFilesCount:sourceFiles.length,data:JSON.parse(JSON.stringify(db)),sourceFiles};
 }
 async function savePackageFile(pkg,prefix="Magic-Pin-Data"){
  const blob=new Blob([JSON.stringify(pkg)],{type:"application/json"});
@@ -11490,7 +11578,7 @@ function deliveryRecordStatus(msg,state="info"){
  el.textContent=msg;el.classList.remove("good","warn","bad");if(state==="good")el.classList.add("good");else if(state==="warn")el.classList.add("warn");else if(state==="bad")el.classList.add("bad");
 }
 function eligibleDeliveryRecords(){
- // v0.10.108: untouched auto-generated Sunday suggestions stay local-only,
+ // v0.10.109: untouched auto-generated Sunday suggestions stay local-only,
  // but once Pin edits one or marks it delivered it becomes a real docket
  // and must participate in record-level cloud sync.
  return [...(db.deliveries||[])].filter(d=>{
@@ -11627,7 +11715,7 @@ window.resolveDeliveryConflictKeepLocal=async id=>{
  try{
   const label=(cloudEl("cloudDeviceLabel")?.value||localStorage.getItem("mdpin-cloud-device")||detectCloudDeviceLabel()).trim()||"Test device";
   const fp=await deliveryPayloadFingerprint(local),next=Number(remote.revision)+1;
-  const row={revision:next,payload:JSON.parse(JSON.stringify(local)),payload_hash:fp,updated_by:mdCloudSession.user?.id||null,updated_by_device:label,updated_at:new Date().toISOString(),app_version:"0.10.108",deleted:false};
+  const row={revision:next,payload:JSON.parse(JSON.stringify(local)),payload_hash:fp,updated_by:mdCloudSession.user?.id||null,updated_by_device:label,updated_at:new Date().toISOString(),app_version:"0.10.109",deleted:false};
   const saved=await mdCloudFetch(`/rest/v1/${MD_TEST_DELIVERY_TABLE}?workspace_id=eq.${encodeURIComponent(MD_TEST_WORKSPACE)}&record_id=eq.${encodeURIComponent(id)}&revision=eq.${remote.revision}`,{method:"PATCH",body:row,headers:{Prefer:"return=representation"}});
   const written=Array.isArray(saved)&&saved.length?saved[0]:null;if(!written)throw new Error("Cloud changed again while you were reviewing. Check / Pull again.");
   const meta=deliverySyncMeta();meta[id]={revision:next,fingerprint:fp};saveDeliverySyncMeta(meta);deliveryConflictCache=deliveryConflictCache.filter(x=>x.id!==id);renderDeliveryConflictPanel();renderCloudDeliveryRecordUi();deliveryRecordStatus(`✓ Conflict resolved — this device is now cloud revision ${next}.`,"good");
@@ -11643,7 +11731,7 @@ async function cloudSyncDeliveryChanges(){
   for(const d of localRows){
    const id=d.id,localFp=await deliveryPayloadFingerprint(d),remote=remoteMap[id],base=meta[id]||null;
    if(!remote){
-    const row={workspace_id:MD_TEST_WORKSPACE,record_id:id,revision:1,payload:JSON.parse(JSON.stringify(d)),payload_hash:localFp,updated_by:mdCloudSession.user?.id||null,updated_by_device:label,updated_at:new Date().toISOString(),app_version:"0.10.108",deleted:false};
+    const row={workspace_id:MD_TEST_WORKSPACE,record_id:id,revision:1,payload:JSON.parse(JSON.stringify(d)),payload_hash:localFp,updated_by:mdCloudSession.user?.id||null,updated_by_device:label,updated_at:new Date().toISOString(),app_version:"0.10.109",deleted:false};
     const saved=await mdCloudFetch(`/rest/v1/${MD_TEST_DELIVERY_TABLE}`,{method:"POST",body:row,headers:{Prefer:"return=representation"}});const written=Array.isArray(saved)&&saved.length?saved[0]:null;
     if(!written){conflicts.push({id,reason:"cloud did not confirm new record",local:d,remote:null});continue;}meta[id]={revision:1,fingerprint:localFp};added++;continue;
    }
@@ -11652,7 +11740,7 @@ async function cloudSyncDeliveryChanges(){
    if(!base){conflicts.push({id,reason:"cloud copy already exists — pull first",local:d,remote});continue;}
    if(Number(base.revision)!==Number(remote.revision)){conflicts.push({id,reason:"cloud changed on another device — pull first",local:d,remote});continue;}
    if(localFp===base.fingerprint){conflicts.push({id,reason:"cloud has a newer change — pull first",local:d,remote});continue;}
-   const next=Number(remote.revision)+1,row={revision:next,payload:JSON.parse(JSON.stringify(d)),payload_hash:localFp,updated_by:mdCloudSession.user?.id||null,updated_by_device:label,updated_at:new Date().toISOString(),app_version:"0.10.108",deleted:false};
+   const next=Number(remote.revision)+1,row={revision:next,payload:JSON.parse(JSON.stringify(d)),payload_hash:localFp,updated_by:mdCloudSession.user?.id||null,updated_by_device:label,updated_at:new Date().toISOString(),app_version:"0.10.109",deleted:false};
    const saved=await mdCloudFetch(`/rest/v1/${MD_TEST_DELIVERY_TABLE}?workspace_id=eq.${encodeURIComponent(MD_TEST_WORKSPACE)}&record_id=eq.${encodeURIComponent(id)}&revision=eq.${remote.revision}`,{method:"PATCH",body:row,headers:{Prefer:"return=representation"}});const written=Array.isArray(saved)&&saved.length?saved[0]:null;
    if(!written){conflicts.push({id,reason:"revision conflict",local:d,remote});continue;}meta[id]={revision:next,fingerprint:localFp};updated++;
   }
@@ -11677,12 +11765,12 @@ async function cloudPushSelectedDeliveryRecord(){
      if(!base||Number(base.revision)!==Number(remote.revision)){
        return deliveryRecordStatus(`Upload blocked — ${id} is cloud revision ${remote.revision}${remote.updated_by_device?` from ${remote.updated_by_device}`:""}. Pull delivery records first.`,"warn");
      }
-     const next=Number(remote.revision)+1;const row={revision:next,payload:JSON.parse(JSON.stringify(d)),payload_hash:localFp,updated_by:mdCloudSession.user?.id||null,updated_by_device:label,updated_at:new Date().toISOString(),app_version:"0.10.108",deleted:false};
+     const next=Number(remote.revision)+1;const row={revision:next,payload:JSON.parse(JSON.stringify(d)),payload_hash:localFp,updated_by:mdCloudSession.user?.id||null,updated_by_device:label,updated_at:new Date().toISOString(),app_version:"0.10.109",deleted:false};
      const saved=await mdCloudFetch(`/rest/v1/${MD_TEST_DELIVERY_TABLE}?workspace_id=eq.${encodeURIComponent(MD_TEST_WORKSPACE)}&record_id=eq.${encodeURIComponent(id)}&revision=eq.${remote.revision}`,{method:"PATCH",body:row,headers:{Prefer:"return=representation"}});
      const written=Array.isArray(saved)&&saved.length?saved[0]:null;if(!written)throw new Error("Record revision conflict — another device changed this docket first.");
      meta[id]={revision:next,fingerprint:localFp};saveDeliverySyncMeta(meta);deliveryRecordStatus(`✓ Docket ${id} uploaded as record revision ${next} from ${label}.`,"good");
    }else{
-     const row={workspace_id:MD_TEST_WORKSPACE,record_id:id,revision:1,payload:JSON.parse(JSON.stringify(d)),payload_hash:localFp,updated_by:mdCloudSession.user?.id||null,updated_by_device:label,updated_at:new Date().toISOString(),app_version:"0.10.108",deleted:false};
+     const row={workspace_id:MD_TEST_WORKSPACE,record_id:id,revision:1,payload:JSON.parse(JSON.stringify(d)),payload_hash:localFp,updated_by:mdCloudSession.user?.id||null,updated_by_device:label,updated_at:new Date().toISOString(),app_version:"0.10.109",deleted:false};
      const saved=await mdCloudFetch(`/rest/v1/${MD_TEST_DELIVERY_TABLE}`,{method:"POST",body:row,headers:{Prefer:"return=representation"}});
      const written=Array.isArray(saved)&&saved.length?saved[0]:null;if(!written)throw new Error("The cloud did not confirm the new delivery record.");
      meta[id]={revision:1,fingerprint:localFp};saveDeliverySyncMeta(meta);deliveryRecordStatus(`✓ Docket ${id} uploaded as new record revision 1 from ${label}.`,"good");
