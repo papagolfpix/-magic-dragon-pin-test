@@ -4681,6 +4681,14 @@ body.deliveryMode:not(.deliveryEditMode).deliveryKeyboardOpen #deliveryCreatePan
   body.workflowMode #sundayWizard.active{height:100%!important;min-height:0!important;}
   body.workflowMode .wizardHero{height:100%!important;min-height:0!important;margin:0!important;}
 }
+/* v0.10.116 TEST — iPhone Sunday Workflow list owns the scroll gesture. */
+@media (max-width:699px){
+  body.workflowMode .app{height:100dvh!important;min-height:0!important;max-height:100dvh!important;padding:8px 10px calc(78px + env(safe-area-inset-bottom))!important;display:flex!important;flex-direction:column!important;overflow:hidden!important}
+  body.workflowMode .contentViewport{position:relative!important;inset:auto!important;flex:1 1 0!important;width:100%!important;height:auto!important;min-height:0!important;max-height:100%!important;overflow:hidden!important;contain:none!important}
+  body.workflowMode .contentViewport>#sundayWizard.active{position:relative!important;inset:auto!important;display:block!important;width:100%!important;height:100%!important;max-height:100%!important;min-height:0!important;overflow:hidden!important}
+  body.workflowMode #sundayWizard.active>.wizardHero{display:flex!important;flex-direction:column!important;height:100%!important;min-height:0!important;max-height:100%!important;overflow:hidden!important}
+  body.workflowMode #wizardContent{flex:1 1 0!important;min-height:0!important;height:auto!important;overflow-y:auto!important;overflow-x:hidden!important;-webkit-overflow-scrolling:touch!important;touch-action:pan-y!important;overscroll-behavior-y:contain!important}
+}
 </style>
 
 </head>
@@ -4696,7 +4704,7 @@ window.addEventListener("error",e=>{const b=document.getElementById("runtimeErro
       <button class="heroHomeHotspot noPrint" type="button" aria-label="Return to Dashboard" title="Dashboard" onclick="returnToDashboardFromHeader()"></button>
     </div>
     <div class="heroActions noPrint">
-      <span class="app-version">v0.10.115 TEST</span>
+      <span class="app-version">v0.10.116 TEST</span>
       <button class="heroMenuButton" id="heroMenuButton" type="button" aria-expanded="false">Menu</button>
     </div>
   </div>
@@ -7467,7 +7475,7 @@ function buildFullBackupPayload(kind="SUPPORT",note=""){
   return {
     magicDragonBackup:true,
     app:"Magic Dragon Pin",
-    appVersion:"0.10.115",
+    appVersion:"0.10.116",
     backupKind:String(kind||"SUPPORT").toUpperCase(),
     createdAt:new Date().toISOString(),
     note:String(note||""),
@@ -11527,7 +11535,7 @@ function validateBackupPackage(pkg){
 }
 async function createCompleteTransferPackage(kind="FULL_TRANSFER"){
  const sourceFiles=await exportArchivedSourceFiles(),counts=backupCounts();
- return {format:BACKUP_FORMAT,schema:BACKUP_SCHEMA,appVersion:"0.10.115",backupKind:kind,createdAt:new Date().toISOString(),counts,sourceFilesCount:sourceFiles.length,data:JSON.parse(JSON.stringify(db)),sourceFiles};
+ return {format:BACKUP_FORMAT,schema:BACKUP_SCHEMA,appVersion:"0.10.116",backupKind:kind,createdAt:new Date().toISOString(),counts,sourceFilesCount:sourceFiles.length,data:JSON.parse(JSON.stringify(db)),sourceFiles};
 }
 async function savePackageFile(pkg,prefix="Magic-Pin-Data"){
  const blob=new Blob([JSON.stringify(pkg)],{type:"application/json"});
