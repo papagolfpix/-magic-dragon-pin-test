@@ -1,3 +1,11 @@
+WHAT CHANGED IN v0.10.102 TEST
+- Added Acknowledge and Back to Dashboard directly to the invoice correction/review warning shown when a linked delivery edit puts the week out of reconciliation.
+- The same controls also appear when the correction is financially verified.
+- Acknowledge records that the source edit was reviewed; it does NOT hide a genuine UPDATE REQUIRED / out-of-balance condition. That condition remains until reconciliation is fixed.
+- Back to Dashboard returns directly without requiring Back to Records first.
+- v0.10.101 was not adopted; actual delivery date continues to determine the accounting week, while source Sunday date remains provenance only.
+- No invoice calculations, delivery-cycle assignment, Sunday logic, pricing, split or payment rules changed.
+
 WHAT CHANGED IN v0.10.100 TEST
 - Invoice review screen now shows a visible Acknowledge button when a linked delivery docket was edited after the invoice was saved.
 - Added Back to Dashboard beside Acknowledge, so reviewing an alert no longer forces a return to the dashboard just to clear it.
@@ -10,7 +18,7 @@ WHAT CHANGED IN v0.10.99 TEST
 - Opening/collapsing a docket no longer scrolls the whole Delivery module header out of view.
 - No Sunday, pricing, invoice, mapping, cloud, PDF or business-rule logic changed.
 
-MAGIC DRAGON PIN v0.10.100 — TEST
+MAGIC DRAGON PIN v0.10.102 — TEST
 
 PURPOSE
 - Frozen Sunday-handoff candidate based directly on validated v0.10.97 TEST.
