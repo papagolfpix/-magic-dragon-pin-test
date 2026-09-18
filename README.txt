@@ -1,14 +1,11 @@
-WHAT CHANGED IN v0.10.105 TEST
-- Added a guided Conflict Resolution Workflow for post-invoice delivery edits and reconciliation problems.
-- Dashboard invoice-review alerts can now launch Resolve step by step.
-- The wizard explains what changed, identifies the affected invoice/docket, shows reconciliation exceptions with evidence, and opens the relevant docket, Sunday report or mapping area.
-- When a source docket is edited from the wizard, saving/cancelling automatically returns to the conflict workflow and rechecks the week.
-- If the Sunday workflow is needed, exiting it automatically resumes the conflict workflow.
-- When reconciliation is green, the wizard asks how to handle the verified correction: update the current invoice or carry it to next Sunday (paid invoices are protected and carry forward automatically).
-- The wizard ends with a green RESOLVED result describing the actual final outcome.
-- A floating Resume conflict resolution control appears if the user leaves the workflow temporarily.
+WHAT CHANGED IN v0.10.106 TEST
+- Added guided Conflict Resolution Workflow with Understand / Fix source / Decision / Result stages.
+- Dashboard invoice-review alerts launch Resolve step by step.
+- Wizard can open the affected docket or Sunday reconciliation and returns to the wizard after docket save/cancel.
+- Once reconciliation is green, the wizard guides the final correction handling and ends with a green resolved result.
+- Mark Delivered now uses the native calendar date picker, matching New Delivery, instead of a YYYY-MM-DD text prompt.
 - Actual delivery date continues to determine the accounting week; source Sunday date remains provenance only.
-- No invoice formulas, profit splits, Sunday import parsing, pricing or payment calculations changed.
+- Package/version validation is now enforced by the companion GitHub extractor workflow.
 
 WHAT CHANGED IN v0.10.104 TEST
 - Rebuilt the invoice correction/review message so it explains: What happened, Why it is not resolved, What you need to do, and the final result once resolved.
@@ -47,7 +44,7 @@ WHAT CHANGED IN v0.10.99 TEST
 - Opening/collapsing a docket no longer scrolls the whole Delivery module header out of view.
 - No Sunday, pricing, invoice, mapping, cloud, PDF or business-rule logic changed.
 
-MAGIC DRAGON PIN v0.10.105 — TEST
+MAGIC DRAGON PIN v0.10.106 — TEST
 
 PURPOSE
 - Frozen Sunday-handoff candidate based directly on validated v0.10.97 TEST.
