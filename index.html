@@ -4244,7 +4244,7 @@ body.deliveryMode .deliveryEditLineCard{
 
 
 <style id="v01047-line-pane-below-controls">
-/* v0.10.75 TEST — hard-separate New Delivery controls from added lines.
+/* v0.10.76 TEST — hard-separate New Delivery controls from added lines.
    iPhone Safari was allowing the first reusable line card/select to paint back
    underneath the stationary control deck.  Use a simple column flex layout
    for New Delivery: controls = fixed natural height, line list = the only
@@ -4326,6 +4326,59 @@ body.deliveryMode:not(.deliveryEditMode).deliveryKeyboardOpen #deliveryCreatePan
   }
   .tabs.menuOpen{top:var(--menu-top,150px)!important;}
 }
+
+/* v0.10.76 — iPad Sunday Workflow keeps the branded header visible.
+   Workflow content gets its own clipped viewport below the header; the bottom
+   workflow navigation remains fixed. iPhone workflow layout is untouched. */
+@media (min-width:700px){
+  body.workflowMode .hero{
+    display:flex!important;
+    position:fixed!important;
+    top:8px!important;
+    left:var(--shell-left,8px)!important;
+    width:var(--shell-width,calc(100vw - 16px))!important;
+    margin:0!important;
+    z-index:1000!important;
+    transform:translateZ(0)!important;
+    -webkit-transform:translateZ(0)!important;
+  }
+  body.workflowMode .tabs,
+  body.workflowMode .navSpacer{display:none!important;}
+  body.workflowMode .app{
+    position:fixed!important;
+    inset:0!important;
+    width:100%!important;
+    height:100dvh!important;
+    min-height:0!important;
+    max-height:100dvh!important;
+    padding:0!important;
+    overflow:hidden!important;
+  }
+  body.workflowMode .contentViewport{
+    position:fixed!important;
+    top:var(--content-top,150px)!important;
+    bottom:calc(72px + env(safe-area-inset-bottom))!important;
+    left:var(--shell-left,8px)!important;
+    width:var(--shell-width,calc(100vw - 16px))!important;
+    height:auto!important;
+    overflow:hidden!important;
+    contain:layout paint!important;
+    isolation:isolate!important;
+    background:var(--bg)!important;
+    z-index:1!important;
+  }
+  body.workflowMode .contentViewport>#sundayWizard.active{
+    position:absolute!important;
+    inset:0!important;
+    width:100%!important;
+    height:100%!important;
+    min-height:0!important;
+    max-height:100%!important;
+    overflow:hidden!important;
+  }
+  body.workflowMode #sundayWizard.active{height:100%!important;min-height:0!important;}
+  body.workflowMode .wizardHero{height:100%!important;min-height:0!important;margin:0!important;}
+}
 </style>
 
 </head>
@@ -4341,7 +4394,7 @@ window.addEventListener("error",e=>{const b=document.getElementById("runtimeErro
       <button class="heroHomeHotspot noPrint" type="button" aria-label="Return to Dashboard" title="Dashboard" onclick="returnToDashboardFromHeader()"></button>
     </div>
     <div class="heroActions noPrint">
-      <span class="app-version">v0.10.75 TEST</span>
+      <span class="app-version">v0.10.76 TEST</span>
       <button class="heroMenuButton" id="heroMenuButton" type="button" aria-expanded="false">Menu</button>
     </div>
   </div>
@@ -6887,7 +6940,7 @@ function buildFullBackupPayload(kind="SUPPORT",note=""){
   return {
     magicDragonBackup:true,
     app:"Magic Dragon Pin",
-    appVersion:"0.10.75",
+    appVersion:"0.10.76",
     backupKind:String(kind||"SUPPORT").toUpperCase(),
     createdAt:new Date().toISOString(),
     note:String(note||""),
@@ -9020,6 +9073,7 @@ function openSundayWizard(targetDate=null){
   sundayWizardStep=items.length?2:1;
   switchTab("sundayWizard");
   document.body.classList.add("workflowMode");
+  if(window.syncShellGeometry) requestAnimationFrame(()=>window.syncShellGeometry());
   renderSundayWizard();
   window.scrollTo({top:0,behavior:"smooth"});
 }
@@ -10372,7 +10426,7 @@ function validateBackupPackage(pkg){
 }
 async function createCompleteTransferPackage(kind="FULL_TRANSFER"){
  const sourceFiles=await exportArchivedSourceFiles(),counts=backupCounts();
- return {format:BACKUP_FORMAT,schema:BACKUP_SCHEMA,appVersion:"0.10.75",backupKind:kind,createdAt:new Date().toISOString(),counts,sourceFilesCount:sourceFiles.length,data:JSON.parse(JSON.stringify(db)),sourceFiles};
+ return {format:BACKUP_FORMAT,schema:BACKUP_SCHEMA,appVersion:"0.10.76",backupKind:kind,createdAt:new Date().toISOString(),counts,sourceFilesCount:sourceFiles.length,data:JSON.parse(JSON.stringify(db)),sourceFiles};
 }
 async function savePackageFile(pkg,prefix="Magic-Pin-Data"){
  const blob=new Blob([JSON.stringify(pkg)],{type:"application/json"});
@@ -10649,7 +10703,7 @@ renderDeliveryTransferSummary();
  sync();
 })();
 
-/* v0.10.75 TEST Cloud freshness: whenever the cloud panel opens, refresh live metadata so stale revision labels cannot survive a device switch or restore. */
+/* v0.10.76 TEST Cloud freshness: whenever the cloud panel opens, refresh live metadata so stale revision labels cannot survive a device switch or restore. */
 (()=>{
  const tc=document.getElementById("testCloudDetails");if(!tc)return;
  tc.addEventListener("toggle",()=>{
@@ -10711,7 +10765,7 @@ if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
     window.addEventListener("load",syncGeometry,{once:true});
   })();
 
-  window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js?v=1074", {updateViaCache:"none"}).catch(()=>{}));
+  window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js?v=1076", {updateViaCache:"none"}).catch(()=>{}));
 }
 
 /* v0.10.44 deterministic regression check.

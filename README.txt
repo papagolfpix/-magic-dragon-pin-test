@@ -1,11 +1,11 @@
-MAGIC DRAGON PIN v0.10.75 — TEST
+MAGIC DRAGON PIN v0.10.76 — TEST
 
-WHAT CHANGED IN v0.10.75
-- Separated normal Delivery Sync from the legacy Whole App Snapshot test UI.
-- Delivery Sync is now the primary cloud workflow; whole-app snapshot controls are tucked into a separate collapsed panel.
-- Added Local / Cloud / Waiting delivery counts and a batch Sync Delivery Changes action.
-- Record-level delivery changes no longer present themselves as a whole-app sync failure in the main workflow.
-- Preserved per-record conflict protection and the advanced single-docket test control.
+WHAT CHANGED IN v0.10.76
+- iPad Sunday Workflow now keeps the branded Magic Dragon header visible instead of switching to a headerless fullscreen shell.
+- Sunday Workflow content is isolated in its own scrollable viewport below the fixed tablet header while the bottom workflow navigation remains available.
+- Opening Sunday Workflow now re-measures the shell after workflow mode starts, preventing stale header geometry.
+- iPhone Sunday Workflow layout is intentionally unchanged.
+- All v0.10.74 Delivery Sync separation/bulk-sync behaviour is preserved.
 
 WHAT CHANGED IN v0.10.73
 - Record-level delivery pull results now distinguish THIS pull from prior sync history.
