@@ -4713,7 +4713,7 @@ window.addEventListener("error",e=>{const b=document.getElementById("runtimeErro
       <button class="heroHomeHotspot noPrint" type="button" aria-label="Return to Dashboard" title="Dashboard" onclick="returnToDashboardFromHeader()"></button>
     </div>
     <div class="heroActions noPrint">
-      <span class="app-version">v0.10.121 TEST</span>
+      <span class="app-version">v0.10.122 TEST</span>
       <button class="heroMenuButton" id="heroMenuButton" type="button" aria-expanded="false">Menu</button>
     </div>
   </div>
@@ -7484,7 +7484,7 @@ function buildFullBackupPayload(kind="SUPPORT",note=""){
   return {
     magicDragonBackup:true,
     app:"Magic Dragon Pin",
-    appVersion:"0.10.121",
+    appVersion:"0.10.122",
     backupKind:String(kind||"SUPPORT").toUpperCase(),
     createdAt:new Date().toISOString(),
     note:String(note||""),
@@ -10881,9 +10881,15 @@ function renderConflictResolutionWizard(){
  if(c&&['pending','waiting_reconciliation'].includes(c.status)){if(invoiceIsPaid(inv))c.choice='next_sunday';html+=`<div class="conflictWizardCard caution"><div class="conflictWizardStatus">READY TO RESOLVE</div><div class="conflictWizardTitle">Choose the final handling</div><div class="conflictWizardText">The week reconciles again. ${invoiceIsPaid(inv)?'This invoice is already paid, so it must stay unchanged and any verified difference will carry forward.':'Choose whether the verified correction belongs in this invoice or the next Sunday cycle.'}</div>${invoiceIsPaid(inv)?'<div class="conflictWizardResult">Paid invoice protected — carry forward to next Sunday.</div>':`<div class="conflictWizardActions"><button class="btn ${c.choice==='update_current'?'gold':'alt'}" onclick="conflictWizardChoose('${c.id}','update_current')">Update this invoice</button><button class="btn ${c.choice==='next_sunday'?'gold':'alt'}" onclick="conflictWizardChoose('${c.id}','next_sunday')">Add to next Sunday</button></div>`}<div class="conflictWizardActions"><button class="btn gold" ${c.choice?'':'disabled'} onclick="conflictWizardApply('${c.id}')">Apply resolution</button><button class="btn alt" onclick="closeConflictResolutionWizard()">Decide later</button></div></div>`;}else{html+=`<div class="conflictWizardCard caution"><div class="conflictWizardTitle">Recheck the correction</div><div class="conflictWizardText">The week is balanced but there is no active correction decision. Open the affected docket and save the required correction choice.</div>${sourceDocket?`<div class="conflictWizardActions"><button class="btn gold" onclick="conflictWizardOpenDocket('${sourceDocket.id}')">Open affected docket</button></div>`:''}</div>`;}b.innerHTML=html;
 }
 function openConflictResolutionWizard(id){conflictWizardInvoiceId=id;sessionStorage.setItem(CONFLICT_WIZARD_RESUME_KEY,id);conflictWizardEnsure().style.display='flex';renderConflictResolutionWizard();}
-function closeConflictResolutionWizard(){const o=document.getElementById('conflictWizardOverlay');if(o)o.style.display='none';const id=sessionStorage.getItem(CONFLICT_WIZARD_RESUME_KEY);if(id)renderConflictResumeChip();}
+function closeConflictResolutionWizard(){const o=document.getElementById('conflictWizardOverlay');if(o)o.style.display='none';renderConflictResumeChip();}
 function renderConflictResumeChip(){
  let c=document.getElementById('conflictResumeChip'),id=sessionStorage.getItem(CONFLICT_WIZARD_RESUME_KEY);
+ const inv=(db.invoices||[]).find(x=>x.id===id);
+ const correction=inv?conflictWizardCorrection(inv):null;
+ if(id&&(!inv||correction&&['resolved','queued'].includes(correction.status))){
+   sessionStorage.removeItem(CONFLICT_WIZARD_RESUME_KEY);
+   id=null;
+ }
  const editing=!!editingDocketId||document.body.classList.contains('deliveryMode');
  const onDashboard=!!document.getElementById('home')?.classList.contains('active');
  const inSundayWorkflow=document.body.classList.contains('workflowMode')||!!document.getElementById('sundayWizard')?.classList.contains('active');
@@ -11238,6 +11244,7 @@ function renderDashboardAlerts(){
   const pending=(db.adjustments||[]).filter(a=>a.status==="pending"&&a.resolution!=="next_sunday_auto");
   if(pending.length){const total=pending.reduce((n,a)=>n+Number(a.amount||0),0);alerts.push(`<div class="dashboardAlert info"><div class="dashboardAlertTitle">Adjustment waiting</div><div class="dashboardAlertText">${pending.length} unresolved adjustment${pending.length>1?'s':''} (${total>=0?'+':''}${baht(total)}) is waiting for Pin's decision. It will be offered automatically in the next eligible Sunday workflow.</div><button class="btn" onclick="switchTab('history');document.getElementById('recordsType').value='invoice';renderHistory()">Open Records</button></div>`);}
   box.innerHTML=alerts.join("");box.style.display=alerts.length?"block":"none";
+  renderConflictResumeChip();
 }
 
 function renderSundayWizard(){
@@ -11628,7 +11635,7 @@ function validateBackupPackage(pkg){
 }
 async function createCompleteTransferPackage(kind="FULL_TRANSFER"){
  const sourceFiles=await exportArchivedSourceFiles(),counts=backupCounts();
- return {format:BACKUP_FORMAT,schema:BACKUP_SCHEMA,appVersion:"0.10.121",backupKind:kind,createdAt:new Date().toISOString(),counts,sourceFilesCount:sourceFiles.length,data:JSON.parse(JSON.stringify(db)),sourceFiles};
+ return {format:BACKUP_FORMAT,schema:BACKUP_SCHEMA,appVersion:"0.10.122",backupKind:kind,createdAt:new Date().toISOString(),counts,sourceFilesCount:sourceFiles.length,data:JSON.parse(JSON.stringify(db)),sourceFiles};
 }
 async function savePackageFile(pkg,prefix="Magic-Pin-Data"){
  const blob=new Blob([JSON.stringify(pkg)],{type:"application/json"});

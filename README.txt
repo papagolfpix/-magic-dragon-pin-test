@@ -1,3 +1,8 @@
+WHAT CHANGED IN v0.10.122 TEST
+- A completed correction clears its old Resume conflict resolution shortcut when returning to the dashboard.
+- The shortcut also disappears on the dashboard while a correction remains in progress; the dashboard keeps its own action.
+- This interface change does not edit saved invoices, dockets, quantities, or amounts.
+
 WHAT CHANGED IN v0.10.121 TEST
 - A saved choice to carry a correction forward no longer hides an unreconciled invoice week.
 - The dashboard says the correction is waiting for reconciliation, and offers a direct Review correction button.
