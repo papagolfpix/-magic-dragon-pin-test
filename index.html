@@ -1551,7 +1551,7 @@ body.docketMode .docketActiveScroll{display:block!important}
 .docketStatusBadge.delivered{color:#176b35;background:#e8f6ed;border-color:#b9dfc6}
 .docketStatusBadge.notDelivered{color:#86501f;background:#f7ead8;border-color:#e5c79f}
 
-/* v0.10.88 TEST — true viewport-root docket footer. */
+/* v0.10.89 TEST — true viewport-root docket footer. */
 body.docketMode{--docket-footer-height:0px}
 body.docketMode #docket.active{bottom:calc(var(--docket-footer-height) + max(8px,env(safe-area-inset-bottom)))!important}
 body.docketMode .docketActivePanel{height:100%!important;min-height:0!important;max-height:none!important;grid-template-rows:minmax(0,1fr)!important}
@@ -3595,6 +3595,10 @@ body.deliveryEditMode .deliveryEditLineCard.keyboardTarget{
 .cloudRecordSyncCard{margin-top:10px;border:1px solid #d8dde6;border-radius:14px;background:#fff;padding:12px}
 .cloudRecordSyncCard .recordSyncTitle{font-weight:900;font-size:16px;margin-bottom:2px}
 .cloudRecordSyncCard .recordSyncSub{font-size:12px;color:#667085;line-height:1.35;margin-bottom:9px}
+.deliverySyncState{margin:8px 0;padding:9px 10px;border:1px solid #d0d5dd;border-radius:10px;background:#f8fafc;color:#344054;font-size:13px;line-height:1.3;font-weight:900}
+.deliverySyncState.good{background:#ecfdf3;border-color:#86efac;color:#166534}
+.deliverySyncState.warn{background:#fff7ed;border-color:#fdba74;color:#9a3412}
+.deliverySyncState.bad{background:#fef2f2;border-color:#fca5a5;color:#991b1b}
 .deliverySyncOverview{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin:9px 0}
 .deliverySyncOverview>div{border:1px solid #d0d5dd;border-radius:10px;padding:8px 9px;background:#f8fafc;display:grid;gap:1px}
 .deliverySyncOverview span{font-size:9px;font-weight:900;letter-spacing:.08em;color:#667085}.deliverySyncOverview b{font-size:20px;line-height:1.1}.deliverySyncOverview small{font-size:10px;color:#667085}
@@ -4307,7 +4311,7 @@ body.deliveryMode .deliveryEditLineCard{
 
 
 <style id="v01047-line-pane-below-controls">
-/* v0.10.88 TEST — hard-separate New Delivery controls from added lines.
+/* v0.10.89 TEST — hard-separate New Delivery controls from added lines.
    iPhone Safari was allowing the first reusable line card/select to paint back
    underneath the stationary control deck.  Use a simple column flex layout
    for New Delivery: controls = fixed natural height, line list = the only
@@ -4457,7 +4461,7 @@ window.addEventListener("error",e=>{const b=document.getElementById("runtimeErro
       <button class="heroHomeHotspot noPrint" type="button" aria-label="Return to Dashboard" title="Dashboard" onclick="returnToDashboardFromHeader()"></button>
     </div>
     <div class="heroActions noPrint">
-      <span class="app-version">v0.10.88 TEST</span>
+      <span class="app-version">v0.10.89 TEST</span>
       <button class="heroMenuButton" id="heroMenuButton" type="button" aria-expanded="false">Menu</button>
     </div>
   </div>
@@ -4827,6 +4831,7 @@ window.addEventListener("error",e=>{const b=document.getElementById("runtimeErro
           <div class="cloudRecordSyncCard" id="cloudDeliveryRecordCard">
             <div class="recordSyncTitle">Delivery Sync — TEST</div>
             <div class="recordSyncSub">Normal working sync for individual delivery dockets. This does not replace the whole app database.</div>
+            <div class="deliverySyncState" id="deliverySyncState" aria-live="polite">Sign in to check delivery sync.</div>
             <div class="deliverySyncOverview" id="deliverySyncOverview">
               <div><span>LOCAL</span><b id="deliveryLocalCount">—</b><small>dockets</small></div>
               <div><span>CLOUD</span><b id="deliveryCloudCount">—</b><small>dockets</small></div>
@@ -7101,7 +7106,7 @@ function buildFullBackupPayload(kind="SUPPORT",note=""){
   return {
     magicDragonBackup:true,
     app:"Magic Dragon Pin",
-    appVersion:"0.10.88",
+    appVersion:"0.10.89",
     backupKind:String(kind||"SUPPORT").toUpperCase(),
     createdAt:new Date().toISOString(),
     note:String(note||""),
@@ -10363,7 +10368,7 @@ function saveCloudTestMarker(){
  cloudStatus("Local TEST change saved — ready to upload when cloud is current.","info");
  const metaRev=cloudNumStorage(MD_CLOUD_SEEN_REV_KEY),base=cloudNumStorage(MD_CLOUD_BASE_REV_KEY);
  if(metaRev&&base===metaRev){
-   const meta={revision:metaRev,updated_by_device:"cloud",app_version:"0.10.88"};
+   const meta={revision:metaRev,updated_by_device:"cloud",app_version:"0.10.89"};
    const cloud=cloudEl("cloudOverviewCloud"),baseEl=cloudEl("cloudOverviewBase"),stateEl=cloudEl("cloudOverviewState"),wrap=cloudEl("cloudOverview");
    if(cloud)cloud.textContent=`Rev ${metaRev}`;if(baseEl)baseEl.textContent=`Base rev ${base}`;if(stateEl)stateEl.textContent="LOCAL CHANGE — UPLOAD";
    if(wrap){[...wrap.querySelectorAll(".cloudOverviewCard")].forEach(x=>{x.classList.remove("good","bad","warn");x.classList.add("warn")})}
@@ -10378,7 +10383,7 @@ async function cloudTryRefreshSession(){
   mdCloudSession=data;sessionStorage.setItem("mdpin-cloud-session",JSON.stringify(data));return true;
  }catch(e){console.warn("TEST Cloud session refresh failed",e);return false}
 }
-/* v0.10.88 TEST — Supabase requests must bypass the service-worker cache; sw.js now passes all cross-origin traffic straight to network. */
+/* v0.10.89 TEST — Supabase requests must bypass the service-worker cache; sw.js now passes all cross-origin traffic straight to network. */
 async function mdCloudFetch(path,{method="GET",body=null,auth=true,headers={},retryAuth=true}={}){
  const h={apikey:MD_TEST_SUPABASE_KEY,...headers};
  if(auth&&mdCloudSession?.access_token)h.Authorization=`Bearer ${mdCloudSession.access_token}`;
@@ -10425,13 +10430,14 @@ async function cloudSignIn(){
    cloudEl("cloudPassword").value="";
    if(fields){fields.dataset.open="";fields.hidden=true;}
    syncCloudAuthUi();
-   await cloudRefresh();
+   await Promise.all([cloudRefresh(),renderDeliverySyncOverview(true)]);
  }catch(e){console.error(e);cloudStatus(`Sign-in failed — ${e.message}`,"bad");if(fields){fields.dataset.open="1";fields.hidden=false;}syncCloudAuthUi()}
 }
 function cloudSignOut(){
  mdCloudSession=null;sessionStorage.removeItem("mdpin-cloud-session");
  const fields=cloudEl("cloudAuthFields");if(fields){fields.dataset.open="";fields.hidden=true;}
  syncCloudAuthUi();
+ const syncState=cloudEl("deliverySyncState");if(syncState){syncState.textContent="Sign in to check delivery sync.";syncState.className="deliverySyncState";}
  cloudStatus("Signed out of TEST Cloud.","info");const m=cloudEl("cloudMeta");if(m)m.textContent="";
 }
 const MD_CLOUD_SEEN_REV_KEY="mdpin-cloud-seen-revision";
@@ -10504,7 +10510,7 @@ async function cloudPush(){
   const hash=await sha256Text(stableJson(pkg)),fingerprint=await cloudStateFingerprint(pkg),revision=currentRevision+1;
   const c=pkg.counts;
   if(!confirm(`Upload this device to TEST Cloud?\n\nRevision ${revision}\n${c.products} products · ${c.aliases} aliases · ${c.sundayReports} Sunday reports · ${c.deliveries} deliveries · ${c.invoices} invoices\n\nTEST workspace only.`)){cloudStatus("Upload cancelled — nothing changed.","info");return}
-  const row={workspace_id:MD_TEST_WORKSPACE,revision,app_version:"0.10.88",payload:pkg,payload_hash:hash,updated_by:mdCloudSession.user?.id||null,updated_by_device:label,updated_at:new Date().toISOString()};
+  const row={workspace_id:MD_TEST_WORKSPACE,revision,app_version:"0.10.89",payload:pkg,payload_hash:hash,updated_by:mdCloudSession.user?.id||null,updated_by_device:label,updated_at:new Date().toISOString()};
   let saved;
   if(currentRevision===0){
    saved=await mdCloudFetch(`/rest/v1/${MD_TEST_STATE_TABLE}`,{method:"POST",body:row,headers:{Prefer:"return=representation"}});
@@ -10592,7 +10598,7 @@ function validateBackupPackage(pkg){
 }
 async function createCompleteTransferPackage(kind="FULL_TRANSFER"){
  const sourceFiles=await exportArchivedSourceFiles(),counts=backupCounts();
- return {format:BACKUP_FORMAT,schema:BACKUP_SCHEMA,appVersion:"0.10.88",backupKind:kind,createdAt:new Date().toISOString(),counts,sourceFilesCount:sourceFiles.length,data:JSON.parse(JSON.stringify(db)),sourceFiles};
+ return {format:BACKUP_FORMAT,schema:BACKUP_SCHEMA,appVersion:"0.10.89",backupKind:kind,createdAt:new Date().toISOString(),counts,sourceFilesCount:sourceFiles.length,data:JSON.parse(JSON.stringify(db)),sourceFiles};
 }
 async function savePackageFile(pkg,prefix="Magic-Pin-Data"){
  const blob=new Blob([JSON.stringify(pkg)],{type:"application/json"});
@@ -10746,13 +10752,53 @@ function renderCloudDeliveryRecordUi(preferredId=""){
  const current=sel?(preferredId||sel.value):"";const rows=eligibleDeliveryRecords();
  if(sel){sel.innerHTML=rows.length?rows.map(d=>`<option value="${escapeHtml(d.id)}">${escapeHtml(deliveryRecordLabel(d))}</option>`).join(""):'<option value="">No local delivery dockets</option>';if(current&&rows.some(d=>d.id===current))sel.value=current;}
  const local=cloudEl("deliveryLocalCount");if(local)local.textContent=String(rows.length);
- renderDeliverySyncOverview().catch(()=>{});
+ renderDeliverySyncOverview(false).catch(()=>{});
 }
-async function renderDeliverySyncOverview(){
- const localRows=eligibleDeliveryRecords(),meta=deliverySyncMeta();let pending=0;
- for(const d of localRows){const fp=await deliveryPayloadFingerprint(d),base=meta[d.id];if(!base||base.fingerprint!==fp)pending++;}
- const l=cloudEl("deliveryLocalCount"),p=cloudEl("deliveryPendingCount"),c=cloudEl("deliveryCloudCount");if(l)l.textContent=String(localRows.length);if(p)p.textContent=String(pending);
- if(c){if(!mdCloudSession?.access_token){c.textContent="—";}else{try{const rows=await cloudGetDeliveryRecords();c.textContent=String(rows.length)}catch(e){c.textContent="?"}}}
+let deliverySyncStatusRun=0;
+function setDeliverySyncState(message,state=""){
+ const el=cloudEl("deliverySyncState");if(!el)return;
+ el.textContent=message;el.className=`deliverySyncState${state?` ${state}`:""}`;
+}
+async function renderDeliverySyncOverview(announce=false){
+ const run=++deliverySyncStatusRun,localRows=eligibleDeliveryRecords(),meta=deliverySyncMeta();
+ const l=cloudEl("deliveryLocalCount"),p=cloudEl("deliveryPendingCount"),c=cloudEl("deliveryCloudCount");
+ if(l)l.textContent=String(localRows.length);
+ if(!mdCloudSession?.access_token){if(p)p.textContent="—";if(c)c.textContent="—";setDeliverySyncState("Sign in to check delivery sync.");return null;}
+ setDeliverySyncState("Checking delivery sync…");
+ try{
+  const remoteRows=await cloudGetDeliveryRecords();if(run!==deliverySyncStatusRun)return null;
+  const localMap=Object.fromEntries(localRows.map(d=>[d.id,d])),remoteMap=Object.fromEntries(remoteRows.map(r=>[r.record_id,r]));
+  let upload=0,download=0,conflict=0,current=0;
+  for(const id of new Set([...Object.keys(localMap),...Object.keys(remoteMap)])){
+   const local=localMap[id],remote=remoteMap[id],base=meta[id]||null;
+   if(local&&!remote){upload++;continue}
+   if(!local&&remote){download++;continue}
+   const localFp=await deliveryPayloadFingerprint(local),remoteFp=remote.payload_hash||await deliveryPayloadFingerprint(remote.payload);
+   if(localFp===remoteFp){current++;continue}
+   if(!base){conflict++;continue}
+   const localChanged=localFp!==base.fingerprint;
+   const cloudChanged=Number(remote.revision)!==Number(base.revision)||remoteFp!==base.fingerprint;
+   if(localChanged&&cloudChanged)conflict++;
+   else if(cloudChanged)download++;
+   else if(localChanged)upload++;
+   else conflict++;
+  }
+  if(run!==deliverySyncStatusRun)return null;
+  if(c)c.textContent=String(remoteRows.length);if(p)p.textContent=String(upload);
+  let message,state;
+  if(conflict){message=`Review needed · ${conflict} delivery conflict${conflict===1?"":"s"}`;state="bad";}
+  else if(download){message=`Cloud newer · ${download} docket${download===1?"":"s"} ready to pull${upload?` · ${upload} local change${upload===1?"":"s"} waiting`:""}`;state="warn";}
+  else if(upload){message=`Changes to upload · ${upload} docket${upload===1?"":"s"}`;state="warn";}
+  else{message=`Up to date · ${current} cloud-linked docket${current===1?"":"s"} match`;state="good";}
+  setDeliverySyncState(message,state);
+  if(announce)deliveryRecordStatus(`${message}. Automatic check only — no data was changed.`,state==="bad"?"warn":state);
+  return {upload,download,conflict,current,local:localRows.length,cloud:remoteRows.length};
+ }catch(e){
+  if(run!==deliverySyncStatusRun)return null;
+  if(c)c.textContent="?";if(p)p.textContent="?";setDeliverySyncState(`Check failed · ${e.message||e}`,"bad");
+  if(announce)deliveryRecordStatus(`Automatic delivery check failed — ${e.message||e}`,"bad");
+  return null;
+ }
 }
 async function deliveryPayloadFingerprint(d){return sha256Text(stableJson(d||{}))}
 async function purgeCachedSupabaseRequests(){
@@ -10815,7 +10861,7 @@ window.resolveDeliveryConflictKeepLocal=async id=>{
  try{
   const label=(cloudEl("cloudDeviceLabel")?.value||localStorage.getItem("mdpin-cloud-device")||detectCloudDeviceLabel()).trim()||"Test device";
   const fp=await deliveryPayloadFingerprint(local),next=Number(remote.revision)+1;
-  const row={revision:next,payload:JSON.parse(JSON.stringify(local)),payload_hash:fp,updated_by:mdCloudSession.user?.id||null,updated_by_device:label,updated_at:new Date().toISOString(),app_version:"0.10.88",deleted:false};
+  const row={revision:next,payload:JSON.parse(JSON.stringify(local)),payload_hash:fp,updated_by:mdCloudSession.user?.id||null,updated_by_device:label,updated_at:new Date().toISOString(),app_version:"0.10.89",deleted:false};
   const saved=await mdCloudFetch(`/rest/v1/${MD_TEST_DELIVERY_TABLE}?workspace_id=eq.${encodeURIComponent(MD_TEST_WORKSPACE)}&record_id=eq.${encodeURIComponent(id)}&revision=eq.${remote.revision}`,{method:"PATCH",body:row,headers:{Prefer:"return=representation"}});
   const written=Array.isArray(saved)&&saved.length?saved[0]:null;if(!written)throw new Error("Cloud changed again while you were reviewing. Check / Pull again.");
   const meta=deliverySyncMeta();meta[id]={revision:next,fingerprint:fp};saveDeliverySyncMeta(meta);deliveryConflictCache=deliveryConflictCache.filter(x=>x.id!==id);renderDeliveryConflictPanel();renderCloudDeliveryRecordUi();deliveryRecordStatus(`✓ Conflict resolved — this device is now cloud revision ${next}.`,"good");
@@ -10831,7 +10877,7 @@ async function cloudSyncDeliveryChanges(){
   for(const d of localRows){
    const id=d.id,localFp=await deliveryPayloadFingerprint(d),remote=remoteMap[id],base=meta[id]||null;
    if(!remote){
-    const row={workspace_id:MD_TEST_WORKSPACE,record_id:id,revision:1,payload:JSON.parse(JSON.stringify(d)),payload_hash:localFp,updated_by:mdCloudSession.user?.id||null,updated_by_device:label,updated_at:new Date().toISOString(),app_version:"0.10.88",deleted:false};
+    const row={workspace_id:MD_TEST_WORKSPACE,record_id:id,revision:1,payload:JSON.parse(JSON.stringify(d)),payload_hash:localFp,updated_by:mdCloudSession.user?.id||null,updated_by_device:label,updated_at:new Date().toISOString(),app_version:"0.10.89",deleted:false};
     const saved=await mdCloudFetch(`/rest/v1/${MD_TEST_DELIVERY_TABLE}`,{method:"POST",body:row,headers:{Prefer:"return=representation"}});const written=Array.isArray(saved)&&saved.length?saved[0]:null;
     if(!written){conflicts.push({id,reason:"cloud did not confirm new record",local:d,remote:null});continue;}meta[id]={revision:1,fingerprint:localFp};added++;continue;
    }
@@ -10840,7 +10886,7 @@ async function cloudSyncDeliveryChanges(){
    if(!base){conflicts.push({id,reason:"cloud copy already exists — pull first",local:d,remote});continue;}
    if(Number(base.revision)!==Number(remote.revision)){conflicts.push({id,reason:"cloud changed on another device — pull first",local:d,remote});continue;}
    if(localFp===base.fingerprint){conflicts.push({id,reason:"cloud has a newer change — pull first",local:d,remote});continue;}
-   const next=Number(remote.revision)+1,row={revision:next,payload:JSON.parse(JSON.stringify(d)),payload_hash:localFp,updated_by:mdCloudSession.user?.id||null,updated_by_device:label,updated_at:new Date().toISOString(),app_version:"0.10.88",deleted:false};
+   const next=Number(remote.revision)+1,row={revision:next,payload:JSON.parse(JSON.stringify(d)),payload_hash:localFp,updated_by:mdCloudSession.user?.id||null,updated_by_device:label,updated_at:new Date().toISOString(),app_version:"0.10.89",deleted:false};
    const saved=await mdCloudFetch(`/rest/v1/${MD_TEST_DELIVERY_TABLE}?workspace_id=eq.${encodeURIComponent(MD_TEST_WORKSPACE)}&record_id=eq.${encodeURIComponent(id)}&revision=eq.${remote.revision}`,{method:"PATCH",body:row,headers:{Prefer:"return=representation"}});const written=Array.isArray(saved)&&saved.length?saved[0]:null;
    if(!written){conflicts.push({id,reason:"revision conflict",local:d,remote});continue;}meta[id]={revision:next,fingerprint:localFp};updated++;
   }
@@ -10865,12 +10911,12 @@ async function cloudPushSelectedDeliveryRecord(){
      if(!base||Number(base.revision)!==Number(remote.revision)){
        return deliveryRecordStatus(`Upload blocked — ${id} is cloud revision ${remote.revision}${remote.updated_by_device?` from ${remote.updated_by_device}`:""}. Pull delivery records first.`,"warn");
      }
-     const next=Number(remote.revision)+1;const row={revision:next,payload:JSON.parse(JSON.stringify(d)),payload_hash:localFp,updated_by:mdCloudSession.user?.id||null,updated_by_device:label,updated_at:new Date().toISOString(),app_version:"0.10.88",deleted:false};
+     const next=Number(remote.revision)+1;const row={revision:next,payload:JSON.parse(JSON.stringify(d)),payload_hash:localFp,updated_by:mdCloudSession.user?.id||null,updated_by_device:label,updated_at:new Date().toISOString(),app_version:"0.10.89",deleted:false};
      const saved=await mdCloudFetch(`/rest/v1/${MD_TEST_DELIVERY_TABLE}?workspace_id=eq.${encodeURIComponent(MD_TEST_WORKSPACE)}&record_id=eq.${encodeURIComponent(id)}&revision=eq.${remote.revision}`,{method:"PATCH",body:row,headers:{Prefer:"return=representation"}});
      const written=Array.isArray(saved)&&saved.length?saved[0]:null;if(!written)throw new Error("Record revision conflict — another device changed this docket first.");
      meta[id]={revision:next,fingerprint:localFp};saveDeliverySyncMeta(meta);deliveryRecordStatus(`✓ Docket ${id} uploaded as record revision ${next} from ${label}.`,"good");
    }else{
-     const row={workspace_id:MD_TEST_WORKSPACE,record_id:id,revision:1,payload:JSON.parse(JSON.stringify(d)),payload_hash:localFp,updated_by:mdCloudSession.user?.id||null,updated_by_device:label,updated_at:new Date().toISOString(),app_version:"0.10.88",deleted:false};
+     const row={workspace_id:MD_TEST_WORKSPACE,record_id:id,revision:1,payload:JSON.parse(JSON.stringify(d)),payload_hash:localFp,updated_by:mdCloudSession.user?.id||null,updated_by_device:label,updated_at:new Date().toISOString(),app_version:"0.10.89",deleted:false};
      const saved=await mdCloudFetch(`/rest/v1/${MD_TEST_DELIVERY_TABLE}`,{method:"POST",body:row,headers:{Prefer:"return=representation"}});
      const written=Array.isArray(saved)&&saved.length?saved[0]:null;if(!written)throw new Error("The cloud did not confirm the new delivery record.");
      meta[id]={revision:1,fingerprint:localFp};saveDeliverySyncMeta(meta);deliveryRecordStatus(`✓ Docket ${id} uploaded as new record revision 1 from ${label}.`,"good");
@@ -10930,14 +10976,14 @@ renderDeliveryConflictPanel();
  sync();
 })();
 
-/* v0.10.88 TEST Cloud freshness: whenever the cloud panel opens, refresh live metadata so stale revision labels cannot survive a device switch or restore. */
+/* v0.10.89 TEST Cloud freshness: whenever the cloud panel opens, refresh live metadata so stale revision labels cannot survive a device switch or restore. */
 (()=>{
  const tc=document.getElementById("testCloudDetails");if(!tc)return;
  tc.addEventListener("toggle",()=>{
   if(!tc.open)return;
   renderCloudDeliveryRecordUi();
   setTimeout(()=>{
-   if(mdCloudSession?.access_token)cloudRefresh();
+   if(mdCloudSession?.access_token)Promise.all([cloudRefresh(),renderDeliverySyncOverview(true)]);
    else{cloudStatus("Sign in to TEST Cloud to check the latest revision.","info");renderCloudOverview(null,"idle");}
   },100);
  });

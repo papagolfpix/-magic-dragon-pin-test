@@ -1,4 +1,12 @@
-MAGIC DRAGON PIN v0.10.88 — TEST
+MAGIC DRAGON PIN v0.10.89 — TEST
+
+
+WHAT CHANGED IN v0.10.89
+- Opening TEST Cloud Sync now performs a read-only delivery-record comparison automatically.
+- Delivery Sync clearly reports Up to date, Cloud newer, Changes to upload, or Review needed.
+- Local, cloud and safely-uploadable pending counts are refreshed from live delivery-record state.
+- The automatic check never uploads, pulls or overwrites data; the existing buttons remain deliberate actions.
+- The v0.10.88 docket UI checkpoint and all business logic are unchanged.
 
 
 WHAT CHANGED IN v0.10.88
