@@ -1,6 +1,6 @@
-MAGIC DRAGON PIN v0.10.74 — TEST
+MAGIC DRAGON PIN v0.10.75 — TEST
 
-WHAT CHANGED IN v0.10.74
+WHAT CHANGED IN v0.10.75
 - Separated normal Delivery Sync from the legacy Whole App Snapshot test UI.
 - Delivery Sync is now the primary cloud workflow; whole-app snapshot controls are tucked into a separate collapsed panel.
 - Added Local / Cloud / Waiting delivery counts and a batch Sync Delivery Changes action.

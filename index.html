@@ -4244,7 +4244,7 @@ body.deliveryMode .deliveryEditLineCard{
 
 
 <style id="v01047-line-pane-below-controls">
-/* v0.10.74 TEST — hard-separate New Delivery controls from added lines.
+/* v0.10.75 TEST — hard-separate New Delivery controls from added lines.
    iPhone Safari was allowing the first reusable line card/select to paint back
    underneath the stationary control deck.  Use a simple column flex layout
    for New Delivery: controls = fixed natural height, line list = the only
@@ -4341,7 +4341,7 @@ window.addEventListener("error",e=>{const b=document.getElementById("runtimeErro
       <button class="heroHomeHotspot noPrint" type="button" aria-label="Return to Dashboard" title="Dashboard" onclick="returnToDashboardFromHeader()"></button>
     </div>
     <div class="heroActions noPrint">
-      <span class="app-version">v0.10.74 TEST</span>
+      <span class="app-version">v0.10.75 TEST</span>
       <button class="heroMenuButton" id="heroMenuButton" type="button" aria-expanded="false">Menu</button>
     </div>
   </div>
@@ -6887,7 +6887,7 @@ function buildFullBackupPayload(kind="SUPPORT",note=""){
   return {
     magicDragonBackup:true,
     app:"Magic Dragon Pin",
-    appVersion:"0.10.74",
+    appVersion:"0.10.75",
     backupKind:String(kind||"SUPPORT").toUpperCase(),
     createdAt:new Date().toISOString(),
     note:String(note||""),
@@ -9993,6 +9993,14 @@ function renderDashboardAlerts(){
 }
 
 function renderSundayWizard(){
+  // v0.10.75 shell invariant: workflowMode belongs ONLY to the active Sunday Wizard.
+  // Async/re-render calls can arrive after the user has already navigated away; those
+  // stale calls must never hide the branded header on Settings or any normal screen.
+  const wizard=document.getElementById("sundayWizard");
+  if(!wizard || !wizard.classList.contains("active")){
+    document.body.classList.remove("workflowMode");
+    return;
+  }
   document.body.classList.add("workflowMode");
   const box=document.getElementById("wizardContent"),period=document.getElementById("wizardPeriod");if(!box)return;
   const state=currentWizardState(),items=state.items;
@@ -10089,6 +10097,10 @@ function switchTab(id){
   if(id==="weekly"&&!document.querySelector("#weekRows tr"))loadWeek();
   if(id==="sundayWizard")renderSundayWizard();
   if(id==="home"){renderPinDashboard();renderMetrics();renderDashboardAlerts()}
+
+  // v0.10.75 header invariant: every normal screen must leave workflowMode off.
+  // This protects the iPad shell even if a delayed Sunday-workflow callback fires.
+  if(id!=="sundayWizard") document.body.classList.remove("workflowMode");
 }
 document.querySelectorAll(".tab").forEach(t=>t.onclick=()=>{if(t.dataset.tab==="docket")openDeliveryArchive();else switchTab(t.dataset.tab)});
 
@@ -10360,7 +10372,7 @@ function validateBackupPackage(pkg){
 }
 async function createCompleteTransferPackage(kind="FULL_TRANSFER"){
  const sourceFiles=await exportArchivedSourceFiles(),counts=backupCounts();
- return {format:BACKUP_FORMAT,schema:BACKUP_SCHEMA,appVersion:"0.10.74",backupKind:kind,createdAt:new Date().toISOString(),counts,sourceFilesCount:sourceFiles.length,data:JSON.parse(JSON.stringify(db)),sourceFiles};
+ return {format:BACKUP_FORMAT,schema:BACKUP_SCHEMA,appVersion:"0.10.75",backupKind:kind,createdAt:new Date().toISOString(),counts,sourceFilesCount:sourceFiles.length,data:JSON.parse(JSON.stringify(db)),sourceFiles};
 }
 async function savePackageFile(pkg,prefix="Magic-Pin-Data"){
  const blob=new Blob([JSON.stringify(pkg)],{type:"application/json"});
@@ -10637,7 +10649,7 @@ renderDeliveryTransferSummary();
  sync();
 })();
 
-/* v0.10.74 TEST Cloud freshness: whenever the cloud panel opens, refresh live metadata so stale revision labels cannot survive a device switch or restore. */
+/* v0.10.75 TEST Cloud freshness: whenever the cloud panel opens, refresh live metadata so stale revision labels cannot survive a device switch or restore. */
 (()=>{
  const tc=document.getElementById("testCloudDetails");if(!tc)return;
  tc.addEventListener("toggle",()=>{
