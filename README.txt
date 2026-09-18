@@ -1,4 +1,12 @@
-MAGIC DRAGON PIN v0.10.95 — TEST
+MAGIC DRAGON PIN v0.10.96 — TEST
+
+WHAT CHANGED IN v0.10.96
+- Mark Delivered now defaults the editable delivery-date prompt to today, not the draft/suggestion creation date.
+- Confirming Delivered makes that chosen real delivery date the docket date used in the Delivery Dockets archive and chronological sorting.
+- Sunday suggestion provenance remains preserved separately through sourceSundayDate and the suggested reference.
+- Adds a narrow safe-undo exception for an accidental Delivered click made after an invoice had already been saved; genuine invoice-cycle deliveries and post-delivery edits remain locked.
+- No Sunday parsing, product mapping, quantity calculation, invoice calculation or cloud-sync logic is otherwise changed.
+
 
 WHAT CHANGED IN v0.10.95
 - Hardens Sunday Excel preflight using the real six-file Sunday validation set supplied on 18 September 2026.
