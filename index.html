@@ -4164,40 +4164,41 @@ TEST runner deliberately excluded.
 .cloudRecordSummary{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}.cloudRecordSummary>div{border:1px solid #d6dce7;border-radius:12px;padding:9px 10px;background:#fff;min-width:0}.cloudRecordSummary b{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#64748b;margin-bottom:2px}.cloudRecordSummary span{display:block;font-size:14px;font-weight:800;color:#172033;line-height:1.25}.cloudRecordSummary .changed{color:#15733a}.cloudRecordSummary .neutral{color:#64748b}@media(max-width:560px){.cloudRecordSummary{grid-template-columns:1fr}}
 
 
-/* v0.10.77 — compact iPad branded header.
-   On tablet, the logo artwork is constrained to the same inner height as the
-   Version + Menu control stack and keeps its natural aspect ratio. iPhone is
-   intentionally untouched. */
+/* v0.10.78 — compact iPad branded header, fitted to the full action stack.
+   Tablet header height is driven by the complete Version + Menu stack, so
+   neither control is clipped. The logo is contained inside the remaining
+   banner area, preserving aspect ratio while scaling to the available space.
+   iPhone is intentionally untouched. */
 @media (min-width:700px){
   .hero{
-    min-height:86px!important;
-    height:86px!important;
-    max-height:86px!important;
+    min-height:120px!important;
+    height:120px!important;
+    max-height:120px!important;
     padding:6px 7px!important;
     align-items:center!important;
   }
   .heroBanner{
-    height:74px!important;
-    min-height:74px!important;
-    max-height:74px!important;
+    height:108px!important;
+    min-height:108px!important;
+    max-height:108px!important;
     align-self:center!important;
     justify-content:flex-start!important;
     background:#111827!important;
   }
   .heroBanner img{
-    width:auto!important;
-    height:74px!important;
+    width:100%!important;
+    height:100%!important;
     max-width:100%!important;
-    max-height:74px!important;
+    max-height:100%!important;
     object-fit:contain!important;
     object-position:left center!important;
   }
   .heroActions{
-    height:74px!important;
-    min-height:74px!important;
-    max-height:74px!important;
+    height:108px!important;
+    min-height:108px!important;
+    max-height:108px!important;
     align-self:center!important;
-    justify-content:center!important;
+    justify-content:flex-start!important;
   }
 }
 </style>
@@ -4282,7 +4283,7 @@ body.deliveryMode .deliveryEditLineCard{
 
 
 <style id="v01047-line-pane-below-controls">
-/* v0.10.77 TEST — hard-separate New Delivery controls from added lines.
+/* v0.10.78 TEST — hard-separate New Delivery controls from added lines.
    iPhone Safari was allowing the first reusable line card/select to paint back
    underneath the stationary control deck.  Use a simple column flex layout
    for New Delivery: controls = fixed natural height, line list = the only
@@ -4432,7 +4433,7 @@ window.addEventListener("error",e=>{const b=document.getElementById("runtimeErro
       <button class="heroHomeHotspot noPrint" type="button" aria-label="Return to Dashboard" title="Dashboard" onclick="returnToDashboardFromHeader()"></button>
     </div>
     <div class="heroActions noPrint">
-      <span class="app-version">v0.10.77 TEST</span>
+      <span class="app-version">v0.10.78 TEST</span>
       <button class="heroMenuButton" id="heroMenuButton" type="button" aria-expanded="false">Menu</button>
     </div>
   </div>
@@ -6978,7 +6979,7 @@ function buildFullBackupPayload(kind="SUPPORT",note=""){
   return {
     magicDragonBackup:true,
     app:"Magic Dragon Pin",
-    appVersion:"0.10.77",
+    appVersion:"0.10.78",
     backupKind:String(kind||"SUPPORT").toUpperCase(),
     createdAt:new Date().toISOString(),
     note:String(note||""),
@@ -10464,7 +10465,7 @@ function validateBackupPackage(pkg){
 }
 async function createCompleteTransferPackage(kind="FULL_TRANSFER"){
  const sourceFiles=await exportArchivedSourceFiles(),counts=backupCounts();
- return {format:BACKUP_FORMAT,schema:BACKUP_SCHEMA,appVersion:"0.10.77",backupKind:kind,createdAt:new Date().toISOString(),counts,sourceFilesCount:sourceFiles.length,data:JSON.parse(JSON.stringify(db)),sourceFiles};
+ return {format:BACKUP_FORMAT,schema:BACKUP_SCHEMA,appVersion:"0.10.78",backupKind:kind,createdAt:new Date().toISOString(),counts,sourceFilesCount:sourceFiles.length,data:JSON.parse(JSON.stringify(db)),sourceFiles};
 }
 async function savePackageFile(pkg,prefix="Magic-Pin-Data"){
  const blob=new Blob([JSON.stringify(pkg)],{type:"application/json"});
@@ -10741,7 +10742,7 @@ renderDeliveryTransferSummary();
  sync();
 })();
 
-/* v0.10.77 TEST Cloud freshness: whenever the cloud panel opens, refresh live metadata so stale revision labels cannot survive a device switch or restore. */
+/* v0.10.78 TEST Cloud freshness: whenever the cloud panel opens, refresh live metadata so stale revision labels cannot survive a device switch or restore. */
 (()=>{
  const tc=document.getElementById("testCloudDetails");if(!tc)return;
  tc.addEventListener("toggle",()=>{
