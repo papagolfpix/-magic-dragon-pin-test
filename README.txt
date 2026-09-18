@@ -1,4 +1,11 @@
-MAGIC DRAGON PIN v0.10.86 — TEST
+MAGIC DRAGON PIN v0.10.87 — TEST
+
+
+WHAT CHANGED IN v0.10.87
+- Fixed the first Records > Delivery dockets view so every row immediately shows Delivered or Not delivered.
+- The Records list now uses the same saved deliveredAt status as the dedicated Delivery Dockets screen.
+- New/updated-from-cloud information remains in the record description instead of replacing the delivery status badge.
+- No docket actions, cloud-sync logic, fixed-footer behaviour or business data were changed.
 
 
 WHAT CHANGED IN v0.10.86
