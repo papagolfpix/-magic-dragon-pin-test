@@ -1,4 +1,14 @@
-MAGIC DRAGON PIN v0.10.90 — TEST
+MAGIC DRAGON PIN v0.10.91 — TEST
+
+
+WHAT CHANGED IN v0.10.91
+- Strengthens detection of several weekly Sunday reports pasted into one worksheet.
+- Each detected week is shown separately with its own shop, check date, product count and source-row range before import.
+- Dates can now be read when embedded in labels, placed in adjacent cells, stored as ISO dates or stored as Excel date serials.
+- A workbook/worksheet containing multiple weeks shows an explicit green separation notice.
+- A block with an undetectable shop or check date is safely excluded instead of being silently filed under today's date or the wrong shop.
+- Adds a visible deterministic detector self-check that must separate three test blocks and three dates correctly.
+- Delivery dockets, delivery cloud sync, calculations and existing saved records are unchanged.
 
 
 WHAT CHANGED IN v0.10.90

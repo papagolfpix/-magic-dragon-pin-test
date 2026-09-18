@@ -232,6 +232,10 @@ tr.kanja td{background:var(--green)}tr.preroll td{background:var(--pink)}tr.edib
 .xlsxActionNotice{display:none;margin:10px 0;padding:11px 12px;border-radius:12px;border:1px solid #bfdbfe;background:#eff6ff;color:#1e3a8a;font-weight:700}.xlsxActionNotice.ok{display:block;border-color:#86efac;background:#f0fdf4;color:#166534}.xlsxActionNotice.info{display:block}.xlsxActionNotice.warn{display:block;border-color:#fcd34d;background:#fffbeb;color:#92400e}
 .duplicateWeek b{color:#92400e}.duplicateWeek select{width:100%;min-height:40px;margin-top:7px}
 .detectedBlock.duplicateExisting{background:#fffbeb;border-color:#fcd34d}.detectedBlock.duplicateBatch{background:#fff7ed;border-color:#fdba74}
+.detectorSelfCheck{margin:8px 0;padding:8px 10px;border:1px solid #86efac;border-radius:10px;background:#f0fdf4;color:#166534;font-size:11px;line-height:1.3;font-weight:800}
+.detectorSelfCheck.bad{border-color:#fca5a5;background:#fef2f2;color:#991b1b}
+.multiWeekSplitNotice{margin:8px 0;padding:9px 10px;border:1px solid #86efac;border-radius:10px;background:#f0fdf4;color:#166534;font-size:12px;line-height:1.35;font-weight:800}
+.detectedBlock.notImportable{background:#fef2f2;border-color:#fca5a5}
 .archiveRow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;padding:9px 0;border-bottom:1px solid #eef2f7;align-items:center}
 .archiveRow:last-child{border-bottom:0}
 .archiveName{font-weight:800;overflow-wrap:anywhere}
@@ -1551,7 +1555,7 @@ body.docketMode .docketActiveScroll{display:block!important}
 .docketStatusBadge.delivered{color:#176b35;background:#e8f6ed;border-color:#b9dfc6}
 .docketStatusBadge.notDelivered{color:#86501f;background:#f7ead8;border-color:#e5c79f}
 
-/* v0.10.90 TEST — true viewport-root docket footer. */
+/* v0.10.91 TEST — true viewport-root docket footer. */
 body.docketMode{--docket-footer-height:0px}
 body.docketMode #docket.active{bottom:calc(var(--docket-footer-height) + max(8px,env(safe-area-inset-bottom)))!important}
 body.docketMode .docketActivePanel{height:100%!important;min-height:0!important;max-height:none!important;grid-template-rows:minmax(0,1fr)!important}
@@ -4318,7 +4322,7 @@ body.deliveryMode .deliveryEditLineCard{
 
 
 <style id="v01047-line-pane-below-controls">
-/* v0.10.90 TEST — hard-separate New Delivery controls from added lines.
+/* v0.10.91 TEST — hard-separate New Delivery controls from added lines.
    iPhone Safari was allowing the first reusable line card/select to paint back
    underneath the stationary control deck.  Use a simple column flex layout
    for New Delivery: controls = fixed natural height, line list = the only
@@ -4468,7 +4472,7 @@ window.addEventListener("error",e=>{const b=document.getElementById("runtimeErro
       <button class="heroHomeHotspot noPrint" type="button" aria-label="Return to Dashboard" title="Dashboard" onclick="returnToDashboardFromHeader()"></button>
     </div>
     <div class="heroActions noPrint">
-      <span class="app-version">v0.10.90 TEST</span>
+      <span class="app-version">v0.10.91 TEST</span>
       <button class="heroMenuButton" id="heroMenuButton" type="button" aria-expanded="false">Menu</button>
     </div>
   </div>
@@ -4550,9 +4554,11 @@ window.addEventListener("error",e=>{const b=document.getElementById("runtimeErro
         <div class="importPrimaryHead"><h3>Excel Sunday Reports</h3></div>
         <label class="btn gold" style="display:inline-block">Choose Excel file(s)<input id="xlsxFiles" type="file" accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" multiple hidden></label>
         <div id="xlsxSelectionCard" class="selectionCard empty"><b>No Excel files selected</b><div class="small">Choose one or both Sunday report files.</div></div>
+        <div id="sundayDetectorSelfCheck" class="detectorSelfCheck" role="status">Checking multi-week detector…</div>
         <div id="xlsxActionNotice" class="xlsxActionNotice" role="status" aria-live="polite"></div>
         <div id="detectedBlocksPanel" class="detectedBlocksPanel" style="display:none">
 <div class="detectedBlocksHead"><div><b id="detectedBlocksTitle">Detected weekly reports</b><div class="small">Choose which weeks to import. Each selected block becomes its own Sunday report.</div></div></div>
+<div id="multiWeekSplitSummary"></div>
 <div id="detectedBlocksList"></div></div>
 <button class="btn" id="importXlsx" disabled>Choose Excel file(s) first</button>
         <button class="btn alt" id="exportMaster">Export Master Workbook</button>
@@ -7123,7 +7129,7 @@ function buildFullBackupPayload(kind="SUPPORT",note=""){
   return {
     magicDragonBackup:true,
     app:"Magic Dragon Pin",
-    appVersion:"0.10.90",
+    appVersion:"0.10.91",
     backupKind:String(kind||"SUPPORT").toUpperCase(),
     createdAt:new Date().toISOString(),
     note:String(note||""),
@@ -7492,7 +7498,14 @@ function findWeeklyBlockStarts(rows){
 
 
 function parseFlexibleDateText(s){
+  if(s instanceof Date&&!Number.isNaN(s.getTime()))return s.toISOString().slice(0,10);
+  if(typeof s==="number"&&Number.isFinite(s)&&s>30000&&s<80000){
+    const d=new Date(Date.UTC(1899,11,30)+Math.floor(s)*86400000);
+    return Number.isNaN(d.getTime())?null:d.toISOString().slice(0,10);
+  }
   const text=String(s||"");
+  let iso=text.match(/\b(20\d{2})[\/\-](\d{1,2})[\/\-](\d{1,2})\b/);
+  if(iso)return `${iso[1]}-${iso[2].padStart(2,"0")}-${iso[3].padStart(2,"0")}`;
   let m=text.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
   if(m){
     return `${m[3]}-${m[2].padStart(2,"0")}-${m[1].padStart(2,"0")}`;
@@ -7504,18 +7517,22 @@ function parseFlexibleDateText(s){
   return null;
 }
 
-function findDateNearBlock(rows,start){
-  let checkDate=null,oldDate=null;
-  const to=Math.min(rows.length-1,start+8);
-  for(let i=start;i<=to;i++){
-    const row=rows[i]||[];
-    for(const cell of row){
-      const t=String(cell||"");
-      if(/check date/i.test(t)) checkDate=parseFlexibleDateText(t)||checkDate;
-      if(/old stock from/i.test(t)) oldDate=parseFlexibleDateText(t)||oldDate;
-    }
+function findLabelDate(rows,start,to,labelPattern){
+ for(let i=start;i<=to;i++){
+  const row=rows[i]||[];
+  for(let c=0;c<row.length;c++){
+   const labelCell=String(row[c]??""),match=labelCell.match(labelPattern);if(!match)continue;
+   const candidates=[labelCell.slice((match.index||0)+match[0].length),...row.slice(c+1,c+4)];
+   for(let r=i+1;r<=Math.min(to,i+2);r++)candidates.push(...(rows[r]||[]).slice(Math.max(0,c-1),c+4));
+   for(const value of candidates){const parsed=parseFlexibleDateText(value);if(parsed)return parsed;}
   }
-  return {checkDate,oldDate};
+ }
+ return null;
+}
+
+function findDateNearBlock(rows,start){
+  const to=Math.min(rows.length-1,start+8);
+  return {checkDate:findLabelDate(rows,start,to,/check\s*date/i),oldDate:findLabelDate(rows,start,to,/old\s*stock\s*from/i)};
 }
 
 function parseWeeklyBlock(rows,start,end,branch,filename,sheetName,idx){
@@ -7526,8 +7543,8 @@ function parseWeeklyBlock(rows,start,end,branch,filename,sheetName,idx){
   parsed.push({no,product:String(product).trim(),oldStock:numOrNull(row[2]),newDeliver:numOrNull(row[3]),takeOut:numOrNull(row[4]),total:numOrNull(row[5]),inStock:numOrNull(row[6]),sold:numOrNull(row[7]),sellPrice:numOrNull(row[8]),cost:numOrNull(row[9]),totalSales:numOrNull(row[11]),totalCost:numOrNull(row[12]),totalProfit:numOrNull(row[13]),bmShare:numOrNull(row[14]),alixShare:numOrNull(row[15]),pinShare:numOrNull(row[16])});
  }
  if(!parsed.length)return null;
- const dates=findDateNearBlock(rows,start),date=dates.checkDate||today(),branchLabel=displayBranchName(branch||"Unknown-Branch");
- return {sheetName,branch,date,oldDate:dates.oldDate,rows:parsed,archiveName:`${date}_${sanitizeArchivePart(branchLabel)}_Sunday-Stock.xlsx`,originalFilename:filename,blockIndex:idx,startRow:start+1,endRow:end};
+ const dates=findDateNearBlock(rows,start),date=dates.checkDate||null,branchLabel=displayBranchName(branch||"Unknown-Branch"),importable=!!branch&&!!date;
+ return {sheetName,branch,date,oldDate:dates.oldDate,rows:parsed,importable,detectionIssue:!branch&&!date?"Shop and check date could not be detected":!branch?"Shop could not be detected":!date?"Check date could not be detected":"",archiveName:`${date||"DATE-NEEDED"}_${sanitizeArchivePart(branchLabel)}_Sunday-Stock.xlsx`,originalFilename:filename,blockIndex:idx,startRow:start+1,endRow:end};
 }
 function parseSundayWorkbook(arrayBuffer,filename){
  const wb=XLSX.read(arrayBuffer,{type:"array",cellDates:false,cellFormula:true,cellNF:false}); if(!wb.SheetNames.length)throw new Error("Workbook contains no worksheets.");
@@ -7538,6 +7555,24 @@ function parseSundayWorkbook(arrayBuffer,filename){
   starts.forEach((start,i)=>{const rep=parseWeeklyBlock(rows,start,i+1<starts.length?starts[i+1]:rows.length,branch,filename,sheetName,i);if(rep)reports.push(rep)});
  }
  if(!reports.length)throw new Error("No weekly stock report blocks were found."); return reports;
+}
+
+function runSundayMultiWeekDetectorSelfCheck(){
+ const rows=[],add=(oldDate,checkDate,name)=>{
+  rows.push([`Old Stock from ${oldDate}`,null,`Check Date`,checkDate]);
+  rows.push(["No.","Products","Old Stock","New Deliver","Take out"]);
+  rows.push([1,name,3,2,0,5,4,1,150,60,null,150,60,90,36,27,27]);
+  rows.push([]);
+ };
+ add("30/08/2026","06/09/2026","Week one");
+ add("06/09/2026","13/09/2026","Week two");
+ const serial=Math.floor((Date.UTC(2026,8,20)-Date.UTC(1899,11,30))/86400000);
+ add("13/09/2026",serial,"Week three");
+ const starts=findWeeklyBlockStarts(rows),reports=starts.map((start,i)=>parseWeeklyBlock(rows,start,i+1<starts.length?starts[i+1]:rows.length,"BM Bangrak","self-check.xlsx","Three weeks",i)).filter(Boolean);
+ const dates=reports.map(r=>r.date),ok=starts.length===3&&reports.length===3&&dates.join("|")==="2026-09-06|2026-09-13|2026-09-20"&&reports.every(r=>r.rows.length===1&&r.importable);
+ const box=document.getElementById("sundayDetectorSelfCheck");
+ if(box){box.classList.toggle("bad",!ok);box.textContent=ok?"✓ Multi-week detector self-check passed — 3 blocks and 3 dates separated correctly.":`⚠ Multi-week detector self-check failed — found ${reports.length} block${reports.length===1?"":"s"}: ${dates.join(", ")||"no dates"}.`;}
+ return {ok,blocks:reports.length,dates};
 }
 
 
@@ -8706,30 +8741,37 @@ function sundayCatalogueCoverageHtml(rep){
 
 async function preflightSelectedXlsxFiles(){
  detectedWorkbookBlocks=[];const panel=document.getElementById("detectedBlocksPanel"),list=document.getElementById("detectedBlocksList");
- if(!selectedXlsxFiles.length){panel.style.display="none";list.innerHTML="";return}
+ if(!selectedXlsxFiles.length){panel.style.display="none";list.innerHTML="";const split=document.getElementById("multiWeekSplitSummary");if(split)split.innerHTML="";return}
  const ok=await loadSheetJS();if(!ok)return;
  let n=0;
  for(const file of selectedXlsxFiles){
-  try{const reps=parseSundayWorkbook(await file.arrayBuffer(),file.name);reps.forEach(rep=>detectedWorkbookBlocks.push({id:`B${n++}`,file,rep,selected:true,duplicateAction:"keep"}))}
+  try{const reps=parseSundayWorkbook(await file.arrayBuffer(),file.name);reps.forEach(rep=>detectedWorkbookBlocks.push({id:`B${n++}`,file,rep,selected:rep.importable!==false,duplicateAction:"keep"}))}
   catch(err){detectedWorkbookBlocks.push({id:`B${n++}`,file,rep:null,selected:false,error:err.message})}
  }
  ensureSundayArchive();
  const counts={};
- detectedWorkbookBlocks.filter(b=>b.rep).forEach(b=>{const k=sundayReportKey(b.rep);counts[k]=(counts[k]||0)+1;});
+ detectedWorkbookBlocks.filter(b=>b.rep&&b.rep.importable!==false).forEach(b=>{const k=sundayReportKey(b.rep);counts[k]=(counts[k]||0)+1;});
  detectedWorkbookBlocks.forEach(b=>{
    if(!b.rep)return;
-   b.existingMatches=existingSundayMatches(b.rep);
+   b.existingMatches=b.rep.importable===false?[]:existingSundayMatches(b.rep);
    b.duplicateExisting=b.existingMatches.length>0;
-   b.duplicateBatch=(counts[sundayReportKey(b.rep)]||0)>1;
+   b.duplicateBatch=b.rep.importable!==false&&(counts[sundayReportKey(b.rep)]||0)>1;
  });
  panel.style.display="block";
+ const splitSummary=document.getElementById("multiWeekSplitSummary"),splitGroups={};
+ detectedWorkbookBlocks.filter(b=>b.rep).forEach(b=>{const k=`${b.file.name}||${b.rep.sheetName}`;(splitGroups[k]||(splitGroups[k]={file:b.file.name,sheet:b.rep.sheetName,count:0})).count++;});
+ const splits=Object.values(splitGroups).filter(x=>x.count>1);
+ if(splitSummary)splitSummary.innerHTML=splits.map(x=>`<div class="multiWeekSplitNotice">✓ ${x.count} separate weekly reports detected in ${escapeHtml(x.file)} · ${escapeHtml(x.sheet)}. Each week will be imported as its own report.</div>`).join("");
  list.innerHTML=detectedWorkbookBlocks.map(b=>{
    if(!b.rep)return `<div class="detectedBlock"><input type="checkbox" disabled><div><b>${escapeHtml(b.file.name)}</b><div class="detectedBlockMeta">${escapeHtml(b.error)}</div></div><span class="reconStatus bad">Unreadable</span></div>`;
-   const cls=b.duplicateBatch?' duplicateBatch':(b.duplicateExisting?' duplicateExisting':'');
+   const cls=b.rep.importable===false?' notImportable':b.duplicateBatch?' duplicateBatch':(b.duplicateExisting?' duplicateExisting':'');
    let meta=`${escapeHtml(b.file.name)} • ${escapeHtml(b.rep.sheetName)} • ${b.rep.rows.length} products`;
    let status=`<span class="reconStatus ok">${b.rep.rows.length} rows</span>`;
    let conflict='';
-   if(b.duplicateBatch){
+   if(b.rep.importable===false){
+     status='<span class="reconStatus bad">Needs review</span>';
+     conflict=`<div class="small" style="grid-column:2/-1;color:#991b1b"><b>${escapeHtml(b.rep.detectionIssue||"Report identity could not be detected")}.</b> This block is safely excluded so it cannot be filed under the wrong week or shop.</div>`;
+   }else if(b.duplicateBatch){
      status='<span class="reconStatus bad">Duplicate selected</span>';
      conflict='<div class="small" style="grid-column:2/-1;color:#9a3412"><b>Same branch/date appears more than once in the selected files.</b> Uncheck all but the one you want to import.</div>';
    }else if(b.duplicateExisting){
@@ -8738,8 +8780,8 @@ async function preflightSelectedXlsxFiles(){
      const when=old?.importedAt?new Date(old.importedAt).toLocaleString():'earlier';
      conflict=`<div class="duplicateWeek"><b>Existing Sunday report found</b><div class="small">Imported ${escapeHtml(when)} • ${old?.rows?.length||0} product rows</div><select data-duplicate-action="${b.id}"><option value="keep" selected>Keep existing — do not import this copy</option><option value="replace">Replace existing with this selected report</option></select></div>`;
    }
-   const coverage=sundayCatalogueCoverageHtml(b.rep);
-   return `<div class="detectedBlock${cls}"><input type="checkbox" data-blockid="${b.id}" ${b.selected?'checked':''}><div><b>${escapeHtml(b.rep.branch||"Unknown")} · ${escapeHtml(b.rep.date)}</b><div class="detectedBlockMeta">${meta}</div></div>${status}${conflict}${coverage}</div>`;
+   const coverage=b.rep.importable===false?"":sundayCatalogueCoverageHtml(b.rep);
+   return `<div class="detectedBlock${cls}"><input type="checkbox" data-blockid="${b.id}" ${b.selected?'checked':''} ${b.rep.importable===false?'disabled':''}><div><b>${escapeHtml(b.rep.branch||"Shop not detected")} · ${escapeHtml(b.rep.date||"Date not detected")}</b><div class="detectedBlockMeta">${meta} • source rows ${b.rep.startRow}–${b.rep.endRow}</div></div>${status}${conflict}${coverage}</div>`;
  }).join("");
  updateDetectedBlockSelectionUI();
  list.querySelectorAll("[data-blockid]").forEach(cb=>cb.onchange=()=>{const b=detectedWorkbookBlocks.find(x=>x.id===cb.dataset.blockid);if(b)b.selected=cb.checked;updateDetectedBlockSelectionUI()});
@@ -8747,7 +8789,7 @@ async function preflightSelectedXlsxFiles(){
 }
 
 function updateDetectedBlockSelectionUI(){
-  const valid=detectedWorkbookBlocks.filter(b=>b.rep);
+  const valid=detectedWorkbookBlocks.filter(b=>b.rep&&b.rep.importable!==false);
   const selected=valid.filter(b=>b.selected);
   const title=document.getElementById("detectedBlocksTitle");
   const btn=document.getElementById("importXlsx");
@@ -8766,6 +8808,7 @@ function resetSundayImportSelection(message,type="info"){
   const card=document.getElementById("xlsxSelectionCard");if(card){card.className="selectionCard empty";card.innerHTML="<b>No Excel files selected</b><div class=\"small\">Choose Excel file(s) when you want to import another Sunday report.</div>";}
   const panel=document.getElementById("detectedBlocksPanel");if(panel)panel.style.display="none";
   const list=document.getElementById("detectedBlocksList");if(list)list.innerHTML="";
+  const split=document.getElementById("multiWeekSplitSummary");if(split)split.innerHTML="";
   const results=document.getElementById("xlsxResults");if(results)results.innerHTML="";
   const btn=document.getElementById("importXlsx");if(btn){btn.disabled=true;btn.textContent="Choose Excel file(s) first";}
   const clear=document.getElementById("clearXlsxSelection");if(clear)clear.disabled=true;
@@ -10385,7 +10428,7 @@ function saveCloudTestMarker(){
  cloudStatus("Local TEST change saved — ready to upload when cloud is current.","info");
  const metaRev=cloudNumStorage(MD_CLOUD_SEEN_REV_KEY),base=cloudNumStorage(MD_CLOUD_BASE_REV_KEY);
  if(metaRev&&base===metaRev){
-   const meta={revision:metaRev,updated_by_device:"cloud",app_version:"0.10.90"};
+   const meta={revision:metaRev,updated_by_device:"cloud",app_version:"0.10.91"};
    const cloud=cloudEl("cloudOverviewCloud"),baseEl=cloudEl("cloudOverviewBase"),stateEl=cloudEl("cloudOverviewState"),wrap=cloudEl("cloudOverview");
    if(cloud)cloud.textContent=`Rev ${metaRev}`;if(baseEl)baseEl.textContent=`Base rev ${base}`;if(stateEl)stateEl.textContent="LOCAL CHANGE — UPLOAD";
    if(wrap){[...wrap.querySelectorAll(".cloudOverviewCard")].forEach(x=>{x.classList.remove("good","bad","warn");x.classList.add("warn")})}
@@ -10400,7 +10443,7 @@ async function cloudTryRefreshSession(){
   mdCloudSession=data;sessionStorage.setItem("mdpin-cloud-session",JSON.stringify(data));return true;
  }catch(e){console.warn("TEST Cloud session refresh failed",e);return false}
 }
-/* v0.10.90 TEST — Supabase requests must bypass the service-worker cache; sw.js now passes all cross-origin traffic straight to network. */
+/* v0.10.91 TEST — Supabase requests must bypass the service-worker cache; sw.js now passes all cross-origin traffic straight to network. */
 async function mdCloudFetch(path,{method="GET",body=null,auth=true,headers={},retryAuth=true}={}){
  const h={apikey:MD_TEST_SUPABASE_KEY,...headers};
  if(auth&&mdCloudSession?.access_token)h.Authorization=`Bearer ${mdCloudSession.access_token}`;
@@ -10527,7 +10570,7 @@ async function cloudPush(){
   const hash=await sha256Text(stableJson(pkg)),fingerprint=await cloudStateFingerprint(pkg),revision=currentRevision+1;
   const c=pkg.counts;
   if(!confirm(`Upload this device to TEST Cloud?\n\nRevision ${revision}\n${c.products} products · ${c.aliases} aliases · ${c.sundayReports} Sunday reports · ${c.deliveries} deliveries · ${c.invoices} invoices\n\nTEST workspace only.`)){cloudStatus("Upload cancelled — nothing changed.","info");return}
-  const row={workspace_id:MD_TEST_WORKSPACE,revision,app_version:"0.10.90",payload:pkg,payload_hash:hash,updated_by:mdCloudSession.user?.id||null,updated_by_device:label,updated_at:new Date().toISOString()};
+  const row={workspace_id:MD_TEST_WORKSPACE,revision,app_version:"0.10.91",payload:pkg,payload_hash:hash,updated_by:mdCloudSession.user?.id||null,updated_by_device:label,updated_at:new Date().toISOString()};
   let saved;
   if(currentRevision===0){
    saved=await mdCloudFetch(`/rest/v1/${MD_TEST_STATE_TABLE}`,{method:"POST",body:row,headers:{Prefer:"return=representation"}});
@@ -10615,7 +10658,7 @@ function validateBackupPackage(pkg){
 }
 async function createCompleteTransferPackage(kind="FULL_TRANSFER"){
  const sourceFiles=await exportArchivedSourceFiles(),counts=backupCounts();
- return {format:BACKUP_FORMAT,schema:BACKUP_SCHEMA,appVersion:"0.10.90",backupKind:kind,createdAt:new Date().toISOString(),counts,sourceFilesCount:sourceFiles.length,data:JSON.parse(JSON.stringify(db)),sourceFiles};
+ return {format:BACKUP_FORMAT,schema:BACKUP_SCHEMA,appVersion:"0.10.91",backupKind:kind,createdAt:new Date().toISOString(),counts,sourceFilesCount:sourceFiles.length,data:JSON.parse(JSON.stringify(db)),sourceFiles};
 }
 async function savePackageFile(pkg,prefix="Magic-Pin-Data"){
  const blob=new Blob([JSON.stringify(pkg)],{type:"application/json"});
@@ -10891,7 +10934,7 @@ window.resolveDeliveryConflictKeepLocal=async id=>{
  try{
   const label=(cloudEl("cloudDeviceLabel")?.value||localStorage.getItem("mdpin-cloud-device")||detectCloudDeviceLabel()).trim()||"Test device";
   const fp=await deliveryPayloadFingerprint(local),next=Number(remote.revision)+1;
-  const row={revision:next,payload:JSON.parse(JSON.stringify(local)),payload_hash:fp,updated_by:mdCloudSession.user?.id||null,updated_by_device:label,updated_at:new Date().toISOString(),app_version:"0.10.90",deleted:false};
+  const row={revision:next,payload:JSON.parse(JSON.stringify(local)),payload_hash:fp,updated_by:mdCloudSession.user?.id||null,updated_by_device:label,updated_at:new Date().toISOString(),app_version:"0.10.91",deleted:false};
   const saved=await mdCloudFetch(`/rest/v1/${MD_TEST_DELIVERY_TABLE}?workspace_id=eq.${encodeURIComponent(MD_TEST_WORKSPACE)}&record_id=eq.${encodeURIComponent(id)}&revision=eq.${remote.revision}`,{method:"PATCH",body:row,headers:{Prefer:"return=representation"}});
   const written=Array.isArray(saved)&&saved.length?saved[0]:null;if(!written)throw new Error("Cloud changed again while you were reviewing. Check / Pull again.");
   const meta=deliverySyncMeta();meta[id]={revision:next,fingerprint:fp};saveDeliverySyncMeta(meta);deliveryConflictCache=deliveryConflictCache.filter(x=>x.id!==id);renderDeliveryConflictPanel();renderCloudDeliveryRecordUi();deliveryRecordStatus(`✓ Conflict resolved — this device is now cloud revision ${next}.`,"good");
@@ -10907,7 +10950,7 @@ async function cloudSyncDeliveryChanges(){
   for(const d of localRows){
    const id=d.id,localFp=await deliveryPayloadFingerprint(d),remote=remoteMap[id],base=meta[id]||null;
    if(!remote){
-    const row={workspace_id:MD_TEST_WORKSPACE,record_id:id,revision:1,payload:JSON.parse(JSON.stringify(d)),payload_hash:localFp,updated_by:mdCloudSession.user?.id||null,updated_by_device:label,updated_at:new Date().toISOString(),app_version:"0.10.90",deleted:false};
+    const row={workspace_id:MD_TEST_WORKSPACE,record_id:id,revision:1,payload:JSON.parse(JSON.stringify(d)),payload_hash:localFp,updated_by:mdCloudSession.user?.id||null,updated_by_device:label,updated_at:new Date().toISOString(),app_version:"0.10.91",deleted:false};
     const saved=await mdCloudFetch(`/rest/v1/${MD_TEST_DELIVERY_TABLE}`,{method:"POST",body:row,headers:{Prefer:"return=representation"}});const written=Array.isArray(saved)&&saved.length?saved[0]:null;
     if(!written){conflicts.push({id,reason:"cloud did not confirm new record",local:d,remote:null});continue;}meta[id]={revision:1,fingerprint:localFp};added++;continue;
    }
@@ -10916,7 +10959,7 @@ async function cloudSyncDeliveryChanges(){
    if(!base){conflicts.push({id,reason:"cloud copy already exists — pull first",local:d,remote});continue;}
    if(Number(base.revision)!==Number(remote.revision)){conflicts.push({id,reason:"cloud changed on another device — pull first",local:d,remote});continue;}
    if(localFp===base.fingerprint){conflicts.push({id,reason:"cloud has a newer change — pull first",local:d,remote});continue;}
-   const next=Number(remote.revision)+1,row={revision:next,payload:JSON.parse(JSON.stringify(d)),payload_hash:localFp,updated_by:mdCloudSession.user?.id||null,updated_by_device:label,updated_at:new Date().toISOString(),app_version:"0.10.90",deleted:false};
+   const next=Number(remote.revision)+1,row={revision:next,payload:JSON.parse(JSON.stringify(d)),payload_hash:localFp,updated_by:mdCloudSession.user?.id||null,updated_by_device:label,updated_at:new Date().toISOString(),app_version:"0.10.91",deleted:false};
    const saved=await mdCloudFetch(`/rest/v1/${MD_TEST_DELIVERY_TABLE}?workspace_id=eq.${encodeURIComponent(MD_TEST_WORKSPACE)}&record_id=eq.${encodeURIComponent(id)}&revision=eq.${remote.revision}`,{method:"PATCH",body:row,headers:{Prefer:"return=representation"}});const written=Array.isArray(saved)&&saved.length?saved[0]:null;
    if(!written){conflicts.push({id,reason:"revision conflict",local:d,remote});continue;}meta[id]={revision:next,fingerprint:localFp};updated++;
   }
@@ -10941,12 +10984,12 @@ async function cloudPushSelectedDeliveryRecord(){
      if(!base||Number(base.revision)!==Number(remote.revision)){
        return deliveryRecordStatus(`Upload blocked — ${id} is cloud revision ${remote.revision}${remote.updated_by_device?` from ${remote.updated_by_device}`:""}. Pull delivery records first.`,"warn");
      }
-     const next=Number(remote.revision)+1;const row={revision:next,payload:JSON.parse(JSON.stringify(d)),payload_hash:localFp,updated_by:mdCloudSession.user?.id||null,updated_by_device:label,updated_at:new Date().toISOString(),app_version:"0.10.90",deleted:false};
+     const next=Number(remote.revision)+1;const row={revision:next,payload:JSON.parse(JSON.stringify(d)),payload_hash:localFp,updated_by:mdCloudSession.user?.id||null,updated_by_device:label,updated_at:new Date().toISOString(),app_version:"0.10.91",deleted:false};
      const saved=await mdCloudFetch(`/rest/v1/${MD_TEST_DELIVERY_TABLE}?workspace_id=eq.${encodeURIComponent(MD_TEST_WORKSPACE)}&record_id=eq.${encodeURIComponent(id)}&revision=eq.${remote.revision}`,{method:"PATCH",body:row,headers:{Prefer:"return=representation"}});
      const written=Array.isArray(saved)&&saved.length?saved[0]:null;if(!written)throw new Error("Record revision conflict — another device changed this docket first.");
      meta[id]={revision:next,fingerprint:localFp};saveDeliverySyncMeta(meta);deliveryRecordStatus(`✓ Docket ${id} uploaded as record revision ${next} from ${label}.`,"good");
    }else{
-     const row={workspace_id:MD_TEST_WORKSPACE,record_id:id,revision:1,payload:JSON.parse(JSON.stringify(d)),payload_hash:localFp,updated_by:mdCloudSession.user?.id||null,updated_by_device:label,updated_at:new Date().toISOString(),app_version:"0.10.90",deleted:false};
+     const row={workspace_id:MD_TEST_WORKSPACE,record_id:id,revision:1,payload:JSON.parse(JSON.stringify(d)),payload_hash:localFp,updated_by:mdCloudSession.user?.id||null,updated_by_device:label,updated_at:new Date().toISOString(),app_version:"0.10.91",deleted:false};
      const saved=await mdCloudFetch(`/rest/v1/${MD_TEST_DELIVERY_TABLE}`,{method:"POST",body:row,headers:{Prefer:"return=representation"}});
      const written=Array.isArray(saved)&&saved.length?saved[0]:null;if(!written)throw new Error("The cloud did not confirm the new delivery record.");
      meta[id]={revision:1,fingerprint:localFp};saveDeliverySyncMeta(meta);deliveryRecordStatus(`✓ Docket ${id} uploaded as new record revision 1 from ${label}.`,"good");
@@ -11024,7 +11067,7 @@ renderDeliveryConflictPanel();
  sync();
 })();
 
-/* v0.10.90 TEST Cloud freshness: whenever the cloud panel opens, refresh live metadata so stale revision labels cannot survive a device switch or restore. */
+/* v0.10.91 TEST Cloud freshness: whenever the cloud panel opens, refresh live metadata so stale revision labels cannot survive a device switch or restore. */
 (()=>{
  const tc=document.getElementById("testCloudDetails");if(!tc)return;
  tc.addEventListener("toggle",()=>{
@@ -11037,7 +11080,7 @@ renderDeliveryConflictPanel();
  });
 })();
 
-initCloudFields();renderCloudOverview(null,"idle");renderCloudTestMarker();renderCloudDeliveryRecordUi();
+initCloudFields();renderCloudOverview(null,"idle");renderCloudTestMarker();renderCloudDeliveryRecordUi();runSundayMultiWeekDetectorSelfCheck();
 document.getElementById("masterProductSearch").oninput=filterMasterProductSetup;
 document.getElementById("fillMasterCurrent").onclick=()=>renderMasterProductSetup(true);
 document.getElementById("saveMasterProducts").onclick=applyMasterProductSetup;
@@ -11086,7 +11129,7 @@ if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
     window.addEventListener("load",syncGeometry,{once:true});
   })();
 
-  window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js?v=1086", {updateViaCache:"none"}).catch(()=>{}));
+  window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js?v=1087", {updateViaCache:"none"}).catch(()=>{}));
 }
 
 /* v0.10.44 deterministic regression check.
