@@ -4262,7 +4262,7 @@ TEST runner deliberately excluded.
 .deliveryAuditTrail{margin-top:10px;padding:9px 10px;border:1px solid #d9dee7;border-radius:11px;background:#f8fafc}.deliveryAuditTrail>summary{font-weight:900;cursor:pointer}.deliveryAuditItem{padding:8px 0;border-top:1px solid #e5e9ef}.deliveryAuditItem:first-of-type{border-top:0}.deliveryAuditMeta{font-size:10px;color:#667085;margin-top:2px}.deliveryAuditReason{font-size:12px;font-weight:800;margin-top:3px}.deliveryAuditChanges{font-size:10px;color:#475467;margin-top:4px}
 .cloudConflictPanel{display:none;margin-top:10px;padding:10px;border:1px solid #f0b764;border-radius:13px;background:#fff8eb}.cloudConflictPanel.show{display:block}.cloudConflictHeader{display:flex;justify-content:space-between;gap:8px;align-items:flex-start;margin-bottom:8px}.cloudConflictHeader b{font-size:14px}.cloudConflictHeader span{font-size:11px;color:#9a3412;font-weight:800}.cloudConflictCard{border:1px solid #e7c98e;border-radius:10px;background:#fff;padding:9px;margin-top:8px}.cloudConflictTitle{font-weight:900;font-size:13px}.cloudConflictMeta{font-size:10px;color:#667085;margin-top:2px}.cloudConflictDiff{margin-top:7px;border-top:1px solid #ece2cf}.cloudConflictDiffRow{display:grid;grid-template-columns:minmax(86px,.8fr) 1fr 1fr;gap:5px;padding:6px 0;border-bottom:1px solid #f1eadf;font-size:10px;align-items:start}.cloudConflictDiffRow.head{font-weight:900;color:#667085}.cloudConflictDiffRow b{font-size:10px}.cloudConflictActions{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:9px}.cloudConflictActions .btn{min-height:38px;padding:7px;font-size:12px}.cloudConflictLater{font-size:10px;color:#667085;text-align:center;margin-top:6px}
 
-/* v0.10.111 TEST — saved-docket viewport correction.
+/* v0.10.112 TEST — saved-docket viewport correction.
    Header/navigation and bottom actions stay fixed; only docket body scrolls. */
 body.docketMode #docket.active{
   overflow:hidden!important;
@@ -4350,7 +4350,7 @@ body.docketMode .deliveryModuleHeadActions .btn{
 }
 
 
-/* v0.10.111 TEST — invoice review actions remain available inside saved invoice view. */
+/* v0.10.112 TEST — invoice review actions remain available inside saved invoice view. */
 #invoiceViewer .invoiceWarningActions{
   display:flex!important;
   gap:8px!important;
@@ -4367,7 +4367,7 @@ body.docketMode .deliveryModuleHeadActions .btn{
 }
 
 
-/* v0.10.111 TEST — acknowledgement is a notification state, not a reconciliation fix. */
+/* v0.10.112 TEST — acknowledgement is a notification state, not a reconciliation fix. */
 #invoiceViewer .invoiceAckState{
   display:flex;
   align-items:center;
@@ -4383,7 +4383,7 @@ body.docketMode .deliveryModuleHeadActions .btn{
 }
 
 
-/* v0.10.111 TEST — guided invoice correction review states. */
+/* v0.10.112 TEST — guided invoice correction review states. */
 #invoiceViewer .invoiceReviewCard{
   border:1px solid #d7dde7;
   border-radius:13px;
@@ -4441,7 +4441,7 @@ body.docketMode .deliveryModuleHeadActions .btn{
 }
 
 
-/* v0.10.111 TEST — guided conflict-resolution workflow + delivered-date calendar */
+/* v0.10.112 TEST — guided conflict-resolution workflow + delivered-date calendar */
 .conflictWizardOverlay{position:fixed;inset:0;z-index:12000;background:#f4f6f9;display:flex;flex-direction:column;overflow:hidden}
 .conflictWizardTop{flex:0 0 auto;background:#121a2b;color:#fff;padding:10px 12px;padding-top:max(10px,env(safe-area-inset-top));display:flex;align-items:center;justify-content:space-between;gap:10px}
 .conflictWizardTopTitle b{display:block;font-size:17px}.conflictWizardTopTitle span{display:block;font-size:11px;opacity:.76;margin-top:2px}
@@ -4696,7 +4696,7 @@ window.addEventListener("error",e=>{const b=document.getElementById("runtimeErro
       <button class="heroHomeHotspot noPrint" type="button" aria-label="Return to Dashboard" title="Dashboard" onclick="returnToDashboardFromHeader()"></button>
     </div>
     <div class="heroActions noPrint">
-      <span class="app-version">v0.10.111 TEST</span>
+      <span class="app-version">v0.10.112 TEST</span>
       <button class="heroMenuButton" id="heroMenuButton" type="button" aria-expanded="false">Menu</button>
     </div>
   </div>
@@ -5387,7 +5387,7 @@ if(!Array.isArray(db.docketAudit)) db.docketAudit=[];
 if(!Array.isArray(db.invoices)) db.invoices=[];
 if(!Array.isArray(db.adjustments)) db.adjustments=[];
 
-// v0.10.111 TEST handoff sanitation:
+// v0.10.112 TEST handoff sanitation:
 // remove development-only cross-device test markers from real app data.
 // This does not alter products, quantities, delivery status, notes, invoices,
 // Sunday reports, mappings, prices, dates or audit history.
@@ -6693,6 +6693,7 @@ window.selectDocketArchive=id=>{
 function renderDocket(d){ renderDocketArchive(d?.id); }
 window.editDocket=id=>{
  const d=db.deliveries.find(x=>x.id===id); if(!d)return alert("Delivery docket not found.");
+ document.getElementById('conflictResumeChip')?.remove();
  editingDocketId=id;
  deliveryEditOriginalSnapshot=JSON.parse(JSON.stringify(d));
  const affectedInvoice=affectedInvoiceForDocket(d); deliveryEditAffectedInvoiceId=affectedInvoice?.id||null; deliveryEditResolutionChoice=""; deliveryEditReason="";
@@ -7465,7 +7466,7 @@ function buildFullBackupPayload(kind="SUPPORT",note=""){
   return {
     magicDragonBackup:true,
     app:"Magic Dragon Pin",
-    appVersion:"0.10.111",
+    appVersion:"0.10.112",
     backupKind:String(kind||"SUPPORT").toUpperCase(),
     createdAt:new Date().toISOString(),
     note:String(note||""),
@@ -10650,7 +10651,7 @@ window.saveInvoiceViewerPayment=saveInvoiceViewerPayment;
 
 
 
-/* v0.10.111 TEST — deterministic unpaid conflict seed for guided-wizard regression testing.
+/* v0.10.112 TEST — deterministic unpaid conflict seed for guided-wizard regression testing.
    This helper is intentionally TEST-only. It creates an unpaid test invoice, ensures there
    is a delivered docket inside that accounting cycle, applies one synthetic quantity edit,
    records the same audit/correction structures used by normal editing, then opens the wizard. */
@@ -10665,7 +10666,19 @@ window.createUnpaidConflictTest=()=>{
     const base=existing[0]||null;
     if(!base)return alert(`No saved invoice exists for week ending ${recordDateLabel(reportDate)}.`);
 
-    // Remove only earlier synthetic conflict-test invoice/correction records so the button is repeatable.
+    // TEST guard: never manufacture a second unresolved synthetic conflict.
+    // If one is already active, resume that exact workflow instead.
+    const activeTestCorrection=[...(db.pendingCorrections||[])].filter(c=>c?.testOnlyConflictSeed&&!['resolved','queued'].includes(c.status)).sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||'')))[0]||null;
+    if(activeTestCorrection){
+      const activeInv=(db.invoices||[]).find(i=>i.id===activeTestCorrection.invoiceId);
+      if(activeInv){
+        switchTab('home');
+        setTimeout(()=>openConflictResolutionWizard(activeInv.id),80);
+        return;
+      }
+    }
+
+    // No unresolved TEST conflict exists, so old resolved synthetic records can be replaced.
     const oldTestIds=new Set((db.invoices||[]).filter(i=>i?.testOnlyConflictSeed).map(i=>i.id));
     db.invoices=(db.invoices||[]).filter(i=>!i?.testOnlyConflictSeed);
     db.pendingCorrections=(db.pendingCorrections||[]).filter(c=>!oldTestIds.has(c.invoiceId));
@@ -10754,7 +10767,15 @@ function renderConflictResolutionWizard(){
 }
 function openConflictResolutionWizard(id){conflictWizardInvoiceId=id;sessionStorage.setItem(CONFLICT_WIZARD_RESUME_KEY,id);conflictWizardEnsure().style.display='flex';renderConflictResolutionWizard();}
 function closeConflictResolutionWizard(){const o=document.getElementById('conflictWizardOverlay');if(o)o.style.display='none';const id=sessionStorage.getItem(CONFLICT_WIZARD_RESUME_KEY);if(id)renderConflictResumeChip();}
-function renderConflictResumeChip(){let c=document.getElementById('conflictResumeChip');const id=sessionStorage.getItem(CONFLICT_WIZARD_RESUME_KEY);if(!id){if(c)c.remove();return;}if(!c){c=document.createElement('button');c.id='conflictResumeChip';c.className='conflictResumeChip';c.type='button';document.body.appendChild(c);}c.textContent='Resume conflict resolution';c.onclick=()=>openConflictResolutionWizard(id);}
+function renderConflictResumeChip(){
+ let c=document.getElementById('conflictResumeChip'),id=sessionStorage.getItem(CONFLICT_WIZARD_RESUME_KEY);
+ const editing=!!editingDocketId||document.body.classList.contains('deliveryMode');
+ const onDashboard=!!document.getElementById('home')?.classList.contains('active');
+ // Never cover delivery-editor controls. On the Dashboard the correction card already has its own Resume button.
+ if(!id||editing||onDashboard){if(c)c.remove();return;}
+ if(!c){c=document.createElement('button');c.id='conflictResumeChip';c.className='conflictResumeChip';c.type='button';document.body.appendChild(c);}
+ c.textContent='Resume conflict resolution';c.onclick=()=>openConflictResolutionWizard(id);
+}
 function conflictWizardOpenDocket(id){closeConflictResolutionWizard();editDocket(id);}
 function conflictWizardOpenSunday(id){const inv=(db.invoices||[]).find(x=>x.id===id);if(!inv)return;closeConflictResolutionWizard();openSundayWizard(inv.reportDate);sundayWizardStep=2;renderSundayWizard();}
 function conflictWizardChoose(id,choice){const c=(db.pendingCorrections||[]).find(x=>x.id===id);if(!c)return;c.choice=choice;localStorage.setItem('mdpin-db',JSON.stringify(db));renderConflictResolutionWizard();}
@@ -11456,7 +11477,7 @@ function validateBackupPackage(pkg){
 }
 async function createCompleteTransferPackage(kind="FULL_TRANSFER"){
  const sourceFiles=await exportArchivedSourceFiles(),counts=backupCounts();
- return {format:BACKUP_FORMAT,schema:BACKUP_SCHEMA,appVersion:"0.10.111",backupKind:kind,createdAt:new Date().toISOString(),counts,sourceFilesCount:sourceFiles.length,data:JSON.parse(JSON.stringify(db)),sourceFiles};
+ return {format:BACKUP_FORMAT,schema:BACKUP_SCHEMA,appVersion:"0.10.112",backupKind:kind,createdAt:new Date().toISOString(),counts,sourceFilesCount:sourceFiles.length,data:JSON.parse(JSON.stringify(db)),sourceFiles};
 }
 async function savePackageFile(pkg,prefix="Magic-Pin-Data"){
  const blob=new Blob([JSON.stringify(pkg)],{type:"application/json"});
