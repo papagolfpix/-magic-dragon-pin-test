@@ -1,6 +1,6 @@
-MAGIC DRAGON PIN v0.10.76 — TEST
+MAGIC DRAGON PIN v0.10.77 — TEST
 
-WHAT CHANGED IN v0.10.76
+WHAT CHANGED IN v0.10.77
 - iPad Sunday Workflow now keeps the branded Magic Dragon header visible instead of switching to a headerless fullscreen shell.
 - Sunday Workflow content is isolated in its own scrollable viewport below the fixed tablet header while the bottom workflow navigation remains available.
 - Opening Sunday Workflow now re-measures the shell after workflow mode starts, preventing stale header geometry.
