@@ -1,4 +1,10 @@
-MAGIC DRAGON PIN v0.10.83 — TEST
+MAGIC DRAGON PIN v0.10.84 — TEST
+
+
+WHAT CHANGED IN v0.10.84
+- Fixed stale cross-device delivery pulls caused by the service worker caching Supabase GET responses.
+- All cross-origin Supabase API/auth requests now bypass the service-worker cache and go directly to network.
+- Delivery Sync cloud counts and Check / Pull from Cloud should now reflect the latest cloud rows on every device.
 
 WHAT CHANGED IN v0.10.83
 - Delivered-docket edit audit now automatically lists exactly what changed before Save.
