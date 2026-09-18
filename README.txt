@@ -1,4 +1,10 @@
-MAGIC DRAGON PIN v0.10.96 — TEST
+MAGIC DRAGON PIN v0.10.97 — TEST
+
+WHAT CHANGED IN v0.10.97
+- Fixed TEST record-level cloud sync for Sunday suggested delivery dockets.
+- Untouched auto-generated suggestions remain local-only and do not pollute cloud sync.
+- As soon as a suggested docket is edited by Pin or marked Delivered, it becomes a normal cloud-linked docket and local changes are detected for upload.
+- This preserves the clean suggestion workflow while allowing real saved/delivered dockets to sync correctly across devices.
 
 WHAT CHANGED IN v0.10.96
 - Mark Delivered now defaults the editable delivery-date prompt to today, not the draft/suggestion creation date.
