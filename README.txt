@@ -1,4 +1,11 @@
-MAGIC DRAGON PIN v0.10.85 — TEST
+MAGIC DRAGON PIN v0.10.86 — TEST
+
+
+WHAT CHANGED IN v0.10.86
+- Delivery-docket actions now remain in a true iPhone-safe 2 × 2 footer fixed to the bottom of the viewport.
+- The open docket uses the full available area above the footer and scrolls independently, including its final line.
+- Each compact docket chevron now shows a green Delivered badge or pale orange-brown Not delivered badge.
+- Button wording, colours, actions, docket data and v0.10.85 cloud-sync behaviour are unchanged.
 
 
 WHAT CHANGED IN v0.10.85
