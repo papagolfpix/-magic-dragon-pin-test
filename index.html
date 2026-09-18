@@ -3541,6 +3541,28 @@ body.deliveryEditMode .deliveryEditLineCard.keyboardTarget{
 .variantBarcodeRow span{font-size:10px;font-weight:900;color:#475467}
 .variantBarcodeRow input{width:100%;min-width:0;min-height:38px;height:38px;padding:5px 8px;border:1px solid #cfd6e1;border-radius:8px;font-size:16px!important;box-sizing:border-box}
 
+
+/* v0.10.124 — expanded docket iPhone header fit regression fix */
+@media(max-width:650px){
+  body.docketMode .docketActiveScroll>.docket table{
+    min-width:0!important;
+    width:100%!important;
+    table-layout:fixed!important;
+  }
+  body.docketMode .docketActiveScroll>.docket th{
+    font-size:9.5px!important;
+    line-height:1.05!important;
+    padding:5px 2px!important;
+    white-space:normal!important;
+    overflow:visible!important;
+    text-overflow:clip!important;
+  }
+  body.docketMode .docketActiveScroll>.docket td{
+    padding-left:2px!important;
+    padding-right:2px!important;
+  }
+}
+
 /* v0.10.14 — reusable Code 128 barcode renderer + docket integration */
 .docketBarcodeCell{
   width:110px;
@@ -4713,7 +4735,7 @@ window.addEventListener("error",e=>{const b=document.getElementById("runtimeErro
       <button class="heroHomeHotspot noPrint" type="button" aria-label="Return to Dashboard" title="Dashboard" onclick="returnToDashboardFromHeader()"></button>
     </div>
     <div class="heroActions noPrint">
-      <span class="app-version">v0.10.123 TEST</span>
+      <span class="app-version">v0.10.124 TEST</span>
       <button class="heroMenuButton" id="heroMenuButton" type="button" aria-expanded="false">Menu</button>
     </div>
   </div>
@@ -7484,7 +7506,7 @@ function buildFullBackupPayload(kind="SUPPORT",note=""){
   return {
     magicDragonBackup:true,
     app:"Magic Dragon Pin",
-    appVersion:"0.10.123",
+    appVersion:"0.10.124",
     backupKind:String(kind||"SUPPORT").toUpperCase(),
     createdAt:new Date().toISOString(),
     note:String(note||""),
@@ -11674,7 +11696,7 @@ function validateBackupPackage(pkg){
 }
 async function createCompleteTransferPackage(kind="FULL_TRANSFER"){
  const sourceFiles=await exportArchivedSourceFiles(),counts=backupCounts();
- return {format:BACKUP_FORMAT,schema:BACKUP_SCHEMA,appVersion:"0.10.123",backupKind:kind,createdAt:new Date().toISOString(),counts,sourceFilesCount:sourceFiles.length,data:JSON.parse(JSON.stringify(db)),sourceFiles};
+ return {format:BACKUP_FORMAT,schema:BACKUP_SCHEMA,appVersion:"0.10.124",backupKind:kind,createdAt:new Date().toISOString(),counts,sourceFilesCount:sourceFiles.length,data:JSON.parse(JSON.stringify(db)),sourceFiles};
 }
 async function savePackageFile(pkg,prefix="Magic-Pin-Data"){
  const blob=new Blob([JSON.stringify(pkg)],{type:"application/json"});

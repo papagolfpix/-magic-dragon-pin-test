@@ -1,3 +1,9 @@
+WHAT CHANGED IN v0.10.124 TEST
+
+- Fixed the expanded Delivery Docket table header on iPhone so Retail and Amount are fully readable instead of clipped.
+- Kept the existing compact docket layout, barcode column, fixed viewport action bar, delivery status logic, and v0.10.123 zero-difference correction lifecycle fix unchanged.
+- Mobile-only CSS adjustment: smaller docket header text and tighter horizontal cell padding.
+
 WHAT CHANGED IN v0.10.123 TEST
 - Fixes a real correction-lifecycle bug found during v0.10.122 regression testing.
 - If a linked delivered docket was edited, the week now reconciles, and the verified invoice difference is exactly ฿0, acknowledging the review now closes the correction automatically.
