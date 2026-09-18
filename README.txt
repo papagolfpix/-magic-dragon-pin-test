@@ -1,4 +1,16 @@
-MAGIC DRAGON PIN v0.10.94 — TEST
+MAGIC DRAGON PIN v0.10.95 — TEST
+
+WHAT CHANGED IN v0.10.95
+- Hardens Sunday Excel preflight using the real six-file Sunday validation set supplied on 18 September 2026.
+- Identical duplicate branch/date reports in the same upload batch are now detected by content: one copy is selected and redundant copies are safely left unchecked.
+- If duplicate branch/date reports differ, none is preselected and the user must deliberately choose which copy to import.
+- Selecting any copy for a branch/date automatically deselects the other copies for that same branch/date, preventing accidental duplicate selection.
+- Multi-week detection, canonical mapping, delivery dockets, calculations and cloud-sync behavior are otherwise unchanged.
+
+REAL SUNDAY VALIDATION TARGET
+- Selecting all six supplied test workbooks should detect 11 weekly blocks.
+- Those 11 blocks represent 7 unique branch/date reports: Lamai 23/08, 30/08, 06/09, 13/09 and BM Bangrak 30/08, 06/09, 13/09.
+- Four redundant Lamai copies should be left unchecked automatically because their report contents are identical.
 
 
 WHAT CHANGED IN v0.10.94
