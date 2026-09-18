@@ -4207,6 +4207,7 @@ TEST runner deliberately excluded.
 /* v0.10.79 — delivered-edit audit trail + conflict review */
 .deliveryEditReasonBox{display:none;margin-top:7px;padding:8px 10px;border:1px solid #e7c86f;border-radius:10px;background:#fffaf0}
 .deliveryEditReasonBox.good{border-color:#86d6a1;background:#effcf3}.deliveryEditReasonBox label{display:block;font-weight:900;font-size:12px;margin-bottom:4px}.deliveryEditReasonBox textarea{width:100%;min-height:52px;resize:vertical;font:inherit;padding:8px;border:1px solid #cfd5df;border-radius:9px;background:#fff}.deliveryEditReasonHelp{font-size:10px;line-height:1.25;color:#667085;margin-top:4px}.deliveryEditReasonNeed{font-size:10px;color:#9b2c24;font-weight:800;margin-top:4px}
+.deliveryEditAutoSummary{margin:0 0 8px;padding:8px 9px;border:1px solid #d9dee7;border-radius:9px;background:#f8fafc}.deliveryEditAutoSummary b{display:block;font-size:11px;margin-bottom:4px}.deliveryEditAutoSummary ul{margin:0;padding-left:18px}.deliveryEditAutoSummary li{font-size:10px;line-height:1.35;color:#475467;margin:2px 0}
 .deliveryAuditTrail{margin-top:10px;padding:9px 10px;border:1px solid #d9dee7;border-radius:11px;background:#f8fafc}.deliveryAuditTrail>summary{font-weight:900;cursor:pointer}.deliveryAuditItem{padding:8px 0;border-top:1px solid #e5e9ef}.deliveryAuditItem:first-of-type{border-top:0}.deliveryAuditMeta{font-size:10px;color:#667085;margin-top:2px}.deliveryAuditReason{font-size:12px;font-weight:800;margin-top:3px}.deliveryAuditChanges{font-size:10px;color:#475467;margin-top:4px}
 .cloudConflictPanel{display:none;margin-top:10px;padding:10px;border:1px solid #f0b764;border-radius:13px;background:#fff8eb}.cloudConflictPanel.show{display:block}.cloudConflictHeader{display:flex;justify-content:space-between;gap:8px;align-items:flex-start;margin-bottom:8px}.cloudConflictHeader b{font-size:14px}.cloudConflictHeader span{font-size:11px;color:#9a3412;font-weight:800}.cloudConflictCard{border:1px solid #e7c98e;border-radius:10px;background:#fff;padding:9px;margin-top:8px}.cloudConflictTitle{font-weight:900;font-size:13px}.cloudConflictMeta{font-size:10px;color:#667085;margin-top:2px}.cloudConflictDiff{margin-top:7px;border-top:1px solid #ece2cf}.cloudConflictDiffRow{display:grid;grid-template-columns:minmax(86px,.8fr) 1fr 1fr;gap:5px;padding:6px 0;border-bottom:1px solid #f1eadf;font-size:10px;align-items:start}.cloudConflictDiffRow.head{font-weight:900;color:#667085}.cloudConflictDiffRow b{font-size:10px}.cloudConflictActions{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:9px}.cloudConflictActions .btn{min-height:38px;padding:7px;font-size:12px}.cloudConflictLater{font-size:10px;color:#667085;text-align:center;margin-top:6px}
 </style>
@@ -4291,7 +4292,7 @@ body.deliveryMode .deliveryEditLineCard{
 
 
 <style id="v01047-line-pane-below-controls">
-/* v0.10.82 TEST — hard-separate New Delivery controls from added lines.
+/* v0.10.83 TEST — hard-separate New Delivery controls from added lines.
    iPhone Safari was allowing the first reusable line card/select to paint back
    underneath the stationary control deck.  Use a simple column flex layout
    for New Delivery: controls = fixed natural height, line list = the only
@@ -4441,7 +4442,7 @@ window.addEventListener("error",e=>{const b=document.getElementById("runtimeErro
       <button class="heroHomeHotspot noPrint" type="button" aria-label="Return to Dashboard" title="Dashboard" onclick="returnToDashboardFromHeader()"></button>
     </div>
     <div class="heroActions noPrint">
-      <span class="app-version">v0.10.82 TEST</span>
+      <span class="app-version">v0.10.83 TEST</span>
       <button class="heroMenuButton" id="heroMenuButton" type="button" aria-expanded="false">Menu</button>
     </div>
   </div>
@@ -5529,6 +5530,41 @@ function deliveryEditReasonDevice(){
  const fallback=(typeof detectCloudDeviceLabel==="function"?detectCloudDeviceLabel():"This device");
  return (localStorage.getItem("mdpin-cloud-device")||document.getElementById("cloudDeviceLabel")?.value||fallback||"This device").trim()||"This device";
 }
+function deliveryLineName(l){
+ const p=resolvedProductById(l?.productId)||db.products.find(x=>x.id===l?.productId);
+ return p?deliveryProductDisplayName(p):(l?.productName||"Unknown product");
+}
+function deliveryEditAutomaticSummary(before,afterLines,branch,date,note){
+ const out=[];
+ const changes=computeDocketLineChanges(before?.lines||[],afterLines||[],new Date().toISOString());
+ changes.forEach(c=>{
+   if(c.before&&c.after){
+     const beforeName=deliveryLineName(c.before),afterName=deliveryLineName(c.after);
+     const bq=Number(c.before.qty||0),aq=Number(c.after.qty||0);
+     if(String(c.before.productId||"")!==String(c.after.productId||"")){
+       out.push(`Product changed: ${beforeName} × ${bq} → ${afterName} × ${aq}`);
+     }else if(bq!==aq){
+       out.push(`Quantity: ${afterName} ${bq} → ${aq}`);
+     }
+   }else if(c.before){
+     out.push(`Removed: ${deliveryLineName(c.before)} × ${Number(c.before.qty||0)}`);
+   }else if(c.after){
+     out.push(`Added: ${deliveryLineName(c.after)} × ${Number(c.after.qty||0)}`);
+   }
+ });
+ if((before?.branch||"")!==(branch||""))out.push(`Shop: ${displayBranchName(before?.branch||"")} → ${displayBranchName(branch||"")}`);
+ if((before?.date||"")!==(date||""))out.push(`Date: ${before?.date||"—"} → ${date||"—"}`);
+ if((before?.note||"")!==(note||""))out.push(`Docket note changed`);
+ return out;
+}
+function currentDeliveryAutomaticSummary(){
+ if(!editingDocketId||!deliveryEditOriginalSnapshot)return [];
+ const branch=document.getElementById("delBranch")?.value||deliveryEditOriginalSnapshot.branch||"";
+ const date=document.getElementById("delDate")?.value||deliveryEditOriginalSnapshot.date||"";
+ const note=(document.getElementById("delNote")?.value||"").trim();
+ const lines=(currentDelivery||[]).map(l=>{const p=resolvedProductById(l.productId)||db.products.find(x=>x.id===l.productId);return {...l,productName:p?deliveryProductDisplayName(p):(l.productName||"Unknown product")};});
+ return deliveryEditAutomaticSummary(deliveryEditOriginalSnapshot,lines,branch,date,note);
+}
 function updateDeliveryEditReasonUI(changed,wasDelivered){
  const box=document.getElementById("deliveryEditReasonBox");if(!box)return true;
  const needed=!!(editingDocketId&&changed&&wasDelivered);
@@ -5536,7 +5572,8 @@ function updateDeliveryEditReasonUI(changed,wasDelivered){
  box.style.display="block";
  const value=deliveryEditReason||"";
  box.classList.toggle("good",!!value.trim());
- box.innerHTML=`<label>Reason for editing delivered docket</label><textarea id="deliveryEditReasonInput" maxlength="180" placeholder="e.g. Shop called — quantity was entered incorrectly.">${escapeHtml(value)}</textarea><div class="deliveryEditReasonHelp">Saved with the docket and visible on other synced devices. Device: <b>${escapeHtml(deliveryEditReasonDevice())}</b></div>${value.trim()?"":'<div class="deliveryEditReasonNeed">Enter a short reason before saving.</div>'}`;
+ const autoSummary=currentDeliveryAutomaticSummary();
+ box.innerHTML=`${autoSummary.length?`<div class="deliveryEditAutoSummary"><b>Changes detected automatically</b><ul>${autoSummary.map(x=>`<li>${escapeHtml(x)}</li>`).join("")}</ul></div>`:""}<label>Why was this correction needed?</label><textarea id="deliveryEditReasonInput" maxlength="180" placeholder="e.g. Shop called and confirmed the delivered quantity was wrong.">${escapeHtml(value)}</textarea><div class="deliveryEditReasonHelp">The app records what changed automatically. You only need to explain why. Saved with the docket and visible on other synced devices. Device: <b>${escapeHtml(deliveryEditReasonDevice())}</b></div>${value.trim()?"":'<div class="deliveryEditReasonNeed">Enter a short reason before saving.</div>'}`;
  const input=document.getElementById("deliveryEditReasonInput");if(input)input.oninput=()=>{
    deliveryEditReason=input.value;box.classList.toggle("good",!!deliveryEditReason.trim());
    const need=box.querySelector(".deliveryEditReasonNeed");if(need)need.style.display=deliveryEditReason.trim()?"none":"block";
@@ -6010,13 +6047,7 @@ document.getElementById("saveDelivery").onclick=()=>{
    if(before.deliveredAt&&changes.length)d.lineChanges=[...(Array.isArray(d.lineChanges)?d.lineChanges:[]),...changes];
    if(changed&&before.deliveredAt){
      if(!Array.isArray(d.editAudit))d.editAudit=[];
-     const beforeMap=Object.fromEntries((before.lines||[]).map(l=>[String(l.productId||l.productName||""),Number(l.qty||0)]));
-     const afterMap=Object.fromEntries((lines||[]).map(l=>[String(l.productId||l.productName||""),Number(l.qty||0)]));
-     const lineSummary=[];
-     [...new Set([...Object.keys(beforeMap),...Object.keys(afterMap)])].forEach(k=>{if(beforeMap[k]!==afterMap[k]){const prod=resolvedProductById(k)||db.products.find(x=>x.id===k);lineSummary.push(`${prod?deliveryProductDisplayName(prod):k}: ${beforeMap[k]??0} → ${afterMap[k]??0}`);}});
-     if((before.branch||"")!==branch)lineSummary.push(`Shop: ${displayBranchName(before.branch)} → ${displayBranchName(branch)}`);
-     if((before.date||"")!==date)lineSummary.push(`Date: ${before.date||"—"} → ${date||"—"}`);
-     if((before.note||"")!==note)lineSummary.push(`Note changed`);
+     const lineSummary=deliveryEditAutomaticSummary(before,lines,branch,date,note);
      d.editAudit.push({at:editAt,reason:deliveryEditReason.trim(),device:deliveryEditReasonDevice(),user:mdCloudSession?.user?.email||"",summary:lineSummary});
    }
    d.branch=branch; d.date=date; d.note=note; d.lines=lines; d.editedAt=editAt;
@@ -7031,7 +7062,7 @@ function buildFullBackupPayload(kind="SUPPORT",note=""){
   return {
     magicDragonBackup:true,
     app:"Magic Dragon Pin",
-    appVersion:"0.10.82",
+    appVersion:"0.10.83",
     backupKind:String(kind||"SUPPORT").toUpperCase(),
     createdAt:new Date().toISOString(),
     note:String(note||""),
@@ -10519,7 +10550,7 @@ function validateBackupPackage(pkg){
 }
 async function createCompleteTransferPackage(kind="FULL_TRANSFER"){
  const sourceFiles=await exportArchivedSourceFiles(),counts=backupCounts();
- return {format:BACKUP_FORMAT,schema:BACKUP_SCHEMA,appVersion:"0.10.82",backupKind:kind,createdAt:new Date().toISOString(),counts,sourceFilesCount:sourceFiles.length,data:JSON.parse(JSON.stringify(db)),sourceFiles};
+ return {format:BACKUP_FORMAT,schema:BACKUP_SCHEMA,appVersion:"0.10.83",backupKind:kind,createdAt:new Date().toISOString(),counts,sourceFilesCount:sourceFiles.length,data:JSON.parse(JSON.stringify(db)),sourceFiles};
 }
 async function savePackageFile(pkg,prefix="Magic-Pin-Data"){
  const blob=new Blob([JSON.stringify(pkg)],{type:"application/json"});
@@ -10842,7 +10873,7 @@ renderDeliveryConflictPanel();
  sync();
 })();
 
-/* v0.10.82 TEST Cloud freshness: whenever the cloud panel opens, refresh live metadata so stale revision labels cannot survive a device switch or restore. */
+/* v0.10.83 TEST Cloud freshness: whenever the cloud panel opens, refresh live metadata so stale revision labels cannot survive a device switch or restore. */
 (()=>{
  const tc=document.getElementById("testCloudDetails");if(!tc)return;
  tc.addEventListener("toggle",()=>{

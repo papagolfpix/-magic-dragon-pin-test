@@ -1,6 +1,11 @@
-MAGIC DRAGON PIN v0.10.82 — TEST
+MAGIC DRAGON PIN v0.10.83 — TEST
 
-WHAT CHANGED IN v0.10.82
+WHAT CHANGED IN v0.10.83
+- Delivered-docket edit audit now automatically lists exactly what changed before Save.
+- User only enters the reason WHY the correction was needed.
+- Automatic change descriptions include quantity changes, product swaps, added/removed products, shop/date/note changes.
+- The same automatic summary is stored in Edit history and syncs to other devices.
+
 - Delivery docket archive now uses focused chevron behaviour.
 - Initial view shows the full compact list of saved dockets.
 - Opening one docket temporarily hides all other docket selectors.
