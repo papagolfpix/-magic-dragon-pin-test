@@ -1,3 +1,32 @@
+WHAT CHANGED IN v0.10.105 TEST
+- Added a guided Conflict Resolution Workflow for post-invoice delivery edits and reconciliation problems.
+- Dashboard invoice-review alerts can now launch Resolve step by step.
+- The wizard explains what changed, identifies the affected invoice/docket, shows reconciliation exceptions with evidence, and opens the relevant docket, Sunday report or mapping area.
+- When a source docket is edited from the wizard, saving/cancelling automatically returns to the conflict workflow and rechecks the week.
+- If the Sunday workflow is needed, exiting it automatically resumes the conflict workflow.
+- When reconciliation is green, the wizard asks how to handle the verified correction: update the current invoice or carry it to next Sunday (paid invoices are protected and carry forward automatically).
+- The wizard ends with a green RESOLVED result describing the actual final outcome.
+- A floating Resume conflict resolution control appears if the user leaves the workflow temporarily.
+- Actual delivery date continues to determine the accounting week; source Sunday date remains provenance only.
+- No invoice formulas, profit splits, Sunday import parsing, pricing or payment calculations changed.
+
+WHAT CHANGED IN v0.10.104 TEST
+- Rebuilt the invoice correction/review message so it explains: What happened, Why it is not resolved, What you need to do, and the final result once resolved.
+- Unresolved corrections now show a clear NOT RESOLVED state and an Open reconciliation button.
+- Acknowledging a review is explicitly shown as REVIEWED — STILL UNRESOLVED; acknowledgement clears only the dashboard review notification and never pretends the accounting issue is fixed.
+- Once the correction is genuinely processed, the invoice view keeps a green RESOLVED result card explaining the final outcome (no financial change, corrected invoice revision, or amount queued to next Sunday).
+- Actual delivery date continues to determine the accounting week; source Sunday date remains provenance only.
+- No invoice calculations, split rules, Sunday import logic, pricing or payment calculations changed.
+
+WHAT CHANGED IN v0.10.103 TEST
+- Fixed Acknowledge behavior for invoice review alerts.
+- Acknowledge now clears the Dashboard 'Invoice needs review' notification for the exact set of source edits reviewed.
+- The invoice itself still remains UPDATE REQUIRED / out of reconciliation until the underlying stock discrepancy is fixed.
+- The invoice review screen visibly changes to 'Acknowledged — dashboard review alert cleared' so the tap has an obvious result.
+- Any later/new docket edit creates a new acknowledgement key and will raise a fresh review alert.
+- Actual delivery date continues to determine the accounting week; source Sunday date remains provenance only.
+- No invoice calculations, Sunday logic, delivery-cycle assignment, pricing, split or payment rules changed.
+
 WHAT CHANGED IN v0.10.102 TEST
 - Added Acknowledge and Back to Dashboard directly to the invoice correction/review warning shown when a linked delivery edit puts the week out of reconciliation.
 - The same controls also appear when the correction is financially verified.
@@ -18,7 +47,7 @@ WHAT CHANGED IN v0.10.99 TEST
 - Opening/collapsing a docket no longer scrolls the whole Delivery module header out of view.
 - No Sunday, pricing, invoice, mapping, cloud, PDF or business-rule logic changed.
 
-MAGIC DRAGON PIN v0.10.102 — TEST
+MAGIC DRAGON PIN v0.10.105 — TEST
 
 PURPOSE
 - Frozen Sunday-handoff candidate based directly on validated v0.10.97 TEST.
