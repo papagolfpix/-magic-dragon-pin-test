@@ -4735,7 +4735,7 @@ window.addEventListener("error",e=>{const b=document.getElementById("runtimeErro
       <button class="heroHomeHotspot noPrint" type="button" aria-label="Return to Dashboard" title="Dashboard" onclick="returnToDashboardFromHeader()"></button>
     </div>
     <div class="heroActions noPrint">
-      <span class="app-version">v0.10.127 TEST</span>
+      <span class="app-version">v0.10.128 TEST</span>
       <button class="heroMenuButton" id="heroMenuButton" type="button" aria-expanded="false">Menu</button>
     </div>
   </div>
@@ -5444,7 +5444,7 @@ if(!Array.isArray(db.adjustments)) db.adjustments=[];
   if(changed)localStorage.setItem("mdpin-db",JSON.stringify(db));
 })();
 
-// v0.10.127 TEST — release-candidate sanitation.
+// v0.10.128 TEST — release-candidate sanitation.
 // Remove ONLY synthetic records created by the retired unpaid-conflict test helper.
 // Normal dockets, Sunday reports, real invoices, payments, mappings and amounts are untouched.
 (function cleanupRetiredConflictTestArtifacts(){
@@ -7523,7 +7523,7 @@ function buildFullBackupPayload(kind="SUPPORT",note=""){
   return {
     magicDragonBackup:true,
     app:"Magic Dragon Pin",
-    appVersion:"0.10.127",
+    appVersion:"0.10.128",
     backupKind:String(kind||"SUPPORT").toUpperCase(),
     createdAt:new Date().toISOString(),
     note:String(note||""),
@@ -9574,6 +9574,13 @@ document.getElementById("importXlsx").onclick=async()=>{
    results.insertAdjacentHTML("beforeend",`<div class="xlsxResult ${mathErrors.length?"warn":"ok"}"><b>${escapeHtml(rep.archiveName)}</b><br><span class="small">${escapeHtml(displayBranchName(rep.branch))} • ${escapeHtml(rep.date)}${cycleDate&&cycleDate!==rep.date?` • billing cycle ${escapeHtml(cycleDate)}`:""} • ${rep.rows.length} product rows${replaceExisting?' • replaced previous report':''}</span></div>`);
   }catch(err){results.insertAdjacentHTML("beforeend",`<div class="xlsxResult bad"><b>${escapeHtml(file.name)}</b><br><span class="small">${escapeHtml(err.message)}</span></div>`)}
  }
+ // v0.10.128: if one branch was already present from a restored backup without
+ // cycleDate metadata, attach it to the same Saturday/Sunday cycle now.
+ if(importedDates.length){
+   const proposed=[...new Set(importedDates.filter(Boolean))].sort((a,b)=>String(b).localeCompare(String(a)))[0];
+   if(proposed)db.activeSundayCycleDate=proposed;
+   alignActiveSundayCycleReports();
+ }
  if(importedDates.length){
    const newest=[...new Set(importedDates.filter(Boolean))].sort((a,b)=>String(b).localeCompare(String(a)))[0];
    if(newest&&!isSundayCycleComplete(newest))db.activeSundayCycleDate=newest;
@@ -9971,7 +9978,7 @@ function normalizeActiveSundayCycle(){
   ensureCompletedSundayCycles();
   const active=db.activeSundayCycleDate||null;
   if(!active)return null;
-  const hasReport=(db.sundayImports||[]).some(r=>r&&r.date===active);
+  const hasReport=(db.sundayImports||[]).some(r=>r&&sundayCycleDateOfReport(r)===active);
   const latestCompleted=(db.completedSundayCycles||[])
     .filter(x=>x&&x.status==="complete"&&x.date)
     .map(x=>String(x.date))
@@ -9988,7 +9995,7 @@ function normalizeActiveSundayCycle(){
   return active;
 }
 function completeSundayCycle(state){
-  const date=state?.items?.[0]?.report?.date;if(!date||!state.paymentSaved)return false;
+  const date=wizardCycleDate(state);if(!date||!state.paymentSaved)return false;
   ensureCompletedSundayCycles();
   const inv=state.invoice;
   const rec={date,status:"complete",completedAt:new Date().toISOString(),invoiceId:inv?.id||null,invoiceNumber:inv?.number||null};
@@ -10095,9 +10102,39 @@ function wizardImportMarkup(){
   const detected=detectedWorkbookBlocks.filter(b=>b.rep);
   return `<div class="wizardImportBox"><div class="wizardImportFiles"><b>Selected Excel files</b>${selectedXlsxFiles.map(f=>`<div class="wizardImportFile">${escapeHtml(f.name)}</div>`).join('')}</div>${detected.length?`<div class="wizardImportDetected">${detected.map(b=>`<div><span>${escapeHtml(displayBranchName(b.rep.branch))} · ${escapeHtml(b.rep.date)}</span><b>${b.rep.rows.length} rows</b></div>`).join('')}</div>`:`<div class="wizardLocked">Reading the selected workbook…</div>`}<div class="wizardActions"><button class="btn alt" onclick="wizardChooseExcel()">Change files</button><button class="btn gold" ${detected.length?'':'disabled'} onclick="wizardImportSelected()">Import ${detected.length||''} report${detected.length===1?'':'s'}</button></div></div>`;
 }
+function sundayCycleDateOfReport(r){
+  return String(r?.cycleDate||r?.date||"");
+}
+function alignActiveSundayCycleReports(){
+  ensureSundayArchive();ensureCompletedSundayCycles();
+  let active=String(db.activeSundayCycleDate||"");
+  if(!active)return active;
+  // v0.10.128: an older backup can contain one branch on Saturday and the other
+  // on Sunday with no cycleDate metadata. Re-bind adjacent cross-branch reports
+  // to one billing cycle before counting/rendering the Sunday workflow.
+  let candidates=(db.sundayImports||[]).filter(r=>r?.date&&Math.abs(Number(daysBetween(String(r.date),active)))<=1);
+  const branches=new Set(candidates.map(r=>canonicalBranchName(r.branch)).filter(Boolean));
+  if(branches.size<2)return active;
+  const dates=candidates.map(r=>String(r.date)).filter(Boolean).sort();
+  const cycle=dates[dates.length-1]||active;
+  let changed=false;
+  candidates.forEach(r=>{
+    if(sundayCycleDateOfReport(r)!==cycle){r.cycleDate=cycle;changed=true;}
+  });
+  if(active!==cycle){db.activeSundayCycleDate=cycle;active=cycle;changed=true;}
+  if(changed)localStorage.setItem("mdpin-db",JSON.stringify(db));
+  return active;
+}
+function wizardCycleDate(state=null){
+  const active=String(db.activeSundayCycleDate||"");
+  if(active)return active;
+  const items=state?.items||[];
+  const dates=items.map(x=>sundayCycleDateOfReport(x.report)).filter(Boolean).sort();
+  return dates[dates.length-1]||null;
+}
 function wizardReportsForDate(date){
   ensureSundayArchive(); rebuildSundayReportChain();
-  // v0.10.127: a shop may prepare its Sunday stock report one day early.
+  // v0.10.128: a shop may prepare its Sunday stock report one day early.
   // Preserve the report's true date, but group it into the same billing cycle via cycleDate.
   return [...(db.sundayImports||[])].filter(r=>(r.cycleDate||r.date)===date).map(r=>({report:r,rec:reconcileExcelReport(r)}));
 }
@@ -10107,6 +10144,7 @@ function latestWizardReports(){
   if(sundayWizardTargetDate)return wizardReportsForDate(sundayWizardTargetDate);
   // Normal Sunday Wizard resumes ONLY a cycle that was explicitly started by an import.
   // Historical unresolved reports are never auto-selected as current work.
+  alignActiveSundayCycleReports();
   const activeDate=normalizeActiveSundayCycle();
   if(!activeDate)return [];
   if(isSundayCycleComplete(activeDate)){db.activeSundayCycleDate=null;localStorage.setItem("mdpin-db",JSON.stringify(db));return [];}
@@ -10168,7 +10206,7 @@ function currentWizardState(){
   const stockGreen=items.length>0&&items.every(x=>x.rec.status==="ok");
   const financial=items.map(x=>({report:x.report,result:financialReconcileReport(x.report)}));
   const financialGreen=stockGreen&&financial.length>0&&financial.every(x=>x.result.status==="ok");
-  const latestDate=items[0]?.report?.date||null;
+  const latestDate=wizardCycleDate({items});
   const adjustmentCandidates=latestDate?adjustmentCandidatesForDate(latestDate):[];
   const pendingForDecision=adjustmentCandidates.filter(a=>a.status==="pending"&&a.resolution!=="next_sunday_auto");
   const autoAdjustments=adjustmentCandidates.filter(a=>a.status==="pending"&&a.resolution==="next_sunday_auto");
@@ -10250,7 +10288,7 @@ function renderFinancialWizard(state){
   const autoCorrections=(state.appliedAdjustments||[]).filter(a=>a.resolution==="next_sunday_auto");
   if(allGreen&&autoCorrections.length){adjustmentHtml+=`<div class="adjustmentPanel"><h3>Correction from previous week</h3>${autoCorrections.map(a=>`<div class="adjustmentRow"><div class="adjustmentTop"><div><b>${escapeHtml(a.description||"Delivery docket correction")}</b><div class="wizardMinimal">From week ending ${escapeHtml(invoiceDateLabel(a.sourceDate))}</div></div><div class="adjustmentAmt ${Number(a.amount)>=0?'pos':'neg'}">${Number(a.amount)>=0?'+':''}${baht(a.amount)}</div></div><div class="adjustmentDecision">This correction is added automatically to this Sunday’s invoice.</div></div>`).join('')}</div>`;}
   if(allGreen&&state.pendingForDecision?.length){
-    adjustmentHtml+=`<div class="adjustmentPanel"><h3>Prior adjustment${state.pendingForDecision.length>1?'s':''}</h3><div class="adjustmentIntro">A previous invoice changed after it was saved. Choose what to do this Sunday. This does not change this week's trading figures.</div>${state.pendingForDecision.map(a=>{const d=adjustmentDecisionForDate(a,state.items[0]?.report?.date);return `<div class="adjustmentRow"><div class="adjustmentTop"><div><b>${escapeHtml(a.oldNumber||'Prior invoice')} adjustment</b><div class="wizardMinimal">From ${escapeHtml(invoiceDateLabel(a.sourceDate))}</div></div><div class="adjustmentAmt ${Number(a.amount)>=0?'pos':'neg'}">${Number(a.amount)>=0?'+':''}${baht(a.amount)}</div></div><div class="adjustmentActions"><button class="${d==='apply'?'selected':''}" onclick="setSundayAdjustmentDecision('${a.id}','apply')">Apply this Sunday</button><button class="${d==='defer'?'selected':''}" onclick="setSundayAdjustmentDecision('${a.id}','defer')">Leave for later</button></div><div class="adjustmentDecision">${d==='apply'?'Will be shown separately on this invoice.':d==='defer'?'Will remain as an alert for a future Sunday.':'Choose one option before continuing.'}</div></div>`}).join('')}</div>`;
+    adjustmentHtml+=`<div class="adjustmentPanel"><h3>Prior adjustment${state.pendingForDecision.length>1?'s':''}</h3><div class="adjustmentIntro">A previous invoice changed after it was saved. Choose what to do this Sunday. This does not change this week's trading figures.</div>${state.pendingForDecision.map(a=>{const d=adjustmentDecisionForDate(a,wizardCycleDate(state));return `<div class="adjustmentRow"><div class="adjustmentTop"><div><b>${escapeHtml(a.oldNumber||'Prior invoice')} adjustment</b><div class="wizardMinimal">From ${escapeHtml(invoiceDateLabel(a.sourceDate))}</div></div><div class="adjustmentAmt ${Number(a.amount)>=0?'pos':'neg'}">${Number(a.amount)>=0?'+':''}${baht(a.amount)}</div></div><div class="adjustmentActions"><button class="${d==='apply'?'selected':''}" onclick="setSundayAdjustmentDecision('${a.id}','apply')">Apply this Sunday</button><button class="${d==='defer'?'selected':''}" onclick="setSundayAdjustmentDecision('${a.id}','defer')">Leave for later</button></div><div class="adjustmentDecision">${d==='apply'?'Will be shown separately on this invoice.':d==='defer'?'Will remain as an alert for a future Sunday.':'Choose one option before continuing.'}</div></div>`}).join('')}</div>`;
   }
   const adjTotal=(state.appliedAdjustments||[]).reduce((n,a)=>n+Number(a.amount||0),0);
   const total=allGreen?`<div class="financeTotal"><b>✓ Financial reconciliation complete</b><div class="wizardMinimal" style="color:#166534;margin-top:3px">Both shops combined</div><div class="big">Pay Pin ${baht(combined.payPin)}</div>${adjTotal?`<div class="wizardMinimal" style="color:#166534">Prior adjustment selected: ${adjTotal>=0?'+':''}${baht(adjTotal)} · Settlement total ${baht(combined.payPin+adjTotal)}</div>`:`<div class="wizardMinimal" style="color:#166534">Sales ${baht(combined.sales)} · Cost recovery ${baht(combined.cost)} · Pin profit ${baht(combined.pinProfit)}</div>`}</div>`:`<div class="wizardLocked">Next stays locked until every financial exception above is resolved.</div>`;
@@ -10258,7 +10296,7 @@ function renderFinancialWizard(state){
   return html+adjustmentHtml+total+gate;
 }
 function setSundayAdjustmentDecision(id,decision){
-  const state=currentWizardState(),date=state.items[0]?.report?.date,adj=(db.adjustments||[]).find(a=>a.id===id);if(!adj||!date)return;
+  const state=currentWizardState(),date=wizardCycleDate(state),adj=(db.adjustments||[]).find(a=>a.id===id);if(!adj||!date)return;
   if(!adj.workflowDecisions||typeof adj.workflowDecisions!=="object")adj.workflowDecisions={};
   adj.workflowDecisions[date]=decision;localStorage.setItem("mdpin-db",JSON.stringify(db));renderSundayWizard();renderDashboardAlerts();
 }
@@ -10269,7 +10307,7 @@ function invoiceDateLabel(date){
   try{return new Date(String(date)+"T12:00:00").toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"})}catch(e){return date||""}
 }
 function buildInvoiceCard(state,printMode=false){
-  const date=state.items[0]?.report?.date||today(),summary=invoiceFinancialSummary(state.financial),saved=state.invoice;
+  const date=wizardCycleDate(state)||today(),summary=invoiceFinancialSummary(state.financial),saved=state.invoice;
   const number=saved?.number||sundayInvoiceNumber(date);
   if(printMode){
     const branches=summary.branches.map(b=>`<div class="invoiceBranch"><div class="invoiceBranchName">${escapeHtml(displayBranchName(b.branch))}</div><div class="invoiceNums"><div class="invoiceNum"><div class="k">Sales</div><div class="v">${baht(b.sales)}</div></div><div class="invoiceNum"><div class="k">Cost recovery</div><div class="v">${baht(b.cost)}</div></div><div class="invoiceNum"><div class="k">Pin profit share</div><div class="v">${baht(b.pinProfit)}</div></div><div class="invoiceNum"><div class="k">Amount due</div><div class="v">${baht(b.payPin)}</div></div></div></div>`).join("");
@@ -10364,7 +10402,7 @@ function processPendingDocketCorrections(){
  let changed=false;
  db.pendingCorrections.forEach(c=>{
   const inv=(db.invoices||[]).find(x=>x.id===c.invoiceId);
-  // v0.10.127: backups from older builds can resurrect a queued carry-forward even after
+  // v0.10.128: backups from older builds can resurrect a queued carry-forward even after
   // the source week later reconciles to zero. Revalidate queued auto-corrections before
   // offering them in a new Sunday invoice.
   if(c.status==="queued"&&c.choice==="next_sunday"){
@@ -10691,7 +10729,7 @@ function saveSundayInvoice(){
   const state=currentWizardState();
   if(!state.financialGreen||!state.items.length)return alert("Financial reconciliation must be complete before saving the invoice.");
   if(!state.adjustmentsReady)return alert("Choose what to do with each prior adjustment before saving the invoice.");
-  const date=state.items[0].report.date,summary=invoiceFinancialSummary(state.financial),sig=invoiceSignature(date,summary),baseNumber=sundayInvoiceNumber(date);
+  const date=wizardCycleDate(state),summary=invoiceFinancialSummary(state.financial),sig=invoiceSignature(date,summary),baseNumber=sundayInvoiceNumber(date);
   if(!Array.isArray(db.invoices))db.invoices=[];
   const latest=latestInvoiceForDate(date),adjSig=settlementAdjustmentSignature(state.appliedAdjustments||[]);
   const latestAdjSig=latest?(latest.adjustmentSignature||settlementAdjustmentSignature(latest.adjustmentsApplied||[])):"";
@@ -11272,7 +11310,7 @@ function renderSundayWizard(){
   const box=document.getElementById("wizardContent"),period=document.getElementById("wizardPeriod");if(!box)return;
   const state=currentWizardState(),items=state.items;
   if(!items.length){sundayWizardStep=1;period.textContent="Start by importing this Sunday's Excel reports.";box.innerHTML=wizardImportMarkup();renderWizardChrome(state);return;}
-  const latest=items[0].report.date,prevDates=[...new Set(items.map(x=>x.rec.previousDate).filter(Boolean))];
+  const latest=wizardCycleDate(state)||items[0].report.date,prevDates=[...new Set(items.map(x=>x.rec.previousDate).filter(Boolean))];
   period.textContent=`${latest}${prevDates.length?` compared with ${prevDates.join(" / ")}`:" — prior Sunday required"}`;
   if(sundayWizardStep===1){
     const existingSummary=`<div class="wizardGood">✓ ${items.length} Sunday report${items.length===1?'':'s'} imported for ${escapeHtml(latest)}.</div>`;
@@ -11656,7 +11694,7 @@ function validateBackupPackage(pkg){
 }
 async function createCompleteTransferPackage(kind="FULL_TRANSFER"){
  const sourceFiles=await exportArchivedSourceFiles(),counts=backupCounts();
- return {format:BACKUP_FORMAT,schema:BACKUP_SCHEMA,appVersion:"0.10.127",backupKind:kind,createdAt:new Date().toISOString(),counts,sourceFilesCount:sourceFiles.length,data:JSON.parse(JSON.stringify(db)),sourceFiles};
+ return {format:BACKUP_FORMAT,schema:BACKUP_SCHEMA,appVersion:"0.10.128",backupKind:kind,createdAt:new Date().toISOString(),counts,sourceFilesCount:sourceFiles.length,data:JSON.parse(JSON.stringify(db)),sourceFiles};
 }
 async function savePackageFile(pkg,prefix="Magic-Pin-Data"){
  const blob=new Blob([JSON.stringify(pkg)],{type:"application/json"});
