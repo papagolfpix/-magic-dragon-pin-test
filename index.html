@@ -4735,7 +4735,7 @@ window.addEventListener("error",e=>{const b=document.getElementById("runtimeErro
       <button class="heroHomeHotspot noPrint" type="button" aria-label="Return to Dashboard" title="Dashboard" onclick="returnToDashboardFromHeader()"></button>
     </div>
     <div class="heroActions noPrint">
-      <span class="app-version">v0.10.125 TEST</span>
+      <span class="app-version">v0.10.126 TEST</span>
       <button class="heroMenuButton" id="heroMenuButton" type="button" aria-expanded="false">Menu</button>
     </div>
   </div>
@@ -5444,7 +5444,7 @@ if(!Array.isArray(db.adjustments)) db.adjustments=[];
   if(changed)localStorage.setItem("mdpin-db",JSON.stringify(db));
 })();
 
-// v0.10.125 TEST — release-candidate sanitation.
+// v0.10.126 TEST — release-candidate sanitation.
 // Remove ONLY synthetic records created by the retired unpaid-conflict test helper.
 // Normal dockets, Sunday reports, real invoices, payments, mappings and amounts are untouched.
 (function cleanupRetiredConflictTestArtifacts(){
@@ -7523,7 +7523,7 @@ function buildFullBackupPayload(kind="SUPPORT",note=""){
   return {
     magicDragonBackup:true,
     app:"Magic Dragon Pin",
-    appVersion:"0.10.125",
+    appVersion:"0.10.126",
     backupKind:String(kind||"SUPPORT").toUpperCase(),
     createdAt:new Date().toISOString(),
     note:String(note||""),
@@ -11235,7 +11235,16 @@ function renderSundayWizard(){
   if(!items.length){sundayWizardStep=1;period.textContent="Start by importing this Sunday's Excel reports.";box.innerHTML=wizardImportMarkup();renderWizardChrome(state);return;}
   const latest=items[0].report.date,prevDates=[...new Set(items.map(x=>x.rec.previousDate).filter(Boolean))];
   period.textContent=`${latest}${prevDates.length?` compared with ${prevDates.join(" / ")}`:" — prior Sunday required"}`;
-  if(sundayWizardStep===1){box.innerHTML=`<div class="wizardGood">✓ ${items.length} Sunday report${items.length===1?'':'s'} imported for ${escapeHtml(latest)}.</div><div class="wizardActions"><button class="btn alt" onclick="wizardAction('import')">Review imported reports</button></div>`;}
+  if(sundayWizardStep===1){
+    const existingSummary=`<div class="wizardGood">✓ ${items.length} Sunday report${items.length===1?'':'s'} imported for ${escapeHtml(latest)}.</div>`;
+    // v0.10.126: when a Sunday cycle already contains one report, choosing another file
+    // must keep the pending selection/import controls visible. Previously the onchange
+    // re-render collapsed back to the existing-report summary, so iPhone users could
+    // select the second branch file but had no Import button and nothing changed.
+    box.innerHTML=existingSummary+(selectedXlsxFiles.length
+      ? wizardImportMarkup()
+      : `<div class="wizardActions"><button class="btn alt" onclick="wizardAction('import')">Add / review Excel reports</button></div>`);
+  }
   else if(sundayWizardStep===2){box.innerHTML=renderStockWizard(items);}
   else if(sundayWizardStep===3){box.innerHTML=renderFinancialWizard(state);}
   else if(sundayWizardStep===4){box.innerHTML=renderInvoiceWizard(state);}
@@ -11608,7 +11617,7 @@ function validateBackupPackage(pkg){
 }
 async function createCompleteTransferPackage(kind="FULL_TRANSFER"){
  const sourceFiles=await exportArchivedSourceFiles(),counts=backupCounts();
- return {format:BACKUP_FORMAT,schema:BACKUP_SCHEMA,appVersion:"0.10.125",backupKind:kind,createdAt:new Date().toISOString(),counts,sourceFilesCount:sourceFiles.length,data:JSON.parse(JSON.stringify(db)),sourceFiles};
+ return {format:BACKUP_FORMAT,schema:BACKUP_SCHEMA,appVersion:"0.10.126",backupKind:kind,createdAt:new Date().toISOString(),counts,sourceFilesCount:sourceFiles.length,data:JSON.parse(JSON.stringify(db)),sourceFiles};
 }
 async function savePackageFile(pkg,prefix="Magic-Pin-Data"){
  const blob=new Blob([JSON.stringify(pkg)],{type:"application/json"});

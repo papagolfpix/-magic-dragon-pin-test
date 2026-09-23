@@ -1,4 +1,4 @@
-WHAT CHANGED IN v0.10.125 TEST
+WHAT CHANGED IN v0.10.126 TEST
 
 - Release-candidate cleanup based on the validated v0.10.124 checkpoint.
 - Removed the dashboard-only “TEST ONLY · Create unpaid conflict test” control and its retired synthetic seed code.
@@ -35,3 +35,8 @@ WHAT CHANGED IN v0.10.120 TEST
 - Existing dockets and completed invoices are not edited; any misdated delivered top-up remains visibly flagged for review.
 - Future marking of generated top-ups requires an actual delivery date after their source Sunday report.
 - TEST-copy exclusions and original docket snapshot handling from v0.10.119 remain.
+
+
+v0.10.126 TEST
+- Fixes adding a second Sunday Excel report after one branch has already been imported.
+- Pending file selections now remain visible inside Step 1 with an actionable Import button instead of collapsing back to the one-report summary.
