@@ -4735,7 +4735,7 @@ window.addEventListener("error",e=>{const b=document.getElementById("runtimeErro
       <button class="heroHomeHotspot noPrint" type="button" aria-label="Return to Dashboard" title="Dashboard" onclick="returnToDashboardFromHeader()"></button>
     </div>
     <div class="heroActions noPrint">
-      <span class="app-version">v0.10.126 TEST</span>
+      <span class="app-version">v0.10.127 TEST</span>
       <button class="heroMenuButton" id="heroMenuButton" type="button" aria-expanded="false">Menu</button>
     </div>
   </div>
@@ -5444,7 +5444,7 @@ if(!Array.isArray(db.adjustments)) db.adjustments=[];
   if(changed)localStorage.setItem("mdpin-db",JSON.stringify(db));
 })();
 
-// v0.10.126 TEST — release-candidate sanitation.
+// v0.10.127 TEST — release-candidate sanitation.
 // Remove ONLY synthetic records created by the retired unpaid-conflict test helper.
 // Normal dockets, Sunday reports, real invoices, payments, mappings and amounts are untouched.
 (function cleanupRetiredConflictTestArtifacts(){
@@ -7523,7 +7523,7 @@ function buildFullBackupPayload(kind="SUPPORT",note=""){
   return {
     magicDragonBackup:true,
     app:"Magic Dragon Pin",
-    appVersion:"0.10.126",
+    appVersion:"0.10.127",
     backupKind:String(kind||"SUPPORT").toUpperCase(),
     createdAt:new Date().toISOString(),
     note:String(note||""),
@@ -9523,6 +9523,23 @@ document.getElementById("xlsxFiles").onchange=e=>{
 document.getElementById("clearXlsxSelection").onclick=()=>resetSundayImportSelection("","");
 
 
+function sundayImportCycleDateForReport(rep,chosenBlocks=[]){
+  const repDate=String(rep?.date||"");
+  if(!repDate)return repDate;
+  const active=String(db.activeSundayCycleDate||"");
+  if(active&&!isSundayCycleComplete(active)){
+    const gap=Math.abs(Number(daysBetween(repDate,active)));
+    if(Number.isFinite(gap)&&gap<=1)return active;
+  }
+  const nearby=(chosenBlocks||[]).filter(b=>b?.rep&&b.rep.importable!==false&&Math.abs(Number(daysBetween(repDate,String(b.rep.date||""))))<=1);
+  const branches=new Set(nearby.map(b=>canonicalBranchName(b.rep.branch)).filter(Boolean));
+  if(branches.size>=2){
+    const dates=nearby.map(b=>String(b.rep.date||"")).filter(Boolean).sort();
+    if(dates.length)return dates[dates.length-1];
+  }
+  return repDate;
+}
+
 document.getElementById("importXlsx").onclick=async()=>{
  if(!selectedXlsxFiles.length)return alert("Choose one or more Excel files first.");
  const ok=await loadSheetJS();if(!ok)return alert("The Excel reader could not load.");
@@ -9543,17 +9560,18 @@ document.getElementById("importXlsx").onclick=async()=>{
      continue;
    }
    const mathErrors=validateWorkbookMath(rep),reconciliation=reconcileExcelReport(rep),id="X"+Date.now()+Math.random().toString(36).slice(2,7),stored=await storeOriginalWorkbook(id,file,rep.archiveName);
-   const record={...rep,id,importedAt:new Date().toISOString(),sourceStored:stored,mathErrors,reconciliation};
+   const cycleDate=sundayImportCycleDateForReport(rep,chosen);
+   const record={...rep,cycleDate,id,importedAt:new Date().toISOString(),sourceStored:stored,mathErrors,reconciliation};
    if(replaceExisting){
      for(const old of same)await deleteArchivedSourceFile(old.id);
      db.sundayImports=db.sundayImports.filter(x=>!(x.branch===rep.branch&&x.date===rep.date));
      db.weeks=db.weeks.filter(w=>!(w.branch===rep.branch&&w.date===rep.date&&/Excel/i.test(String(w.source||""))));
    }
-   db.sundayImports.push(record);reconReports.push(reconciliation);if(!replaceExisting)importedDates.push(rep.date);if(replaceExisting)replacedExistingCount++;else newImportedCount++;
+   db.sundayImports.push(record);reconReports.push(reconciliation);if(!replaceExisting)importedDates.push(cycleDate||rep.date);if(replaceExisting)replacedExistingCount++;else newImportedCount++;
    const weeklyRows=rep.rows.map(rr=>{const pm=canonicalProductMatchRow(rr),p=pm.product;return {productId:p?.id||null,sourceProductName:rr.product,opening:rr.oldStock,delivered:rr.newDeliver||0,takeout:rr.takeOut||0,closing:rr.inStock,reportedSold:rr.sold,sellPrice:rr.sellPrice,cost:rr.cost,historyKnown:rr.oldStock!=null,source:"Excel"}});
    db.weeks.push({id:"W"+Date.now()+Math.random().toString(36).slice(2,5),branch:rep.branch,date:rep.date,source:"Excel Sunday import",sourceArchiveId:id,rows:weeklyRows,totals:{sales:rep.rows.reduce((s,r)=>s+(r.totalSales||0),0),cost:rep.rows.reduce((s,r)=>s+(r.totalCost||0),0),profit:rep.rows.reduce((s,r)=>s+(r.totalProfit||0),0),bm:rep.rows.reduce((s,r)=>s+(r.bmShare||0),0),alix:rep.rows.reduce((s,r)=>s+(r.alixShare||0),0),pin:rep.rows.reduce((s,r)=>s+(r.pinShare||0),0)},importAudit:{type:"xlsx",archiveName:rep.archiveName,mathErrors,reconciliation,replacedExisting:!!replaceExisting}});
    save();
-   results.insertAdjacentHTML("beforeend",`<div class="xlsxResult ${mathErrors.length?"warn":"ok"}"><b>${escapeHtml(rep.archiveName)}</b><br><span class="small">${escapeHtml(displayBranchName(rep.branch))} • ${escapeHtml(rep.date)} • ${rep.rows.length} product rows${replaceExisting?' • replaced previous report':''}</span></div>`);
+   results.insertAdjacentHTML("beforeend",`<div class="xlsxResult ${mathErrors.length?"warn":"ok"}"><b>${escapeHtml(rep.archiveName)}</b><br><span class="small">${escapeHtml(displayBranchName(rep.branch))} • ${escapeHtml(rep.date)}${cycleDate&&cycleDate!==rep.date?` • billing cycle ${escapeHtml(cycleDate)}`:""} • ${rep.rows.length} product rows${replaceExisting?' • replaced previous report':''}</span></div>`);
   }catch(err){results.insertAdjacentHTML("beforeend",`<div class="xlsxResult bad"><b>${escapeHtml(file.name)}</b><br><span class="small">${escapeHtml(err.message)}</span></div>`)}
  }
  if(importedDates.length){
@@ -10079,7 +10097,9 @@ function wizardImportMarkup(){
 }
 function wizardReportsForDate(date){
   ensureSundayArchive(); rebuildSundayReportChain();
-  return [...(db.sundayImports||[])].filter(r=>r.date===date).map(r=>({report:r,rec:reconcileExcelReport(r)}));
+  // v0.10.127: a shop may prepare its Sunday stock report one day early.
+  // Preserve the report's true date, but group it into the same billing cycle via cycleDate.
+  return [...(db.sundayImports||[])].filter(r=>(r.cycleDate||r.date)===date).map(r=>({report:r,rec:reconcileExcelReport(r)}));
 }
 function latestWizardReports(){
   ensureSundayArchive(); rebuildSundayReportChain();ensureCompletedSundayCycles();
@@ -10343,8 +10363,27 @@ function processPendingDocketCorrections(){
  if(!Array.isArray(db.pendingCorrections)||!db.pendingCorrections.length)return false;
  let changed=false;
  db.pendingCorrections.forEach(c=>{
+  const inv=(db.invoices||[]).find(x=>x.id===c.invoiceId);
+  // v0.10.127: backups from older builds can resurrect a queued carry-forward even after
+  // the source week later reconciles to zero. Revalidate queued auto-corrections before
+  // offering them in a new Sunday invoice.
+  if(c.status==="queued"&&c.choice==="next_sunday"){
+    if(!inv){c.status="error";c.message="Affected invoice could not be found.";changed=true;return;}
+    const live=currentWizardStateSafeForInvoice(inv.reportDate);
+    if(!live?.financialGreen)return;
+    const oldBase=Number(inv.totals?.basePayPin ?? (Number(inv.totals?.payPin||0)-Number(inv.totals?.adjustmentTotal||0)));
+    const newBase=Number(live.summary?.combined?.payPin||0);
+    const delta=+(newBase-oldBase).toFixed(2);
+    c.amount=delta;
+    const a=(db.adjustments||[]).find(a=>a.id===c.adjustmentId||a.correctionId===c.id);
+    if(Math.abs(delta)<0.005){
+      if(a&&a.status==="pending")db.adjustments=db.adjustments.filter(x=>x.id!==a.id);
+      c.status="resolved";c.amount=0;c.adjustmentId=null;c.resolvedSignature=live.signature;c.resolvedAt=new Date().toISOString();c.message="No financial difference to carry forward.";changed=true;
+    }else if(a&&a.status==="pending"&&Math.abs(Number(a.amount||0)-delta)>=0.005){a.amount=delta;changed=true;}
+    return;
+  }
   if(!["pending","waiting_reconciliation"].includes(c.status))return;
-  const inv=(db.invoices||[]).find(x=>x.id===c.invoiceId);if(!inv){c.status="error";c.message="Affected invoice could not be found.";changed=true;return;}
+  if(!inv){c.status="error";c.message="Affected invoice could not be found.";changed=true;return;}
   const live=currentWizardStateSafeForInvoice(inv.reportDate);
   if(!live?.financialGreen){if(c.status!=="waiting_reconciliation"){c.status="waiting_reconciliation";changed=true;}c.message="Waiting for the edited week to reconcile.";return;}
   const oldBase=Number(inv.totals?.basePayPin ?? (Number(inv.totals?.payPin||0)-Number(inv.totals?.adjustmentTotal||0))),newBase=Number(live.summary?.combined?.payPin||0),delta=+(newBase-oldBase).toFixed(2);c.amount=delta;c.description=correctionChangeDescription(c);
@@ -11617,7 +11656,7 @@ function validateBackupPackage(pkg){
 }
 async function createCompleteTransferPackage(kind="FULL_TRANSFER"){
  const sourceFiles=await exportArchivedSourceFiles(),counts=backupCounts();
- return {format:BACKUP_FORMAT,schema:BACKUP_SCHEMA,appVersion:"0.10.126",backupKind:kind,createdAt:new Date().toISOString(),counts,sourceFilesCount:sourceFiles.length,data:JSON.parse(JSON.stringify(db)),sourceFiles};
+ return {format:BACKUP_FORMAT,schema:BACKUP_SCHEMA,appVersion:"0.10.127",backupKind:kind,createdAt:new Date().toISOString(),counts,sourceFilesCount:sourceFiles.length,data:JSON.parse(JSON.stringify(db)),sourceFiles};
 }
 async function savePackageFile(pkg,prefix="Magic-Pin-Data"){
  const blob=new Blob([JSON.stringify(pkg)],{type:"application/json"});
