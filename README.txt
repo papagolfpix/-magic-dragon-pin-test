@@ -1,3 +1,11 @@
+WHAT CHANGED IN v0.10.129 TEST
+
+- Adds a hard financial-integrity check for imported Sunday spreadsheets: the spreadsheet's own Total/Pay Pin cells are compared with the sum of all imported product-line amounts.
+- A mismatch is shown as a red FINANCIAL TOTAL MISMATCH warning and Step 3 remains blocked until the spreadsheet/report is corrected or reviewed.
+- Older restored reports are backfilled from their archived original XLSX files so the integrity check also works after Complete App Data restore.
+- Removes the exact stale Lamai 23 Aug -฿87 Sunday-report correction confirmed as historical TEST residue in Pin's 24 Sep backup. The cleanup is deliberately scoped to that exact correction/adjustment ID and does not delete legitimate corrections.
+- Preserves the v0.10.128 Saturday/Sunday two-branch billing-cycle grouping fix.
+
 WHAT CHANGED IN v0.10.126 TEST
 
 - Release-candidate cleanup based on the validated v0.10.124 checkpoint.

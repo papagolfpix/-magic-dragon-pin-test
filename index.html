@@ -4735,7 +4735,7 @@ window.addEventListener("error",e=>{const b=document.getElementById("runtimeErro
       <button class="heroHomeHotspot noPrint" type="button" aria-label="Return to Dashboard" title="Dashboard" onclick="returnToDashboardFromHeader()"></button>
     </div>
     <div class="heroActions noPrint">
-      <span class="app-version">v0.10.128 TEST</span>
+      <span class="app-version">v0.10.129 TEST</span>
       <button class="heroMenuButton" id="heroMenuButton" type="button" aria-expanded="false">Menu</button>
     </div>
   </div>
@@ -5444,7 +5444,7 @@ if(!Array.isArray(db.adjustments)) db.adjustments=[];
   if(changed)localStorage.setItem("mdpin-db",JSON.stringify(db));
 })();
 
-// v0.10.128 TEST — release-candidate sanitation.
+// v0.10.129 TEST — release-candidate sanitation.
 // Remove ONLY synthetic records created by the retired unpaid-conflict test helper.
 // Normal dockets, Sunday reports, real invoices, payments, mappings and amounts are untouched.
 (function cleanupRetiredConflictTestArtifacts(){
@@ -7523,7 +7523,7 @@ function buildFullBackupPayload(kind="SUPPORT",note=""){
   return {
     magicDragonBackup:true,
     app:"Magic Dragon Pin",
-    appVersion:"0.10.128",
+    appVersion:"0.10.129",
     backupKind:String(kind||"SUPPORT").toUpperCase(),
     createdAt:new Date().toISOString(),
     note:String(note||""),
@@ -7929,6 +7929,28 @@ function findDateNearBlock(rows,start){
   return {checkDate:findLabelDate(rows,start,to,/check\s*date/i),oldDate:findLabelDate(rows,start,to,/old\s*stock\s*from/i)};
 }
 
+function spreadsheetFinancialTotalsNearBlock(rows,start,end){
+ const from=Math.max(start+1,0),to=Math.min(rows.length,end+4);
+ for(let r=from;r<to;r++){
+  const row=rows[r]||[];
+  const label=String(row[10]??"").trim().toLowerCase();
+  if(label!=="total")continue;
+  const vals={sales:numOrNull(row[11]),cost:numOrNull(row[12]),profit:numOrNull(row[13]),bm:numOrNull(row[14]),alix:numOrNull(row[15]),pinProfit:numOrNull(row[16]),payPin:numOrNull(row[17]),rowNumber:r+1};
+  if(Object.values(vals).some(v=>typeof v==="number"&&Number.isFinite(v)))return vals;
+ }
+ return null;
+}
+
+function workbookFinancialIntegrity(rep){
+ const sheet=rep?.sheetTotals;if(!sheet)return {status:"unknown",mismatches:[]};
+ const calc={sales:0,cost:0,profit:0,bm:0,alix:0,pinProfit:0,payPin:0};
+ (rep.rows||[]).forEach(r=>{calc.sales+=Number(r.totalSales)||0;calc.cost+=Number(r.totalCost)||0;calc.profit+=Number(r.totalProfit)||0;calc.bm+=Number(r.bmShare)||0;calc.alix+=Number(r.alixShare)||0;calc.pinProfit+=Number(r.pinShare)||0;calc.payPin+=(Number(r.totalCost)||0)+(Number(r.pinShare)||0)});
+ const labels={sales:"Sales",cost:"Cost",profit:"Profit",bm:"BM share",alix:"Alix share",pinProfit:"Pin profit",payPin:"Pay Pin"};
+ const mismatches=[];
+ Object.keys(labels).forEach(k=>{if(sheet[k]!=null&&Math.abs(Number(sheet[k])-Number(calc[k]))>0.011)mismatches.push({key:k,label:labels[k],sheet:Number(sheet[k]),calculated:Number(calc[k]),difference:+(Number(calc[k])-Number(sheet[k])).toFixed(2)})});
+ return {status:mismatches.length?"mismatch":"ok",mismatches,sheet,calculated:calc};
+}
+
 function parseWeeklyBlock(rows,start,end,branch,filename,sheetName,idx){
  const parsed=[];
  for(let r=start+1;r<end;r++){
@@ -7938,7 +7960,8 @@ function parseWeeklyBlock(rows,start,end,branch,filename,sheetName,idx){
  }
  if(!parsed.length)return null;
  const dates=findDateNearBlock(rows,start),date=dates.checkDate||null,branchLabel=displayBranchName(branch||"Unknown-Branch"),importable=!!branch&&!!date;
- return {sheetName,branch,date,oldDate:dates.oldDate,rows:parsed,importable,detectionIssue:!branch&&!date?"Shop and check date could not be detected":!branch?"Shop could not be detected":!date?"Check date could not be detected":"",archiveName:`${date||"DATE-NEEDED"}_${sanitizeArchivePart(branchLabel)}_Sunday-Stock.xlsx`,originalFilename:filename,blockIndex:idx,startRow:start+1,endRow:end};
+ const sheetTotals=spreadsheetFinancialTotalsNearBlock(rows,start,end);
+ return {sheetName,branch,date,oldDate:dates.oldDate,rows:parsed,sheetTotals,financialIntegrity:workbookFinancialIntegrity({rows:parsed,sheetTotals}),importable,detectionIssue:!branch&&!date?"Shop and check date could not be detected":!branch?"Shop could not be detected":!date?"Check date could not be detected":"",archiveName:`${date||"DATE-NEEDED"}_${sanitizeArchivePart(branchLabel)}_Sunday-Stock.xlsx`,originalFilename:filename,blockIndex:idx,startRow:start+1,endRow:end};
 }
 function parseSundayWorkbook(arrayBuffer,filename){
  const wb=XLSX.read(arrayBuffer,{type:"array",cellDates:false,cellFormula:true,cellNF:false}); if(!wb.SheetNames.length)throw new Error("Workbook contains no worksheets.");
@@ -9084,6 +9107,22 @@ async function storeOriginalWorkbook(id,file,archiveName){
   }catch(e){ return false; }
 }
 
+async function getArchivedSourceRecord(id){
+ try{const idb=await openFileDb();const rec=await new Promise((resolve,reject)=>{const tx=idb.transaction("sourceFiles","readonly"),rq=tx.objectStore("sourceFiles").get(id);rq.onsuccess=()=>resolve(rq.result||null);rq.onerror=()=>reject(rq.error)});idb.close();return rec}catch(e){return null}
+}
+async function hydrateWorkbookFinancialIntegrityFromArchive(){
+ if(!window.XLSX) return false;
+ let changed=false;
+ for(const imp of (db.sundayImports||[])){
+  if(imp?.sheetTotals&&imp?.financialIntegrity)continue;
+  if(!imp?.id)continue;
+  const rec=await getArchivedSourceRecord(imp.id);if(!rec?.blob)continue;
+  try{const reps=parseSundayWorkbook(await rec.blob.arrayBuffer(),rec.archiveName||imp.originalFilename||imp.archiveName||"Sunday-Report.xlsx");const match=reps.find(r=>canonicalBranchName(r.branch)===canonicalBranchName(imp.branch)&&String(r.date||"")===String(imp.date||""));if(!match?.sheetTotals)continue;imp.sheetTotals=match.sheetTotals;imp.financialIntegrity=workbookFinancialIntegrity({...imp,rows:match.rows,sheetTotals:match.sheetTotals});const w=(db.weeks||[]).find(w=>w.sourceArchiveId===imp.id);if(w){w.importAudit=w.importAudit||{};w.importAudit.sheetTotals=match.sheetTotals;w.importAudit.financialIntegrity=imp.financialIntegrity;}changed=true}catch(e){}
+ }
+ if(changed){localStorage.setItem("mdpin-db",JSON.stringify(db));renderAll();}
+ return changed;
+}
+
 async function downloadArchivedSource(id,archiveName){
   try{
     const idb=await openFileDb();
@@ -9559,9 +9598,9 @@ document.getElementById("importXlsx").onclick=async()=>{
      results.insertAdjacentHTML("beforeend",`<div class="xlsxResult warn"><b>${escapeHtml(rep.archiveName)}</b><br><span class="small">${escapeHtml(displayBranchName(rep.branch))} • ${escapeHtml(rep.date)} — existing report kept. No data changed.</span></div>`);
      continue;
    }
-   const mathErrors=validateWorkbookMath(rep),reconciliation=reconcileExcelReport(rep),id="X"+Date.now()+Math.random().toString(36).slice(2,7),stored=await storeOriginalWorkbook(id,file,rep.archiveName);
+   const mathErrors=validateWorkbookMath(rep),financialIntegrity=workbookFinancialIntegrity(rep),reconciliation=reconcileExcelReport(rep),id="X"+Date.now()+Math.random().toString(36).slice(2,7),stored=await storeOriginalWorkbook(id,file,rep.archiveName);
    const cycleDate=sundayImportCycleDateForReport(rep,chosen);
-   const record={...rep,cycleDate,id,importedAt:new Date().toISOString(),sourceStored:stored,mathErrors,reconciliation};
+   const record={...rep,cycleDate,id,importedAt:new Date().toISOString(),sourceStored:stored,mathErrors,financialIntegrity,reconciliation};
    if(replaceExisting){
      for(const old of same)await deleteArchivedSourceFile(old.id);
      db.sundayImports=db.sundayImports.filter(x=>!(x.branch===rep.branch&&x.date===rep.date));
@@ -9569,9 +9608,11 @@ document.getElementById("importXlsx").onclick=async()=>{
    }
    db.sundayImports.push(record);reconReports.push(reconciliation);if(!replaceExisting)importedDates.push(cycleDate||rep.date);if(replaceExisting)replacedExistingCount++;else newImportedCount++;
    const weeklyRows=rep.rows.map(rr=>{const pm=canonicalProductMatchRow(rr),p=pm.product;return {productId:p?.id||null,sourceProductName:rr.product,opening:rr.oldStock,delivered:rr.newDeliver||0,takeout:rr.takeOut||0,closing:rr.inStock,reportedSold:rr.sold,sellPrice:rr.sellPrice,cost:rr.cost,historyKnown:rr.oldStock!=null,source:"Excel"}});
-   db.weeks.push({id:"W"+Date.now()+Math.random().toString(36).slice(2,5),branch:rep.branch,date:rep.date,source:"Excel Sunday import",sourceArchiveId:id,rows:weeklyRows,totals:{sales:rep.rows.reduce((s,r)=>s+(r.totalSales||0),0),cost:rep.rows.reduce((s,r)=>s+(r.totalCost||0),0),profit:rep.rows.reduce((s,r)=>s+(r.totalProfit||0),0),bm:rep.rows.reduce((s,r)=>s+(r.bmShare||0),0),alix:rep.rows.reduce((s,r)=>s+(r.alixShare||0),0),pin:rep.rows.reduce((s,r)=>s+(r.pinShare||0),0)},importAudit:{type:"xlsx",archiveName:rep.archiveName,mathErrors,reconciliation,replacedExisting:!!replaceExisting}});
+   db.weeks.push({id:"W"+Date.now()+Math.random().toString(36).slice(2,5),branch:rep.branch,date:rep.date,source:"Excel Sunday import",sourceArchiveId:id,rows:weeklyRows,totals:{sales:rep.rows.reduce((s,r)=>s+(r.totalSales||0),0),cost:rep.rows.reduce((s,r)=>s+(r.totalCost||0),0),profit:rep.rows.reduce((s,r)=>s+(r.totalProfit||0),0),bm:rep.rows.reduce((s,r)=>s+(r.bmShare||0),0),alix:rep.rows.reduce((s,r)=>s+(r.alixShare||0),0),pin:rep.rows.reduce((s,r)=>s+(r.pinShare||0),0)},importAudit:{type:"xlsx",archiveName:rep.archiveName,mathErrors,financialIntegrity,sheetTotals:rep.sheetTotals||null,reconciliation,replacedExisting:!!replaceExisting}});
    save();
-   results.insertAdjacentHTML("beforeend",`<div class="xlsxResult ${mathErrors.length?"warn":"ok"}"><b>${escapeHtml(rep.archiveName)}</b><br><span class="small">${escapeHtml(displayBranchName(rep.branch))} • ${escapeHtml(rep.date)}${cycleDate&&cycleDate!==rep.date?` • billing cycle ${escapeHtml(cycleDate)}`:""} • ${rep.rows.length} product rows${replaceExisting?' • replaced previous report':''}</span></div>`);
+   const integrityBad=financialIntegrity.status==="mismatch";
+   const integrityMsg=integrityBad?`<div class="small" style="margin-top:5px;color:#991b1b;font-weight:850">⚠ FINANCIAL TOTAL MISMATCH — spreadsheet Pay Pin ${baht(financialIntegrity.sheet?.payPin)}; product-line calculation ${baht(financialIntegrity.calculated?.payPin)}. Review before invoicing.</div>`:"";
+   results.insertAdjacentHTML("beforeend",`<div class="xlsxResult ${(mathErrors.length||integrityBad)?"bad":"ok"}"><b>${escapeHtml(rep.archiveName)}</b><br><span class="small">${escapeHtml(displayBranchName(rep.branch))} • ${escapeHtml(rep.date)}${cycleDate&&cycleDate!==rep.date?` • billing cycle ${escapeHtml(cycleDate)}`:""} • ${rep.rows.length} product rows${replaceExisting?' • replaced previous report':''}</span>${integrityMsg}</div>`);
   }catch(err){results.insertAdjacentHTML("beforeend",`<div class="xlsxResult bad"><b>${escapeHtml(file.name)}</b><br><span class="small">${escapeHtml(err.message)}</span></div>`)}
  }
  // v0.10.128: if one branch was already present from a restored backup without
@@ -10173,7 +10214,12 @@ function financialReconcileReport(rep){
     totals.sales+=expectedSales;totals.cost+=expectedCost;totals.profit+=expectedProfit;totals.bm+=expectedBm;totals.alix+=expectedAlix;totals.pinProfit+=expectedPin;totals.payPin+=expectedCost+expectedPin;
     totals.sheetSales+=Number(rr.totalSales)||0;totals.sheetCost+=Number(rr.totalCost)||0;totals.sheetProfit+=Number(rr.totalProfit)||0;totals.sheetBm+=Number(rr.bmShare)||0;totals.sheetAlix+=Number(rr.alixShare)||0;totals.sheetPinProfit+=Number(rr.pinShare)||0;
   });
-  return {status:issues.length?"review":"ok",issues,totals,stock};
+  const integrity=rep.financialIntegrity||workbookFinancialIntegrity(rep);
+  if(integrity?.status==="mismatch") {
+    const pay=integrity.mismatches?.find(x=>x.key==="payPin");
+    issues.unshift({product:"Spreadsheet totals",reason:`Spreadsheet total does not match the product lines${pay?`: Pay Pin ${baht(pay.sheet)} on sheet vs ${baht(pay.calculated)} from all product rows (difference ${pay.difference>=0?"+":""}${baht(pay.difference)})`:""}.`,action:"import",financialIntegrity:true});
+  }
+  return {status:issues.length?"review":"ok",issues,totals,stock,financialIntegrity:integrity};
 }
 function invoiceFinancialSummary(financial){
   const branches=financial.filter(x=>x.result.status==="ok").map(x=>({branch:x.report.branch,...x.result.totals}));
@@ -10397,9 +10443,23 @@ function finalizeAcknowledgedZeroDifferenceSourceCorrections(onlyInvoiceId=null)
   return changed;
 }
 
+function cleanupKnownRestoredTestSundayCorrection(){
+ // v0.10.129: forensic cleanup for the exact Lamai 23-Aug test residue identified
+ // from Pin's authoritative 24-Sep backup. This is deliberately ID + amount + source scoped
+ // so legitimate Sunday-report corrections are never auto-deleted.
+ const correctionId="SRC1789278494941jex",adjustmentId="ADJ1789278494941xi";
+ const a=(db.adjustments||[]).find(x=>x?.id===adjustmentId&&x.sourceCorrectionId===correctionId&&x.sourceType==="sunday_report_correction"&&x.branch==="Lamai"&&x.sourceDate==="2026-08-23"&&Math.abs(Number(x.amount||0)+87)<0.005);
+ const c=(db.sundaySourceCorrections||[]).find(x=>x?.id===correctionId&&x.adjustmentId===adjustmentId);
+ if(!a&&!c)return false;
+ if(a)db.adjustments=(db.adjustments||[]).filter(x=>x.id!==adjustmentId);
+ if(c){c.status="voided_test_residue";c.voidedAt=c.voidedAt||new Date().toISOString();c.voidReason="Confirmed historical test residue; must not carry into live settlement.";c.adjustmentId=null;}
+ return true;
+}
+
 function processPendingDocketCorrections(){
- if(!Array.isArray(db.pendingCorrections)||!db.pendingCorrections.length)return false;
- let changed=false;
+ let changed=cleanupKnownRestoredTestSundayCorrection();
+ if(!Array.isArray(db.pendingCorrections)||!db.pendingCorrections.length){if(changed)localStorage.setItem("mdpin-db",JSON.stringify(db));return changed;}
+
  db.pendingCorrections.forEach(c=>{
   const inv=(db.invoices||[]).find(x=>x.id===c.invoiceId);
   // v0.10.128: backups from older builds can resurrect a queued carry-forward even after
@@ -11694,7 +11754,7 @@ function validateBackupPackage(pkg){
 }
 async function createCompleteTransferPackage(kind="FULL_TRANSFER"){
  const sourceFiles=await exportArchivedSourceFiles(),counts=backupCounts();
- return {format:BACKUP_FORMAT,schema:BACKUP_SCHEMA,appVersion:"0.10.128",backupKind:kind,createdAt:new Date().toISOString(),counts,sourceFilesCount:sourceFiles.length,data:JSON.parse(JSON.stringify(db)),sourceFiles};
+ return {format:BACKUP_FORMAT,schema:BACKUP_SCHEMA,appVersion:"0.10.129",backupKind:kind,createdAt:new Date().toISOString(),counts,sourceFilesCount:sourceFiles.length,data:JSON.parse(JSON.stringify(db)),sourceFiles};
 }
 async function savePackageFile(pkg,prefix="Magic-Pin-Data"){
  const blob=new Blob([JSON.stringify(pkg)],{type:"application/json"});
@@ -12135,7 +12195,8 @@ document.getElementById("branchAssignmentBranch").onchange=e=>{
 };
 document.getElementById("branchProductDetails").addEventListener("toggle",e=>{if(e.target.open)renderBranchProductAssignments()});
 document.getElementById("resetData").onclick=()=>{if(confirm("Delete all local Magic Dragon Pin data on this browser?")){localStorage.removeItem("mdpin-db");location.reload()}}
-cleanupDataIntegrity();refreshStoredReconciliations();renderImport();renderArchive();migrateLegacyDeliverySuggestions();bootstrapLatestSavedInvoiceSuggestions();renderAll();renderDashboardAlerts();refreshBaselineSnapshotStatus();showLastTransferResult();
+cleanupDataIntegrity();refreshStoredReconciliations();renderImport();renderArchive();migrateLegacyDeliverySuggestions();bootstrapLatestSavedInvoiceSuggestions();processPendingDocketCorrections();renderAll();renderDashboardAlerts();refreshBaselineSnapshotStatus();showLastTransferResult();
+loadSheetJS().then(ok=>{if(ok)hydrateWorkbookFinancialIntegrityFromArchive().then(()=>{processPendingDocketCorrections();renderAll();renderDashboardAlerts();});});
 // v0.9.25 contextual Sunday help and compact selection controls
 const sundayHelpButton=document.getElementById("sundayHelpButton");
 const sundayHelp=document.getElementById("sundayHelp");
