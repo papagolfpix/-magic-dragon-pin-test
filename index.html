@@ -4735,7 +4735,7 @@ window.addEventListener("error",e=>{const b=document.getElementById("runtimeErro
       <button class="heroHomeHotspot noPrint" type="button" aria-label="Return to Dashboard" title="Dashboard" onclick="returnToDashboardFromHeader()"></button>
     </div>
     <div class="heroActions noPrint">
-      <span class="app-version">v0.10.129 TEST</span>
+      <span class="app-version">v0.10.130 TEST</span>
       <button class="heroMenuButton" id="heroMenuButton" type="button" aria-expanded="false">Menu</button>
     </div>
   </div>
@@ -5444,7 +5444,7 @@ if(!Array.isArray(db.adjustments)) db.adjustments=[];
   if(changed)localStorage.setItem("mdpin-db",JSON.stringify(db));
 })();
 
-// v0.10.129 TEST — release-candidate sanitation.
+// v0.10.130 TEST — release-candidate sanitation.
 // Remove ONLY synthetic records created by the retired unpaid-conflict test helper.
 // Normal dockets, Sunday reports, real invoices, payments, mappings and amounts are untouched.
 (function cleanupRetiredConflictTestArtifacts(){
@@ -7523,7 +7523,7 @@ function buildFullBackupPayload(kind="SUPPORT",note=""){
   return {
     magicDragonBackup:true,
     app:"Magic Dragon Pin",
-    appVersion:"0.10.129",
+    appVersion:"0.10.130",
     backupKind:String(kind||"SUPPORT").toUpperCase(),
     createdAt:new Date().toISOString(),
     note:String(note||""),
@@ -7950,6 +7950,43 @@ function workbookFinancialIntegrity(rep){
  Object.keys(labels).forEach(k=>{if(sheet[k]!=null&&Math.abs(Number(sheet[k])-Number(calc[k]))>0.011)mismatches.push({key:k,label:labels[k],sheet:Number(sheet[k]),calculated:Number(calc[k]),difference:+(Number(calc[k])-Number(sheet[k])).toFixed(2)})});
  return {status:mismatches.length?"mismatch":"ok",mismatches,sheet,calculated:calc};
 }
+
+// v0.10.130: financial-integrity mismatches are resolved inside the Sunday
+// workflow. The resolution is bound to the exact mismatch signature so any
+// later change to the workbook/report automatically reopens the warning.
+function financialIntegritySignature(integrity){
+  return JSON.stringify((integrity?.mismatches||[]).map(m=>[m.key,+Number(m.sheet||0).toFixed(2),+Number(m.calculated||0).toFixed(2)]).sort((a,b)=>String(a[0]).localeCompare(String(b[0]))));
+}
+function financialIntegrityResolutionValid(rep,integrity){
+  return !!(rep?.financialIntegrityResolution&&rep.financialIntegrityResolution.mode==="line_items"&&rep.financialIntegrityResolution.signature===financialIntegritySignature(integrity));
+}
+window.resolveFinancialIntegrity=function(reportId){
+  ensureSundayArchive();
+  const rep=(db.sundayImports||[]).find(r=>r&&r.id===reportId);
+  if(!rep)return alert("Sunday report not found.");
+  const integrity=workbookFinancialIntegrity(rep);
+  if(integrity.status!=="mismatch"){
+    alert("This report no longer has a spreadsheet-total mismatch.");
+    renderSundayWizard();
+    return;
+  }
+  const pay=integrity.mismatches.find(m=>m.key==="payPin");
+  const message=`Spreadsheet total mismatch — ${displayBranchName(rep.branch)} ${recordDateLabel(rep.date)}\n\n`+
+    (pay?`Spreadsheet Pay Pin: ${baht(pay.sheet)}\nAll product lines: ${baht(pay.calculated)}\nDifference: ${pay.difference>=0?"+":""}${baht(pay.difference)}\n\n`:"")+
+    `The product-line calculation includes every imported product row.\n\nTap OK to acknowledge the spreadsheet formula problem and use ALL PRODUCT LINES for this Sunday calculation. The original spreadsheet remains unchanged and the acknowledgement is saved in the audit data.\n\nTap Cancel to keep Invoice blocked.`;
+  if(!confirm(message))return;
+  rep.financialIntegrity=integrity;
+  rep.financialIntegrityResolution={
+    mode:"line_items",
+    signature:financialIntegritySignature(integrity),
+    acknowledgedAt:new Date().toISOString(),
+    sheetPayPin:pay?.sheet??null,
+    calculatedPayPin:pay?.calculated??null,
+    mismatchKeys:(integrity.mismatches||[]).map(m=>m.key)
+  };
+  save();
+  renderSundayWizard();
+};
 
 function parseWeeklyBlock(rows,start,end,branch,filename,sheetName,idx){
  const parsed=[];
@@ -10079,7 +10116,11 @@ function exitSundayWorkflow(){
   setTimeout(settle,220);
 }
 function wizardAction(type){
-  if(type==="import"){ wizardChooseExcel(); return; }
+  if(type==="import"){
+    document.body.classList.remove("workflowMode");
+    switchTab("import");
+    return;
+  }
   document.body.classList.remove("workflowMode");
   if(type==="delivery") openDeliveryArchive();
   else if(type==="mapping") switchTab("settings");
@@ -10215,11 +10256,12 @@ function financialReconcileReport(rep){
     totals.sheetSales+=Number(rr.totalSales)||0;totals.sheetCost+=Number(rr.totalCost)||0;totals.sheetProfit+=Number(rr.totalProfit)||0;totals.sheetBm+=Number(rr.bmShare)||0;totals.sheetAlix+=Number(rr.alixShare)||0;totals.sheetPinProfit+=Number(rr.pinShare)||0;
   });
   const integrity=rep.financialIntegrity||workbookFinancialIntegrity(rep);
-  if(integrity?.status==="mismatch") {
+  const integrityResolved=financialIntegrityResolutionValid(rep,integrity);
+  if(integrity?.status==="mismatch"&&!integrityResolved) {
     const pay=integrity.mismatches?.find(x=>x.key==="payPin");
-    issues.unshift({product:"Spreadsheet totals",reason:`Spreadsheet total does not match the product lines${pay?`: Pay Pin ${baht(pay.sheet)} on sheet vs ${baht(pay.calculated)} from all product rows (difference ${pay.difference>=0?"+":""}${baht(pay.difference)})`:""}.`,action:"import",financialIntegrity:true});
+    issues.unshift({product:"Spreadsheet totals",reason:`Spreadsheet total does not match the product lines${pay?`: Pay Pin ${baht(pay.sheet)} on sheet vs ${baht(pay.calculated)} from all product rows (difference ${pay.difference>=0?"+":""}${baht(pay.difference)})`:""}.`,action:"integrity",financialIntegrity:true});
   }
-  return {status:issues.length?"review":"ok",issues,totals,stock,financialIntegrity:integrity};
+  return {status:issues.length?"review":"ok",issues,totals,stock,financialIntegrity:integrity,financialIntegrityResolved:integrityResolved};
 }
 function invoiceFinancialSummary(financial){
   const branches=financial.filter(x=>x.result.status==="ok").map(x=>({branch:x.report.branch,...x.result.totals}));
@@ -10324,11 +10366,17 @@ function renderFinancialWizard(state){
     Object.keys(combined).forEach(k=>combined[k]+=Number(x.totals[k]||0));
     if(x.status==="locked")return `<div class="wizardBranch"><div class="wizardBranchHead"><b>${escapeHtml(r.branch)}</b><span class="reconStatus bad">LOCKED</span></div><div class="wizardBranchBody"><div class="wizardLocked">Complete stock reconciliation first.</div></div></div>`;
     if(x.status==="review"){
-      const issues=x.issues.slice(0,10).map(i=>`<div class="financeIssue"><b>${escapeHtml(i.product)}</b><div class="small">${escapeHtml(i.reason)}</div><div class="wizardActions"><button class="btn" onclick="wizardAction('${i.action}')">${i.action==='mapping'?'Review Product Price':'Review Sunday Report'}</button></div></div>`).join('');
+      const issues=x.issues.slice(0,10).map(i=>{
+        const actions=i.financialIntegrity
+          ? `<div class="wizardActions"><button class="btn gold" onclick="resolveFinancialIntegrity('${r.id}')">Resolve mismatch</button><button class="btn alt" onclick="wizardOpenSundayReport('${r.id}')">Open saved report</button></div>`
+          : `<div class="wizardActions"><button class="btn" onclick="wizardAction('${i.action}')">${i.action==='mapping'?'Review Product Price':'Review Sunday Report'}</button></div>`;
+        return `<div class="financeIssue"><b>${escapeHtml(i.product)}</b><div class="small">${escapeHtml(i.reason)}</div>${actions}</div>`;
+      }).join('');
       return `<div class="wizardBranch"><div class="wizardBranchHead"><b>${escapeHtml(r.branch)}</b><span class="reconStatus bad">ACTION REQUIRED</span></div><div class="wizardBranchBody">${issues}${x.issues.length>10?`<div class="wizardMinimal">+ ${x.issues.length-10} more financial issue(s).</div>`:''}</div></div>`;
     }
     const t=x.totals;
-    return `<div class="wizardBranch"><div class="wizardBranchHead"><b>${escapeHtml(r.branch)}</b><span class="reconStatus ok">FINANCIAL OK</span></div><div class="wizardBranchBody"><div class="wizardGood">✓ Sales, costs and profit shares agree.</div><div class="financeSummary"><div class="financeCell"><div class="k">Sales</div><div class="v">${baht(t.sales)}</div></div><div class="financeCell"><div class="k">Pay Pin</div><div class="v">${baht(t.payPin)}</div></div></div><details class="financeDetails"><summary>View calculation</summary><div class="financeSummary"><div class="financeCell"><div class="k">Cost recovery</div><div class="v">${baht(t.cost)}</div></div><div class="financeCell"><div class="k">Profit</div><div class="v">${baht(t.profit)}</div></div><div class="financeCell"><div class="k">BM share</div><div class="v">${baht(t.bm)}</div></div><div class="financeCell"><div class="k">Alix share</div><div class="v">${baht(t.alix)}</div></div><div class="financeCell"><div class="k">Pin profit</div><div class="v">${baht(t.pinProfit)}</div></div></div></details></div></div>`;
+    const integrityNote=x.financialIntegrityResolved&&x.financialIntegrity?.status==="mismatch"?`<div class="notice warn" style="margin:8px 0"><b>Spreadsheet total mismatch acknowledged.</b><br><span class="small">Using the calculation from all imported product lines. The original spreadsheet total is preserved for audit.</span></div>`:"";
+    return `<div class="wizardBranch"><div class="wizardBranchHead"><b>${escapeHtml(r.branch)}</b><span class="reconStatus ok">FINANCIAL OK</span></div><div class="wizardBranchBody"><div class="wizardGood">✓ Sales, costs and profit shares agree.</div>${integrityNote}<div class="financeSummary"><div class="financeCell"><div class="k">Sales</div><div class="v">${baht(t.sales)}</div></div><div class="financeCell"><div class="k">Pay Pin</div><div class="v">${baht(t.payPin)}</div></div></div><details class="financeDetails"><summary>View calculation</summary><div class="financeSummary"><div class="financeCell"><div class="k">Cost recovery</div><div class="v">${baht(t.cost)}</div></div><div class="financeCell"><div class="k">Profit</div><div class="v">${baht(t.profit)}</div></div><div class="financeCell"><div class="k">BM share</div><div class="v">${baht(t.bm)}</div></div><div class="financeCell"><div class="k">Alix share</div><div class="v">${baht(t.alix)}</div></div><div class="financeCell"><div class="k">Pin profit</div><div class="v">${baht(t.pinProfit)}</div></div></div></details></div></div>`;
   }).join('');
   let adjustmentHtml="";
   const autoCorrections=(state.appliedAdjustments||[]).filter(a=>a.resolution==="next_sunday_auto");
@@ -11754,7 +11802,7 @@ function validateBackupPackage(pkg){
 }
 async function createCompleteTransferPackage(kind="FULL_TRANSFER"){
  const sourceFiles=await exportArchivedSourceFiles(),counts=backupCounts();
- return {format:BACKUP_FORMAT,schema:BACKUP_SCHEMA,appVersion:"0.10.129",backupKind:kind,createdAt:new Date().toISOString(),counts,sourceFilesCount:sourceFiles.length,data:JSON.parse(JSON.stringify(db)),sourceFiles};
+ return {format:BACKUP_FORMAT,schema:BACKUP_SCHEMA,appVersion:"0.10.130",backupKind:kind,createdAt:new Date().toISOString(),counts,sourceFilesCount:sourceFiles.length,data:JSON.parse(JSON.stringify(db)),sourceFiles};
 }
 async function savePackageFile(pkg,prefix="Magic-Pin-Data"){
  const blob=new Blob([JSON.stringify(pkg)],{type:"application/json"});

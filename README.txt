@@ -1,50 +1,12 @@
-WHAT CHANGED IN v0.10.129 TEST
+WHAT CHANGED IN v0.10.130 TEST
 
-- Adds a hard financial-integrity check for imported Sunday spreadsheets: the spreadsheet's own Total/Pay Pin cells are compared with the sum of all imported product-line amounts.
-- A mismatch is shown as a red FINANCIAL TOTAL MISMATCH warning and Step 3 remains blocked until the spreadsheet/report is corrected or reviewed.
-- Older restored reports are backfilled from their archived original XLSX files so the integrity check also works after Complete App Data restore.
-- Removes the exact stale Lamai 23 Aug -฿87 Sunday-report correction confirmed as historical TEST residue in Pin's 24 Sep backup. The cleanup is deliberately scoped to that exact correction/adjustment ID and does not delete legitimate corrections.
-- Preserves the v0.10.128 Saturday/Sunday two-branch billing-cycle grouping fix.
+- Fixes the Financial > Review Sunday Report dead end.
+- A spreadsheet-total mismatch is now resolved inside the Sunday Workflow; it no longer opens the iPhone file picker.
+- The mismatch card shows Resolve mismatch and Open saved report.
+- Resolve mismatch explicitly lets the user acknowledge the spreadsheet formula problem and use the calculation from all imported product lines.
+- The acknowledgement is tied to the exact mismatch signature. If report data changes later, the red flag automatically returns.
+- The original spreadsheet totals remain preserved for audit.
+- Generic Review Sunday Report actions now open the saved Sunday Reports area rather than the file picker.
+- Preserves v0.10.129 fixes: Saturday/Sunday cycle grouping, spreadsheet financial-integrity detection, and targeted cleanup of the stale Lamai 23-Aug test adjustment.
 
-WHAT CHANGED IN v0.10.126 TEST
-
-- Release-candidate cleanup based on the validated v0.10.124 checkpoint.
-- Removed the dashboard-only “TEST ONLY · Create unpaid conflict test” control and its retired synthetic seed code.
-- On load, removes ONLY artifacts created by that helper (tagged test invoice/docket/correction/audit records such as MD-20260913-TEST); normal business records are not touched.
-- Preserves the validated v0.10.124 regression baseline: zero-difference correction closure, invoice/payment status, Sunday entry, docket status/actions, iPhone Qty keyboard behavior, compact Records lists, fixed docket action bar, and fully readable Retail/Amount headers.
-- This remains a TEST build. Production promotion still requires the final phone smoke test and creation of a separate -DEPLOY package.
-
-WHAT CHANGED IN v0.10.124 TEST
-
-- Fixed the expanded Delivery Docket table header on iPhone so Retail and Amount are fully readable instead of clipped.
-- Kept the existing compact docket layout, barcode column, fixed viewport action bar, delivery status logic, and v0.10.123 zero-difference correction lifecycle fix unchanged.
-- Mobile-only CSS adjustment: smaller docket header text and tighter horizontal cell padding.
-
-WHAT CHANGED IN v0.10.123 TEST
-- Fixes a real correction-lifecycle bug found during v0.10.122 regression testing.
-- If a linked delivered docket was edited, the week now reconciles, and the verified invoice difference is exactly ฿0, acknowledging the review now closes the correction automatically.
-- Existing acknowledged zero-difference legacy corrections self-heal on load/recheck; no second acknowledgement is required.
-- A zero-difference correction does not create a replacement invoice revision and does not create a next-Sunday adjustment.
-- The resolved live signature is recorded so the invoice no longer remains falsely marked UPDATE REQUIRED.
-- Paid invoices remain protected and all existing money values are left unchanged.
-
-WHAT CHANGED IN v0.10.122 TEST
-- A completed correction clears its old Resume conflict resolution shortcut when returning to the dashboard.
-- The shortcut also disappears on the dashboard while a correction remains in progress; the dashboard keeps its own action.
-- This interface change does not edit saved invoices, dockets, quantities, or amounts.
-
-WHAT CHANGED IN v0.10.121 TEST
-- A saved choice to carry a correction forward no longer hides an unreconciled invoice week.
-- The dashboard says the correction is waiting for reconciliation, and offers a direct Review correction button.
-- No existing invoice, correction, docket or amount is changed by this update.
-
-WHAT CHANGED IN v0.10.120 TEST
-- A Sunday top-up derived from a report never counts as a delivery into that same report, even if its saved date is earlier.
-- Existing dockets and completed invoices are not edited; any misdated delivered top-up remains visibly flagged for review.
-- Future marking of generated top-ups requires an actual delivery date after their source Sunday report.
-- TEST-copy exclusions and original docket snapshot handling from v0.10.119 remain.
-
-
-v0.10.126 TEST
-- Fixes adding a second Sunday Excel report after one branch has already been imported.
-- Pending file selections now remain visible inside Step 1 with an actionable Import button instead of collapsing back to the one-report summary.
+TEST FIRST. Do not deploy to Pin production until this flow is verified.
