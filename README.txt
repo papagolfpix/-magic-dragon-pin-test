@@ -1,12 +1,13 @@
-WHAT CHANGED IN v0.10.130 TEST
+MAGIC DRAGON PIN — v0.10.132 TEST
 
-- Fixes the Financial > Review Sunday Report dead end.
-- A spreadsheet-total mismatch is now resolved inside the Sunday Workflow; it no longer opens the iPhone file picker.
-- The mismatch card shows Resolve mismatch and Open saved report.
-- Resolve mismatch explicitly lets the user acknowledge the spreadsheet formula problem and use the calculation from all imported product lines.
-- The acknowledgement is tied to the exact mismatch signature. If report data changes later, the red flag automatically returns.
-- The original spreadsheet totals remain preserved for audit.
-- Generic Review Sunday Report actions now open the saved Sunday Reports area rather than the file picker.
-- Preserves v0.10.129 fixes: Saturday/Sunday cycle grouping, spreadsheet financial-integrity detection, and targeted cleanup of the stale Lamai 23-Aug test adjustment.
+Targeted historical repair test.
 
-TEST FIRST. Do not deploy to Pin production until this flow is verified.
+Repairs the missing 13 Sep 2026 historical invoice/completed Sunday entry only when both surviving 13 Sep branch reports are present and their saved totals exactly reconstruct THB 9,156.5.
+
+The repair is intentionally guarded and one-time. It does not change the current 20 Sep invoice, payment status, reports, deliveries, or live calculations.
+
+Expected after first load:
+- Records / Invoices contains MD-20260913 for THB 9,156.5.
+- 13 Sep appears as a historical paid week rather than adding to current due.
+- Current due remains THB 9,658.
+- Current 20 Sep invoice/payment state is unchanged.
